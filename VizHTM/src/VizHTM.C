@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <random>
 
 #include "SpatialException.h"
 #include "SpatialIndex.h"
@@ -98,6 +99,10 @@ void VizHTM::addCoordinate64(float64 x, float64 y, float64 z){
 	nCoordinates++;
 }
 
+void VizHTM::addCoordinate(const SpatialVector c) {
+	addCoordinate64(c.x(),c.y(),c.z());
+}
+
 void VizHTM::addEdgeIndices(int i0, int i1) {  // Generally i1 = i0 + 1
 	edgeIndices[nEdgeIndices] = i0; nEdgeIndices++;
 	edgeIndices[nEdgeIndices] = i1; nEdgeIndices++;
@@ -140,15 +145,6 @@ void VizHTM::addFace3(
 	addCoordinate( x10,  x11,  x12);
 	addCoordinate( x20,  x21,  x22);
 	addFaceIndices3(indexBase,indexBase+1,indexBase+2);
-}
-
-void VizHTM::addSphere(int coordinateIndex, float r, float g, float b, float radius) {
-	sphereIndices[nSpheres]   = coordinateIndex;
-	sphereColors[nSpheres][0] = r;
-	sphereColors[nSpheres][1] = g;
-	sphereColors[nSpheres][2] = b;
-	fRadii[nSpheres]          = radius;
-	nSpheres++;
 }
 
 void VizHTM::triaxis() {
@@ -210,9 +206,9 @@ void VizHTM::triaxis() {
 	addCoordinate(1.05,0.,0.);
 	addCoordinate(0.,1.05,0.);
 	addCoordinate(0.,0.,1.05);
-	addSphere(indexBase,1.,0.,0.,0.025);
-	addSphere(indexBase+1,0.,1.,0.,0.025);
-	addSphere(indexBase+2,0.,0.,1.,0.025);
+	addSphere(indexBase,.5,0.,0.,0.025);
+	addSphere(indexBase+1,0.,.5,0.,0.025);
+	addSphere(indexBase+2,0.,0.,.5,0.025);
 
 //	indexBase = nCoordinates;
 //	addCoordinate(0.,0.,1.05);
@@ -278,6 +274,46 @@ void VizHTM::addFaceVertexColorIndices3(int i0, int i1, int i2) {
 	faceVertexColorIndices[nFaceVertexColorIndices++]=i1;
 	faceVertexColorIndices[nFaceVertexColorIndices++]=i2;
 	faceVertexColorIndices[nFaceVertexColorIndices++]=SO_END_FACE_INDEX;
+}
+
+void VizHTM::addConstraint(SpatialVector a, float64 d, float r, float g, float blue) {
+	SpatialVector ad = (1.0-d)*a;
+	SpatialVector o  = SpatialVector(0.,0.,0.);
+	SpatialVector as = 1.025*ad;
+	addEdgeAndSphere(o,ad,r,g,blue,as,r,g,blue,0.0125);
+
+	SpatialVector i, a_cross_i;
+	float aci_norm;
+	do {
+		i = randomVector();
+//		cout << "i: " << i << endl << flush;
+		a_cross_i = a^i;
+		aci_norm = a_cross_i.length();
+	} while (!aci_norm);
+
+	SpatialVector b = a_cross_i; b.normalize();
+	SpatialVector c = a^b; c.normalize();
+//	viz->addEdgeAndSphere(o,b,0.,1.,0.5*d,b,0.,1.,0.5*d,0.025);
+//	viz->addEdgeAndSphere(o,c,0.,0.5*d,1.,c,0.,0.5*d,1.,0.025);
+
+	float64 theta = 0.;
+	float64 twopi  = atan2(0.,-0.);
+	float64 deltaTheta = 0.05;
+	SpatialVector dlast = sin(-twopi*(1.+deltaTheta))*b + cos(-twopi*(1.+deltaTheta))*c; dlast.normalize();
+	dlast *= sqrt(d*(2.-d));
+	SpatialVector last = ad + dlast;
+	for(float64 theta = -1.; theta<=1.; theta += deltaTheta) {
+		float64 lambda = sin(twopi*theta);
+		float64 mu     = cos(twopi*theta);
+		SpatialVector delta_ad = lambda*b + mu*c; delta_ad.normalize();
+		delta_ad *= sqrt(d*(2.-d));
+		SpatialVector aPlusDelta = ad + delta_ad;
+//			viz->addEdge(ad,aPlusDelta,1.,0.5*d,1.);
+//			viz->addEdge(o,aPlusDelta,1.,0.5*d,1.);
+		addEdge(last,aPlusDelta,r,g,blue);
+		last = aPlusDelta;
+	}
+
 }
 
 SoSeparator* VizHTM::makeRoot() {
@@ -400,4 +436,66 @@ float* xyzFromLatLonDegrees(float lat,float lon) {
 }
 
 
+int rollDieWithFourSides() {
+	static std::default_random_engine e{};
+	static std::uniform_int_distribution<int> d{0,3};
+	return d(e);
+}
 
+double uniformDouble() {
+	static std::default_random_engine e{};
+	static std::uniform_real_distribution<double> d{0.,1.};
+	//uniform_int_distribution<int> d{0,3};
+	return d(e);
+}
+
+SpatialVector randomVector() {
+	SpatialVector r = SpatialVector(
+			uniformDouble(),
+			uniformDouble(),
+			uniformDouble());
+	r.normalize();
+	return r;
+}
+
+void VizHTM::addEdge(SpatialVector x0, SpatialVector x1, float r, float g, float b) {
+	int colorBase = nEdgeColors;
+	addEdgeColor(r,g,b);
+	addEdgeColor(r,g,b);
+	addEdgeVertexColorIndices(colorBase,colorBase+1);
+
+	int coordBase = nCoordinates;
+	addCoordinate(x0);
+	addCoordinate(x1);
+	addEdgeIndices(coordBase,coordBase+1);
+}
+
+void VizHTM::addEdgeProjections(SpatialVector x1) {
+	SpatialVector o = SpatialVector(0.,0.,0.);
+	SpatialVector p = SpatialVector(x1.x(),x1.y(),0.);
+//	SpatialVector z = SpatialVector(0.,0.,x1.z());
+	addEdge(o,p,1.,1.,0.);
+	addEdge(p,x1,0.,0.,1.);
+}
+
+void VizHTM::addEdgeAndSphere(SpatialVector x0, SpatialVector x1, float r, float g, float b, SpatialVector s0, float rs, float gs, float bs,
+		float radius) {
+	addEdge(x0,x1,r,g,b);
+	addSphere(s0,rs,gs,bs,radius);
+}
+
+void VizHTM::addSphere(int coordinateIndex, float r, float g, float b, float radius) {
+	sphereIndices[nSpheres]   = coordinateIndex;
+	sphereColors[nSpheres][0] = r;
+	sphereColors[nSpheres][1] = g;
+	sphereColors[nSpheres][2] = b;
+	fRadii[nSpheres]          = radius;
+	nSpheres++;
+}
+
+void VizHTM::addSphere(SpatialVector x, float r, float g, float b, float radius) {
+	int coordinateBase = nCoordinates;
+	addCoordinate(x);
+	addSphere(coordinateBase,r,g,b,radius);
+
+}

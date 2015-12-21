@@ -23,18 +23,28 @@ class VizHTM {
 public:
 	VizHTM(int nArray);
 
+	void addEdge(SpatialVector x0, SpatialVector x1, float r, float g, float b);
+	void addEdgeAndSphere(SpatialVector x0, SpatialVector x1, float r, float g, float b,
+						  SpatialVector s0, float rs, float gs, float bs, float radius);
+
 	void addEdgeColor(float r, float g, float b);
 	void addFaceColor(float r, float g, float b);
 	void addCoordinate(float x, float y, float z);
 	void addCoordinate64(float64 x, float64 y, float64 z);
+	void addCoordinate(SpatialVector c);
+
+
 	void addEdgeIndices(int i0, int i1);
 	// Don't assume that adding an edge color requires it be used
 	// by the edge list.
 	void addEdgeVertexColorIndices(int i0, int i1);
 	void addEdgeIndicesTriangle(int i0, int i1, int i2);
+	void addEdgeProjections(SpatialVector x1);
+
 	void addFaceIndices3(int i0, int i1, int i2);
 	void addFaceVertexColorIndices3(int i0, int i1, int i2);
 	void addSphere(int coordianteIndex, float r, float g, float b, float radius);
+	void addSphere(SpatialVector x, float r, float g, float b, float radius);
 
 	void addFace3(
 			float x00, float x01, float x02,
@@ -43,6 +53,8 @@ public:
 			float r0, float g0, float b0,
 			float r1, float g1, float b1,
 			float r2, float g2, float b2);
+
+	void addConstraint(SpatialVector a, float64 d, float r, float g, float b);
 
 	void debug_dump();
 
@@ -83,5 +95,9 @@ public:
 unsigned int lg2(unsigned int v);
 float* xyzFromLatLonRadians(float lat,float lon);
 float* xyzFromLatLonDegrees(float lat,float lon);
+
+int rollDieWithFourSides();
+double uniformDouble();
+SpatialVector randomVector();
 
 #endif /* VIZHTM_H_ */
