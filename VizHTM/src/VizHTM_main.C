@@ -36,141 +36,302 @@
 #include <Inventor/sensors/SoTimerSensor.h>
 #include <Inventor/SbBasic.h>
 
+#include "VizHTM_main.h"
+
 using namespace std;
+
+void testAnEdge(VizHTM *viz) {
+	int colorBase = viz->nEdgeColors;
+	viz->addEdgeColor(0,1,1);
+	viz->addEdgeColor(0,1,1);
+	viz->addEdgeVertexColorIndices(colorBase,colorBase+1);
+	int coordBase = viz->nCoordinates;
+	viz->addEdgeIndices(coordBase,coordBase+1);
+}
+
+void testConstraint(VizHTM *viz, SpatialConstraint sc) {
+	viz->addConstraint(sc,1.0,0.5,1.0);
+}
+
+void testConstraintAD(VizHTM *viz, SpatialVector a, float64 d) {
+	SpatialConstraint sc = SpatialConstraint(a,d);
+	cout << " a in sc(a,d)? " << sc.contains(a) << endl << flush;
+	cout << " acos(a*a),s " << acos(a*a) << " " << sc.coneAngle() << endl << flush;
+	cout << " i in sc(a,d)? " << sc.contains(SpatialVector(1.0,0.0,0.0)) << endl << flush;
+	cout << " acos(i*a),s " << acos(SpatialVector(1.0,0.0,0.0)*a) << " " << sc.coneAngle() << endl << flush;
+	testConstraint(viz,sc);
+}
+
+void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdDepth) {
+
+	int saveDepth = 5;
+	SpatialIndex *index = new SpatialIndex(htmIdDepth,saveDepth);
+	SpatialDomain domain = SpatialDomain(index);
+	domain.add(convex);
+	domain.setOlevel(htmIdDepth);
+
+	HtmRange *range = new HtmRange();
+
+	range->purge();
+	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
+	bool overlap = domain.intersect(index,range,varlen_individualHTMIds);
+
+	Key lo = 0; Key hi = 0;
+	SpatialVector v1,v2,v3;
+	if(false)
+		cout
+		<< " overlap: " << overlap
+		<< " nRanges: " << range->nranges() << flush;
+	range->defrag();
+	if(false)
+		cout
+		<< " nRangeDefrag: " << range->nranges()
+		<< " nConvexes: " << domain.numConvexes()
+		<< endl << flush;
+
+//		overlap = false;
+
+	if(overlap) {
+		range->reset();
+		uint64 indexp = range->getNext(lo,hi);
+		//		indexp = range->getNext(lo,hi);
+		// cout << " indexp,lo,hi: " << indexp << " " << lo << " " << hi << endl << flush;
+		int k = 0; int kMax = 10000;
+		int triangles = 0; int tMax = 10000;
+		// cout << " index-depth: " << index->getMaxlevel() << " -saveDepth: " << index->getBildLevel() << endl << flush;
+		do {
+			k++;
+			//			for(uint64 nodeIndex=lo; nodeIndex <= min(lo+10,hi); nodeIndex++){
+			for(uint64 numericId=lo; numericId <= hi && triangles < tMax; numericId++){
+				triangles ++;
+				uint64 nodeIndex = index->nodeIndexFromId(numericId);
+
+				if(false){
+					cout
+					<< "working " << flush
+					<< " triangles: " << triangles << flush
+					<< " numericId: " << numericId << flush
+					<< " nodeIndex: " << nodeIndex << flush;
+					cout << " k=" << k << flush;
+				}
+
+				index->nodeVertex(nodeIndex,v1,v2,v3);
+
+				if(false){
+					cout << "..." << flush;
+					cout
+					<< " v1: " << v1.x() << " " << v1.y() << " " << v1.z()
+					<< " v2: " << v2.x() << " " << v2.y() << " " << v2.z()
+					<< " v3: " << v1.x() << " " << v3.y() << " " << v3.z() << flush;
+				}
+
+				if(true){
+					float size = pow(0.5,htmIdDepth+3);
+					float r = 0.4, g = 0.4, b = 0.6;
+					SpatialVector x = 3.*v1+v2+v3; x.normalize(); x *= 1.0+1.0e-6;
+					SpatialVector x_ = v1+v2+v3; x_.normalize();
+					if(false){
+						cout
+						<< " nI: " << nodeIndex
+						<< " x: " << x.x() << " " << x.y() << " " << x.z();
+					}
+					char *str = new char[256];
+					sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
+					viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
+					viz->addEdge(x,x_,0.1,0.1,0.1);
+				}
+
+				int indexBase = viz->nCoordinates;
+				int colorBase = viz->nFaceColors;
+				if(true) {
+					float r=0.; float g=0.; float b=0.;
+					switch(numericId % 4) {
+					case 0:
+						r=1.;
+						break;
+					case 1:
+						g=1.;
+						break;
+					case 2:
+						b=1.;
+						break;
+					default:
+						r=1.; g=1.; b=1.;
+						break;
+					}
+					//	for(int i=0; i<3; i++) addEdgeColor(r,g,b);
+					for(int i=0; i<3; i++) {
+						viz->addFaceColor(r,g,b);
+					}
+					viz->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
+
+					viz->addCoordinate64(v1.x(),v1.y(),v1.z());
+					viz->addCoordinate64(v2.x(),v2.y(),v2.z());
+					viz->addCoordinate64(v3.x(),v3.y(),v3.z());
+					//	addEdgeIndicesTriangle(indexBase,indexBase+1,indexBase+2);
+					viz->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+					//	cout << " ( " << indexBase << " " << indexBase+1 << " " << indexBase+2 << ") ";
+				}
+				if(false) cout << endl << flush;;
+			}
+		} while (range->getNext(lo,hi) && k < kMax && triangles < tMax);
+	}
+//	cout << "overlap done " << endl << flush;
+}
+
+void testTwoConstraints(VizHTM * viz, int htmIdDepth) {
+	SpatialVector o = SpatialVector(0.0,0.0,0.0);
+
+	//	SpatialVector a = SpatialVector(1.0,0.0,0.0);
+	SpatialVector a = randomVector();
+	//	SpatialVector a = SpatialVector(1.0,1.0,0.0); a.normalize();
+
+	SpatialVector as = 1.05*a;
+
+	//	float64 d = 0.9999;
+	float64 d = 0.99;
+	SpatialConstraint sc = SpatialConstraint(a,d);
+
+	if(false) testConstraintAD(viz,a,d);
+
+	RangeConvex convex = RangeConvex();
+	convex.add(sc);
+
+	//	SpatialVector a1 = a+randomVector()*0.15; a1.normalize();
+	//	SpatialConstraint sc1 = SpatialConstraint(a1,0.99);
+
+	SpatialVector a1 = -1*a; a1.normalize();
+	SpatialConstraint sc1 = SpatialConstraint(a1,0.995);
+	sc1.invert();
+	// SpatialConstraint(randomVector(),0.99);
+	viz->addConstraint(sc1,0.5,1.0,1.0);
+	convex.add(sc1);
+
+	testConvexHtmRangeIntersection(viz,convex,htmIdDepth);
+}
+
+void testText1(VizHTM* viz, SpatialVector a) {
+	viz->triaxis();
+	if(true){
+		cout << "Starting text test" << flush;
+		SpatialVector o = SpatialVector(0.,0.,0.);
+		viz->addEdge(o,a,1.,1.,1.);
+		float size = 0.25;
+		float r = 0.8, g = 0.8, b = 0.9;
+		SpatialVector *x = new SpatialVector(a); x->normalize(); (*x) *= 1.01;
+		char *str = new char[256];
+		//		strcpy(str,"N0xx\n");
+		sprintf(str,"%s\n%s","NOxy",a.toString());
+		//		strcat(str,a.toString());
+		viz->addAnnotation(x,str,size,r,g,b);
+		cout << "'" << str << "'" << flush;
+		cout << "...done." << endl << flush;
+	}
+	if(true){
+		cout << "Starting text test 2" << flush;
+		SpatialVector o = SpatialVector(0.,0.,0.);
+		SpatialVector a = SpatialVector(0.,0.,1.);
+		viz->addEdge(o,a,1.,1.,1.);
+		float size = 0.25;
+		float r = 0.8, g = 0.8, b = 0.9;
+		SpatialVector *x = new SpatialVector(a); x->normalize(); (*x) *= 1.01;
+		char *str = new char[256];
+		//		strcpy(str,"N0xx\n");
+		sprintf(str,"%s\n%s","NOxy",a.toString());
+		//		strcat(str,a.toString());
+		viz->addAnnotation(x,str,size,r,g,b);
+		cout << "'" << str << "'" << flush;
+		cout << "...done." << endl << flush;
+	}
+}
+
+void testShowEdgeProjections(VizHTM *viz, SpatialVector a, float64 d) {
+	SpatialVector o = SpatialVector(0.,0.,0.);
+	if(true) {
+		viz->triaxis();
+		viz->addEdge(o,a,1.,1.,1.);
+		viz->addConstraint(a,d,0.5,0.5,1.0);
+		viz->addEdgeProjections(a*d);
+	}
+}
+
+void testLatLonSpiral(VizHTM* viz) { // Try to draw latlon lines.
+	int indexBase = viz->nCoordinates;
+	int edgeColorBase = viz->nEdgeColors;
+	int nPoints = 1001;
+//		nPoints = 3;
+	for(int i = 0;i < nPoints; i++) {
+		float lat = -90.0 + (i*180.)/(nPoints-1);	float lon = -(i*16*4*90.)/(nPoints-1);
+		float* xyz = xyzFromLatLonDegrees(lat,lon);
+		//		cout << "1000: " << i << " ( " << xyz[0] << " " << xyz[1] << " " << xyz[2] << " ) " << endl;
+		viz->addCoordinate(xyz[0],xyz[1],xyz[2]);
+	}
+	for(int i=0;i<nPoints;i++) {
+		edgeColorBase = viz->nEdgeColors;
+		float r = (i/(1.0*nPoints));
+		float g = 1.0;
+		float b = 1.0;
+		viz->addEdgeColor(r,g,b);
+		viz->addEdgeVertexColorIndices(edgeColorBase,edgeColorBase);
+	}
+	int nEdges = nPoints-1;
+	for(int iPoint = 0; iPoint < nEdges; iPoint++) {
+		viz->edgeIndices[viz->nEdgeIndices] = indexBase + iPoint; viz->nEdgeIndices++;
+		viz->edgeIndices[viz->nEdgeIndices] = indexBase + iPoint + 1; viz->nEdgeIndices++;
+		viz->edgeIndices[viz->nEdgeIndices] = SO_END_LINE_INDEX; viz->nEdgeIndices++;
+	}
+//		cout << "1000: " << nCoordinates << " " << nEdgeColors << " " << nFaceColors << " " << nEdgeIndices << " " << nFaceIndices << endl << endl;
+}
+
+void testTriaxis(VizHTM* viz) {
+	cout << "viz triaxis..." << flush;
+	viz->triaxis();
+	cout << "created." << endl << flush;
+}
+void testIJKRGBFace(VizHTM* viz) {
+	cout << "viz test ijk-rgb-face..." << flush;
+	viz->triaxis();
+	viz->addFace3(
+			1.0,0.0,0.0,
+			0.0,1.0,0.0,
+			0.0,0.0,1.0,
+			1.0,0.0,0.0,
+			0.0,1.0,0.0,
+			0.0,0.0,1.0
+	);
+	cout << "done." << endl << flush;
+}
+
+
 
 int main(int argc, char *argv[]) {
 	const char* mainName = "VizHTM-main";
 	cout << mainName << endl;
 
-	float64 PI = atan2(0,-1); cout << "PI=" << PI << endl << flush;
+	float64 PI = atan2(0,-1); // cout << "PI=" << PI << endl << flush;
+	SpatialVector xHat = SpatialVector(1.,0.,0.);
+	SpatialVector yHat = SpatialVector(0.,1.,0.);
+	SpatialVector zHat = SpatialVector(0.,0.,1.);
 
+	cout << "viz..." << flush;
 	VizHTM *viz = new VizHTM(NARRAY_);
+	cout << "allocated." << endl << flush;
 
-
-	if(true) {
-		viz->triaxis(); // TODO Breaks if first?
-	}
-
-	if(false) {
-		viz->addFace3(
-				1.0,0.0,0.0,
-				0.0,1.0,0.0,
-				0.0,0.0,1.0,
-				1.0,0.0,0.0,
-				0.0,1.0,0.0,
-				0.0,0.0,1.0
-		);
-	}
-
-	SpatialVector o = SpatialVector(0.0,0.0,0.0);
-
-//	SpatialVector a = SpatialVector(1.0,0.0,0.0);
-//	SpatialVector as = SpatialVector(1.05,0.0,0.0);
-
-	SpatialVector a = randomVector();
-	SpatialVector as = 1.05*a;
-
-//	int colorBase = viz->nEdgeColors;
-//	viz->addEdgeColor(0,1,1);
-//	viz->addEdgeColor(0,1,1);
-//	viz->addEdgeVertexColorIndices(colorBase,colorBase+1);
-//
-//	int coordBase = viz->nCoordinates;
-//	viz->addEdgeIndices(coordBase,coordBase+1);
-//
-//	viz->addCoordinate(o);
-//	viz->addCoordinate(a);
-
-	int coordBase = viz->nCoordinates;
-	viz->addCoordinate(as);
-	viz->addSphere(coordBase,0,1,1,0.025);
-
-	viz->addEdge(o,a,1.,1.,1.);
-
-	float64 d = 0.3;
-	viz->addConstraint(a,d,0.5,0.5,1.0);
-	viz->addEdgeProjections(a*(1.-d));
-
-	for(float64 d = 0.; d < 2.0; d += 0.2) {
-
-//		viz->addConstraint(a,d,0.5,0.5,1.0);
-//
-//		SpatialVector ad = (1.0-d)*a;
-//
-//		SpatialVector i, a_cross_i;
-//		float64 aci_norm;
-//
-//		do {
-//			i = randomVector();
-//			cout << "i: " << i << endl << flush;
-//			a_cross_i = a^i;
-//			aci_norm = a_cross_i.length();
-//		} while (!aci_norm);
-//
-//		SpatialVector b = a_cross_i; b.normalize();
-//		SpatialVector c = a^b; c.normalize();
-//		viz->addEdgeAndSphere(o,b,0.,1.,0.5*d,b,0.,1.,0.5*d,0.025);
-//		viz->addEdgeAndSphere(o,c,0.,0.5*d,1.,c,0.,0.5*d,1.,0.025);
-//
-//		//	for(int i=0; i<100; i++) cout << "i: " << uniformDouble() << endl << flush;
-//
-//		float64 theta = 0.;
-//		float64 twopi  = atan2(0.,-0.);
-//		float64 deltaTheta = 0.05;
-//		SpatialVector dlast = sin(-twopi*(1.+deltaTheta))*b + cos(-twopi*(1.+deltaTheta))*c; dlast.normalize();
-//		dlast *= sqrt(d*(2.-d));
-//		SpatialVector last = ad + dlast;
-//		for(float64 theta = -1.; theta<=1.; theta += deltaTheta) {
-//			float64 lambda = sin(twopi*theta);
-//			float64 mu     = cos(twopi*theta);
-//			SpatialVector delta_ad = lambda*b + mu*c; delta_ad.normalize();
-//			delta_ad *= sqrt(d*(2.-d));
-//			SpatialVector aPlusDelta = ad + delta_ad;
-////			viz->addEdge(ad,aPlusDelta,1.,0.5*d,1.);
-////			viz->addEdge(o,aPlusDelta,1.,0.5*d,1.);
-//			viz->addEdge(last,aPlusDelta,1.0,0.,0.);
-//			last = aPlusDelta;
-//		}
-	}
-
-	if(false) {
-		viz->triaxis();
-	}
-
-	if(false){ // Try to draw latlon lines.
-		int indexBase = viz->nCoordinates;
-		int edgeColorBase = viz->nEdgeColors;
-		int nPoints = 1001;
-//		nPoints = 3;
-		for(int i = 0;i < nPoints; i++) {
-			float lat = -90.0 + (i*180.)/(nPoints-1);	float lon = -(i*16*4*90.)/(nPoints-1);
-			float* xyz = xyzFromLatLonDegrees(lat,lon);
-			//		cout << "1000: " << i << " ( " << xyz[0] << " " << xyz[1] << " " << xyz[2] << " ) " << endl;
-			viz->addCoordinate(xyz[0],xyz[1],xyz[2]);
-		}
-		for(int i=0;i<nPoints;i++) {
-			edgeColorBase = viz->nEdgeColors;
-			float r = (i/(1.0*nPoints));
-			float g = 1.0;
-			float b = 1.0;
-			viz->addEdgeColor(r,g,b);
-			viz->addEdgeVertexColorIndices(edgeColorBase,edgeColorBase);
-		}
-		int nEdges = nPoints-1;
-		for(int iPoint = 0; iPoint < nEdges; iPoint++) {
-			viz->edgeIndices[viz->nEdgeIndices] = indexBase + iPoint; viz->nEdgeIndices++;
-			viz->edgeIndices[viz->nEdgeIndices] = indexBase + iPoint + 1; viz->nEdgeIndices++;
-			viz->edgeIndices[viz->nEdgeIndices] = SO_END_LINE_INDEX; viz->nEdgeIndices++;
-		}
-//		cout << "1000: " << nCoordinates << " " << nEdgeColors << " " << nFaceColors << " " << nEdgeIndices << " " << nFaceIndices << endl << endl;
-	}
-
-	if(false) {
-		viz->triaxis();
-	}
-
+	if(false) testTriaxis(viz);
+	if(false) testIJKRGBFace(viz);
+	if(false) testAnEdge(viz);
+	if(false) testText1(
+			viz,
+			unitVector(xHat+yHat+zHat));
+	if(false) testShowEdgeProjections(
+			viz,
+			unitVector(xHat+yHat+zHat),
+			0.99);
+	if(true) testTwoConstraints(viz,5);
+	if(false) testLatLonSpiral(viz);
 	if(false) viz->debug_dump();
 
+	/**************** Start Graphics ****************/
 	QWidget *window = SoQt::init(argv[0]);
 	if (window == NULL) exit(1);
 
@@ -178,7 +339,7 @@ int main(int argc, char *argv[]) {
 	selectionRoot->policy = SoSelection::SINGLE;
 
 	SoSeparator *root = new SoSeparator;
-//	root->ref();
+//	root->ref(); // TODO Figure out ->ref();
 
 	root->addChild(viz->makeRoot());
 
@@ -197,4 +358,5 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
+
 

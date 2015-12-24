@@ -9,6 +9,7 @@
 #define VIZHTM_H_
 
 #include "SpatialVector.h"
+#include "SpatialConstraint.h"
 
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSwitch.h>
@@ -23,6 +24,7 @@ class VizHTM {
 public:
 	VizHTM(int nArray);
 
+
 	void addEdge(SpatialVector x0, SpatialVector x1, float r, float g, float b);
 	void addEdgeAndSphere(SpatialVector x0, SpatialVector x1, float r, float g, float b,
 						  SpatialVector s0, float rs, float gs, float bs, float radius);
@@ -32,7 +34,6 @@ public:
 	void addCoordinate(float x, float y, float z);
 	void addCoordinate64(float64 x, float64 y, float64 z);
 	void addCoordinate(SpatialVector c);
-
 
 	void addEdgeIndices(int i0, int i1);
 	// Don't assume that adding an edge color requires it be used
@@ -55,6 +56,11 @@ public:
 			float r2, float g2, float b2);
 
 	void addConstraint(SpatialVector a, float64 d, float r, float g, float b);
+	void addConstraint(SpatialConstraint c, float r, float g, float b);
+
+	SoSeparator* makeText(SpatialVector *a, const char *text, float size, float r, float g, float b);
+	void addAnnotation(SpatialVector *a, const char *annotation, float size, float r, float g, float b);
+
 
 	void debug_dump();
 
@@ -90,6 +96,17 @@ public:
 
 	int 	nFaceIndices;
 	int   	*faceIndices;
+
+	struct annotation {
+		SpatialVector *v;
+		const char *text;
+		float size;
+		float r,g,b;
+	};
+
+	int        nAnnotations;
+	annotation *annotations;
+
 };
 
 unsigned int lg2(unsigned int v);
@@ -99,5 +116,6 @@ float* xyzFromLatLonDegrees(float lat,float lon);
 int rollDieWithFourSides();
 double uniformDouble();
 SpatialVector randomVector();
+SpatialVector unitVector(SpatialVector x);
 
 #endif /* VIZHTM_H_ */

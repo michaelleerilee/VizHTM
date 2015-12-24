@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <random>
 
+#include "SpatialConstraint.h"
 #include "SpatialException.h"
 #include "SpatialIndex.h"
 #include "SpatialVector.h"
@@ -33,6 +34,13 @@
 #include <Inventor/nodes/SoTranslation.h>
 #include <Inventor/sensors/SoTimerSensor.h>
 #include <Inventor/SbBasic.h>
+
+#include <Inventor/nodes/SoFont.h>
+#include <Inventor/nodes/SoTransform.h>
+#include <Inventor/nodes/SoText3.h>
+// #include <Inventor/nodes/.h>
+
+
 
 using namespace std;
 
@@ -67,6 +75,9 @@ VizHTM::VizHTM(int nArray) : nArray(nArray) {
 	edgeIndices = new int[nArray];
 	faceIndices = new int[nArray];
 
+	nAnnotations = 0;
+	annotations  = new annotation[nArray];
+
 }
 
 void VizHTM::addEdgeColor(float r, float g, float b){
@@ -92,7 +103,7 @@ void VizHTM::addCoordinate(float x, float y, float z){
 
 // TODO float64 to float;  Mea maxima culpa.
 void VizHTM::addCoordinate64(float64 x, float64 y, float64 z){
-	cout << "  (adding-coord64 " << x << " " << y << " " << z << ") " << endl << flush;
+//	cout << "  (adding-coord64 " << x << " " << y << " " << z << ") " << endl << flush;
 	fCoordinates[nCoordinates][0] = (float) x;
 	fCoordinates[nCoordinates][1] = (float) y;
 	fCoordinates[nCoordinates][2] = (float) z;
@@ -277,10 +288,10 @@ void VizHTM::addFaceVertexColorIndices3(int i0, int i1, int i2) {
 }
 
 void VizHTM::addConstraint(SpatialVector a, float64 d, float r, float g, float blue) {
-	SpatialVector ad = (1.0-d)*a;
+	SpatialVector ad = a*d;
 	SpatialVector o  = SpatialVector(0.,0.,0.);
 	SpatialVector as = 1.025*ad;
-	addEdgeAndSphere(o,ad,r,g,blue,as,r,g,blue,0.0125);
+	addEdgeAndSphere(o,ad,r,g,blue,as,r,g,blue,0.025*sqrt(1.0-d*d));
 
 	SpatialVector i, a_cross_i;
 	float aci_norm;
@@ -300,13 +311,13 @@ void VizHTM::addConstraint(SpatialVector a, float64 d, float r, float g, float b
 	float64 twopi  = atan2(0.,-0.);
 	float64 deltaTheta = 0.05;
 	SpatialVector dlast = sin(-twopi*(1.+deltaTheta))*b + cos(-twopi*(1.+deltaTheta))*c; dlast.normalize();
-	dlast *= sqrt(d*(2.-d));
+	dlast *= sqrt(1.0-d*d);
 	SpatialVector last = ad + dlast;
 	for(float64 theta = -1.; theta<=1.; theta += deltaTheta) {
 		float64 lambda = sin(twopi*theta);
 		float64 mu     = cos(twopi*theta);
 		SpatialVector delta_ad = lambda*b + mu*c; delta_ad.normalize();
-		delta_ad *= sqrt(d*(2.-d));
+		delta_ad *= sqrt(1.0-d*d);
 		SpatialVector aPlusDelta = ad + delta_ad;
 //			viz->addEdge(ad,aPlusDelta,1.,0.5*d,1.);
 //			viz->addEdge(o,aPlusDelta,1.,0.5*d,1.);
@@ -314,6 +325,10 @@ void VizHTM::addConstraint(SpatialVector a, float64 d, float r, float g, float b
 		last = aPlusDelta;
 	}
 
+}
+
+void VizHTM::addConstraint(SpatialConstraint c, float r, float g, float b) {
+		addConstraint(c.v(),c.d(),r,g,b);
 }
 
 SoSeparator* VizHTM::makeRoot() {
@@ -345,7 +360,6 @@ SoSeparator* VizHTM::makeRoot() {
 	edgeSwitch->whichChild = SO_SWITCH_ALL;
 	edgeSwitch->addChild(edgeNode);
 	root->addChild(edgeSwitch);
-
 
 	SoSeparator *faceNode = new SoSeparator;
 
@@ -395,6 +409,33 @@ SoSeparator* VizHTM::makeRoot() {
 			sphereNodes->addChild(sphereNode);
 		}
 		root->addChild(sphereNodes);
+	}
+
+//	{
+//		cout << "Starting text test" << flush;
+//		SpatialVector a = SpatialVector(0.0,0.0,1.0);
+//		float size = 1.0;
+//		float r = 0.8, g = 0.8, b = 0.9;
+//		addText(a,"Test",size,r,g,b);
+//		cout << "...done." << endl << flush;
+//	}
+
+	if(nAnnotations>0){
+		SoSeparator *texts = new SoSeparator;
+		for(int ia=0;ia<nAnnotations;ia++) {
+//			cout
+//				<< " adding annotation: " << ia
+//				<< " text: " << annotations[ia].text
+//				<< endl << flush;
+			texts->addChild(makeText(
+					annotations[ia].v,
+					annotations[ia].text,
+					annotations[ia].size,
+					annotations[ia].r,
+					annotations[ia].g,
+					annotations[ia].b));
+		}
+		root->addChild(texts);
 	}
 
 	root->unrefNoDelete();
@@ -498,4 +539,72 @@ void VizHTM::addSphere(SpatialVector x, float r, float g, float b, float radius)
 	addCoordinate(x);
 	addSphere(coordinateBase,r,g,b,radius);
 
+}
+
+SoSeparator* VizHTM::makeText(SpatialVector* a, const char* annotation, float size, float r, float g, float b) {
+	// cf. http://oivdoc90.vsg3d.com/content/62-three-dimensional-text
+	SoSeparator *root = new SoSeparator;
+
+	SoFont *font = new SoFont;
+	font->name.setValue("Times-Roman");
+	font->size.setValue(size);
+	root->addChild(font);
+
+	SoMaterial *material = new SoMaterial;
+	SoMaterialBinding *binding = new SoMaterialBinding;
+	material->diffuseColor.set1Value(0,SbColor(r,g,b));
+	material->diffuseColor.set1Value(1,SbColor(0.5*r,0.5*g,0.5*b));
+	binding->value = SoMaterialBinding::PER_PART;
+	root->addChild(material);
+	root->addChild(binding);
+
+	SoSeparator *textSeparator = new SoSeparator;
+	SoText3 *text = new SoText3;
+
+	SoTransform *rot0 = new SoTransform;
+	SoTransform *tra0 = new SoTransform;
+
+	SpatialVector i = SpatialVector(1.0,0.0,0.0);
+	SpatialVector k = SpatialVector(0.0,0.0,1.0);
+
+	SpatialVector axis = k^(*a);
+	tra0->rotation.setValue(SbVec3f(axis.x(),axis.y(),axis.z()),acos(k*(*a)));
+//	transform->rotation.setValue(SbVec3f(a->x(),a->y(),a->z()),0.1);
+	tra0->translation.setValue(a->x(),a->y(),a->z());
+
+	rot0->rotation.setValue(SbVec3f(a->x(),a->y(),a->z()),acos(i*(*a)));
+
+	text->parts = SoText3::FRONT;
+//	text->parts = SoText3::ALL;
+
+	string *s = new string(annotation);
+	string delimiter = "\n";
+	int idx=0; int last=0; int next=0; while((next=s->find(delimiter,last)) != string::npos) {
+		text->string.set1Value(idx++,(s->substr(last,next-last)).c_str());
+		last = next + 1;
+	}
+
+	textSeparator->addChild(rot0);
+	textSeparator->addChild(tra0);
+	textSeparator->addChild(text);
+
+	root->addChild(textSeparator);
+
+	return root;
+}
+
+void VizHTM::addAnnotation(SpatialVector *a, const char *annotation, float size, float r, float g, float b){
+//	cout << " vhtm::addA::nA: " << nAnnotations << flush;
+	annotations[nAnnotations].r = r;
+	annotations[nAnnotations].g = g;
+	annotations[nAnnotations].b = b;
+	annotations[nAnnotations].size = size;
+	annotations[nAnnotations].text = annotation;
+	annotations[nAnnotations].v = a;
+	nAnnotations++;
+}
+
+SpatialVector unitVector(SpatialVector x) {
+	SpatialVector n = x; n.normalize();
+	return n;
 }
