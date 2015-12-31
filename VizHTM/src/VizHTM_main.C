@@ -177,9 +177,12 @@ void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdD
 		} while (range->getNext(lo,hi) && k < kMax && triangles < tMax);
 	}
 //	cout << "overlap done " << endl << flush;
+
+
+
 }
 
-void testTwoConstraints(VizHTM * viz, int htmIdDepth) {
+void testTwoConstraints(VizHTM *viz, int htmIdDepth) {
 	SpatialVector o = SpatialVector(0.0,0.0,0.0);
 
 	//	SpatialVector a = SpatialVector(1.0,0.0,0.0);
@@ -208,6 +211,47 @@ void testTwoConstraints(VizHTM * viz, int htmIdDepth) {
 	convex.add(sc1);
 
 	testConvexHtmRangeIntersection(viz,convex,htmIdDepth);
+}
+
+void testAddRectangle(VizHTM *viz, int htmIdDepth) {
+	int saveDepth = 5;
+
+	SpatialIndex *index = new SpatialIndex(htmIdDepth,saveDepth);
+	SpatialDomain domain = SpatialDomain(index);
+
+	SpatialVector *v0 = VectorFromLatLonDegrees(10.0,0.0);
+	SpatialVector *v1 = VectorFromLatLonDegrees(70.0,0.0);
+	SpatialVector *v2 = VectorFromLatLonDegrees(70.0,80.0);
+	SpatialVector *v3 = VectorFromLatLonDegrees(10.0,80.0);
+	float r = 0.1;
+	float g = 0.1;
+	float b = 0.9;
+
+	viz->addRectangle(*v0,*v1,*v2,*v3,r,g,b);
+
+	viz->addArcAtLatitudeDegrees(10.0,0.,80.0,1.0,0.,0.);
+	viz->addArcAtLatitudeDegrees(70.0,0.,80.0,1.0,0.,0.);
+
+}
+
+void testTenDegreeGrid(VizHTM *viz, int htmIdDepth) {
+	int saveDepth = 5;
+	float64 PI = atan2(0,-1);
+	float64 k  = 2*PI/360.;
+
+	float dLat = 10;
+	float dLon = 10;
+	for(float lat=-90; lat<=90; lat+= dLat) {
+		for(float lon=0; lon<=360; lon+= dLon) {
+			float r = 0.5*(1+cos(k*lon)); // r=0;
+			float g = 0.5*(1+sin(k*lon)); // g=0;
+			float b = 0.5*(1+sin(k*lat)); // b=0;
+			viz->addLatLonBoxEdgesDegrees(
+					lat + 0.25, lon + 0.25,
+					lat + dLat - 0.25, lon + dLon - 0.25,
+					r,g,b);
+		}
+	}
 }
 
 void testText1(VizHTM* viz, SpatialVector a) {
@@ -255,31 +299,63 @@ void testShowEdgeProjections(VizHTM *viz, SpatialVector a, float64 d) {
 	}
 }
 
+float lat_(int i, int nPoints) { return -90.0 + (i*180.)/(nPoints-1); }
+float lon_(int i, int nPoints) { return -(i*16*4*90.)/(nPoints-1); }
+float r_  (int i, int nPoints) { return (i/(1.0*nPoints)); }
+
 void testLatLonSpiral(VizHTM* viz) { // Try to draw latlon lines.
 	int indexBase = viz->nCoordinates;
 	int edgeColorBase = viz->nEdgeColors;
 	int nPoints = 1001;
-//		nPoints = 3;
-	for(int i = 0;i < nPoints; i++) {
-		float lat = -90.0 + (i*180.)/(nPoints-1);	float lon = -(i*16*4*90.)/(nPoints-1);
-		float* xyz = xyzFromLatLonDegrees(lat,lon);
-		//		cout << "1000: " << i << " ( " << xyz[0] << " " << xyz[1] << " " << xyz[2] << " ) " << endl;
-		viz->addCoordinate(xyz[0],xyz[1],xyz[2]);
-	}
-	for(int i=0;i<nPoints;i++) {
-		edgeColorBase = viz->nEdgeColors;
-		float r = (i/(1.0*nPoints));
-		float g = 1.0;
-		float b = 1.0;
-		viz->addEdgeColor(r,g,b);
-		viz->addEdgeVertexColorIndices(edgeColorBase,edgeColorBase);
-	}
 	int nEdges = nPoints-1;
-	for(int iPoint = 0; iPoint < nEdges; iPoint++) {
-		viz->edgeIndices[viz->nEdgeIndices] = indexBase + iPoint; viz->nEdgeIndices++;
-		viz->edgeIndices[viz->nEdgeIndices] = indexBase + iPoint + 1; viz->nEdgeIndices++;
-		viz->edgeIndices[viz->nEdgeIndices] = SO_END_LINE_INDEX; viz->nEdgeIndices++;
+	float last_lat = lat_(0,nPoints);
+	float last_lon = lon_(0,nPoints);
+//	float last_r   = r_  (0,nPoints);
+	float *last_xyz= xyzFromLatLonDegrees(last_lat,last_lon);
+
+	for(int i=1; i <= nEdges; i++) {
+		float lat = lat_(i,nPoints);
+		float lon = lon_(i,nPoints);
+		float r   = r_  (i,nPoints);
+		float g   = 1.0;
+		float b   = 1.0;
+		float *xyz= xyzFromLatLonDegrees(lat,lon);
+
+		viz->addEdge(
+				SpatialVector(last_xyz[0],last_xyz[1],last_xyz[2]),
+				SpatialVector(xyz[0],xyz[1],xyz[2]),
+				r, g, b);
+
+		last_xyz = xyz;
+		last_lat = lat;
+		last_lon = lon;
+//		last_r   = r;
+
 	}
+
+	viz->addEdge(SpatialVector(0.0,0.0,1.0),SpatialVector(0.0,0.0,-1.0),0.9,0.9,1.0);
+
+//	for(int i = 0;i < nPoints; i++) {
+//		float lat = -90.0 + (i*180.)/(nPoints-1);	float lon = -(i*16*4*90.)/(nPoints-1);
+//		float* xyz = xyzFromLatLonDegrees(lat,lon);
+//		//		cout << "1000: " << i << " ( " << xyz[0] << " " << xyz[1] << " " << xyz[2] << " ) " << endl;
+//		viz->addCoordinate(xyz[0],xyz[1],xyz[2]);
+//	}
+//	for(int i=0;i<nPoints;i++) {
+//		edgeColorBase = viz->nEdgeColors;
+//		float r = (i/(1.0*nPoints));
+//		float g = 1.0;
+//		float b = 1.0;
+//		viz->addEdgeColor(r,g,b);
+//		viz->addEdgeVertexColorIndices(edgeColorBase,edgeColorBase);
+//	}
+//	int nEdges = nPoints-1;
+//	for(int iPoint = 0; iPoint < nEdges; iPoint++) {
+//		viz->edgeIndices[viz->nEdgeIndices] = indexBase + iPoint; viz->nEdgeIndices++;
+//		viz->edgeIndices[viz->nEdgeIndices] = indexBase + iPoint + 1; viz->nEdgeIndices++;
+//		viz->edgeIndices[viz->nEdgeIndices] = SO_END_LINE_INDEX; viz->nEdgeIndices++;
+//	}
+
 //		cout << "1000: " << nCoordinates << " " << nEdgeColors << " " << nFaceColors << " " << nEdgeIndices << " " << nFaceIndices << endl << endl;
 }
 
@@ -317,6 +393,10 @@ int main(int argc, char *argv[]) {
 	VizHTM *viz = new VizHTM(NARRAY_);
 	cout << "allocated." << endl << flush;
 
+	if(false) testLatLonSpiral(viz);
+	if(false) testAddRectangle(viz,5);
+	if(true) testTenDegreeGrid(viz,5);
+
 	if(false) testTriaxis(viz);
 	if(false) testIJKRGBFace(viz);
 	if(false) testAnEdge(viz);
@@ -327,9 +407,11 @@ int main(int argc, char *argv[]) {
 			viz,
 			unitVector(xHat+yHat+zHat),
 			0.99);
-	if(true) testTwoConstraints(viz,5);
-	if(false) testLatLonSpiral(viz);
+	if(false) testTwoConstraints(viz,5);
+
 	if(false) viz->debug_dump();
+
+
 
 	/**************** Start Graphics ****************/
 	QWidget *window = SoQt::init(argv[0]);

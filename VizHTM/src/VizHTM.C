@@ -463,6 +463,18 @@ lg2(unsigned int v) {  // 32-bit value to find the log2 of
 	}
 	return r;
 }
+
+SpatialVector* VectorFromLatLonRadians(float lat, float lon) {
+	float *x = xyzFromLatLonRadians(lat,lon);
+	SpatialVector *ret = new SpatialVector(x[0],x[1],x[2]); ret->normalize();
+	return ret;
+}
+
+SpatialVector* VectorFromLatLonDegrees(float lat, float lon) {
+	float piDiv180 = 4*atan(1.0f)/180.;
+	return VectorFromLatLonRadians(lat*piDiv180,lon*piDiv180);
+}
+
 float* xyzFromLatLonRadians(float lat,float lon) {
 	float *ret = new float[3];
 	ret[0] = cos(lat)*cos(lon);
@@ -475,7 +487,6 @@ float* xyzFromLatLonDegrees(float lat,float lon) {
 	float piDiv180 = 4*atan(1.0f)/180.;
 	return xyzFromLatLonRadians(lat*piDiv180,lon*piDiv180);
 }
-
 
 int rollDieWithFourSides() {
 	static std::default_random_engine e{};
@@ -608,3 +619,59 @@ SpatialVector unitVector(SpatialVector x) {
 	SpatialVector n = x; n.normalize();
 	return n;
 }
+
+void VizHTM::addRectangle(SpatialVector x0, SpatialVector x1, SpatialVector x2, SpatialVector x3, float r, float g, float b) {
+	addArc(x0,x1,r,g,b);
+	addArc(x1,x2,r,g,b);
+	addArc(x2,x3,r,g,b);
+	addArc(x3,x0,r,g,b);
+}
+
+void VizHTM::addLatLonBoxEdgesDegrees(
+		float64 lat0, float64 lon0,
+		float64 lat1, float64 lon1,
+		float r, float g, float b
+		) {
+	addArcAtLatitudeDegrees(lat0,lon0,lon1,r,g,b);
+	addArcAtLatitudeDegrees(lat1,lon0,lon1,r,g,b);
+	addArc( *VectorFromLatLonDegrees(lat0,lon0),
+			*VectorFromLatLonDegrees(lat1,lon0),
+			r,g,b
+			);
+	addArc( *VectorFromLatLonDegrees(lat0,lon1),
+			*VectorFromLatLonDegrees(lat1,lon1),
+			r,g,b
+			);
+}
+
+void VizHTM::addArc(SpatialVector x0, SpatialVector x1,float r, float g, float b) {
+	const int steps = 20;
+	SpatialVector dx = x1-x0;
+	SpatialVector *last = new SpatialVector(x0);
+	for(double i=1; i<steps-1; i++) {
+		double a = i / (steps - 1);
+		SpatialVector *next = new SpatialVector(x0 + a * dx); next->normalize();
+		addEdge(*last,*next, r, g, b);
+		last = next;
+	}
+	addEdge(*last,x1,r,g,b);
+}
+
+void VizHTM::addArcAtLatitudeDegrees(float64 lat, float64 lon0, float64 lon1, float r, float g, float b) {
+	SpatialVector *x0 = VectorFromLatLonDegrees(lat,lon0);
+	SpatialVector *x1 = VectorFromLatLonDegrees(lat,lon1);
+
+	const int steps = 20;
+	double dlon = lon1 - lon0;
+
+	SpatialVector *last = VectorFromLatLonDegrees(lat,lon0);
+	for(double i = 0; i<steps-1; i++) {
+		double a = i / (steps - 1);
+		SpatialVector *next = VectorFromLatLonDegrees(lat,lon0+a*dlon); next->normalize();
+		addEdge(*last,*next, r, g, b);
+		last = next;
+	}
+	addEdge(*last,*x1,r,g,b);
+
+}
+

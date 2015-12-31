@@ -55,12 +55,27 @@ public:
 			float r1, float g1, float b1,
 			float r2, float g2, float b2);
 
+	void addRectangle(
+			SpatialVector x0,
+			SpatialVector x1,
+			SpatialVector x2,
+			SpatialVector x3,
+			float r, float g, float b);
+
+	void addLatLonBoxEdgesDegrees(
+			float64 lat0, float64 lon0,
+			float64 lat1, float64 lon1,
+			float r, float g, float b
+			);
+
+	void addArc(SpatialVector x0, SpatialVector x1, float r, float g, float b);
+	void addArcAtLatitudeDegrees(float64 lat, float64 lon0, float64 lon1, float r, float g, float b);
+
 	void addConstraint(SpatialVector a, float64 d, float r, float g, float b);
 	void addConstraint(SpatialConstraint c, float r, float g, float b);
 
 	SoSeparator* makeText(SpatialVector *a, const char *text, float size, float r, float g, float b);
 	void addAnnotation(SpatialVector *a, const char *annotation, float size, float r, float g, float b);
-
 
 	void debug_dump();
 
@@ -112,6 +127,8 @@ public:
 unsigned int lg2(unsigned int v);
 float* xyzFromLatLonRadians(float lat,float lon);
 float* xyzFromLatLonDegrees(float lat,float lon);
+SpatialVector* VectorFromLatLonDegrees(float lat, float lon);
+SpatialVector* VectorFromLatLonRadians(float lat, float lon);
 
 int rollDieWithFourSides();
 double uniformDouble();

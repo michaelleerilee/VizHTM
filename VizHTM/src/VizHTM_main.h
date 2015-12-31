@@ -18,4 +18,6 @@ void testShowEdgeProjections(VizHTM *viz, SpatialVector a, float64 d);
 void testLatLonSpiral(VizHTM *viz);
 void testIJKRGBFace(VizHTM *viz);
 
+void testAddRectangle(VizHTM *viz, int htmIdDepth);
+
 #endif /* VIZHTM_MAIN_H_ */
