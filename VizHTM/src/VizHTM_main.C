@@ -236,6 +236,12 @@ void testAddRectangle(VizHTM *viz, int htmIdDepth) {
 	rc->setOlevel(htmIdDepth); // Note this is supposed to be done when added to the domain.
 	domain.add(*rc);
 
+	viz->addRectangle(*v0,*v1,*v2,*v3,r,g,b);
+	viz->addArcAtLatitudeDegrees(10.0,0.,80.0,1.0,0.,0.);
+	viz->addArcAtLatitudeDegrees(70.0,0.,80.0,1.0,0.,0.);
+
+//	return;
+
 	HtmRange *range = new HtmRange();
 	range->purge();
 	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
@@ -326,11 +332,6 @@ void testAddRectangle(VizHTM *viz, int htmIdDepth) {
 			}
 		}
 	} while (range->getNext(lo,hi));
-
-	viz->addRectangle(*v0,*v1,*v2,*v3,r,g,b);
-	viz->addArcAtLatitudeDegrees(10.0,0.,80.0,1.0,0.,0.);
-	viz->addArcAtLatitudeDegrees(70.0,0.,80.0,1.0,0.,0.);
-
 }
 
 void testTenDegreeGrid(VizHTM *viz, int htmIdDepth) {
@@ -494,7 +495,7 @@ int main(int argc, char *argv[]) {
 
 	if(false) testLatLonSpiral(viz);
 	if(true) testAddRectangle(viz,4);
-	if(false) testTenDegreeGrid(viz,5);
+	if(true) testTenDegreeGrid(viz,5);
 
 	if(false) testTriaxis(viz);
 	if(false) testIJKRGBFace(viz);
@@ -537,7 +538,7 @@ int main(int argc, char *argv[]) {
 	delete viewer;
 	//	root->unref();
 
-	cout << mainName << " starting." << endl;
+	cout << mainName << " done." << endl;
 
 	return 0;
 }
