@@ -89,7 +89,7 @@ void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdD
 		<< " nConvexes: " << domain.numConvexes()
 		<< endl << flush;
 
-//		overlap = false;
+	//		overlap = false;
 
 	if(overlap) {
 		range->reset();
@@ -176,7 +176,7 @@ void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdD
 			}
 		} while (range->getNext(lo,hi) && k < kMax && triangles < tMax);
 	}
-//	cout << "overlap done " << endl << flush;
+	//	cout << "overlap done " << endl << flush;
 
 
 
@@ -218,6 +218,7 @@ void testAddRectangle(VizHTM *viz, int htmIdDepth) {
 
 	SpatialIndex *index = new SpatialIndex(htmIdDepth,saveDepth);
 	SpatialDomain domain = SpatialDomain(index);
+	domain.setOlevel(htmIdDepth); // Note this sets the olevel on the convexes.
 
 	SpatialVector *v0 = VectorFromLatLonDegrees(10.0,0.0);
 	SpatialVector *v1 = VectorFromLatLonDegrees(70.0,0.0);
@@ -227,8 +228,106 @@ void testAddRectangle(VizHTM *viz, int htmIdDepth) {
 	float g = 0.1;
 	float b = 0.9;
 
-	viz->addRectangle(*v0,*v1,*v2,*v3,r,g,b);
+	RangeConvex *rc = new RangeConvex(v0,v1,v2,v3);
+//	cout << "nConstraints: " << rc->numConstraints() << endl << flush;
+	//	SpatialConstraint *sc = new SpatialConstraint(SpatialVector(0.,0.,1.),0.5);
+	//	viz->addConstraint(*sc,1.0,1.0,1.0);
+	//	rc->add(*sc);
+	rc->setOlevel(htmIdDepth); // Note this is supposed to be done when added to the domain.
+	domain.add(*rc);
 
+	HtmRange *range = new HtmRange();
+	range->purge();
+	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
+	bool overlap = domain.intersect(index,range,varlen_individualHTMIds);
+	range->defrag();
+	range->reset();
+	Key lo = 0, hi = 0;
+	uint64 indexp = range->getNext(lo,hi);
+	// The indexes lo and hi are not restricted to being at one depth.
+	//	cout << "indexp: " << indexp << endl << flush;
+	SpatialVector x1,x2,x3;
+	do {
+//		cout << "original lo,hi= " << lo << " " << hi << " " << flush;
+
+		// Leaves are at a depth of maxlevel+1
+
+		int level = htmIdDepth + 1; // htmIdDepth is used to set maxlevel in the index. aka olevel.
+
+		int depthLo = depthOfId(lo);
+		if(depthLo<level) {
+			lo = lo << (2*(level-depthLo));
+		}
+		int depthHi = depthOfId(hi);
+		if(depthHi<level) {
+			for(int shift=0; shift < (level-depthHi); shift++) {
+				hi = hi << 2;
+				hi += 3; // TODO Determine if I am overthinking it?
+			}
+		}
+//		cout << "   fixed lo,hi= " << lo << " " << hi << " "
+//				<< "depth lo,hi,level= "
+//				<< depthLo << " "
+//				<< depthHi << " "
+//				<< level << " "
+//				<< endl << flush;
+		for(uint64 numericId=lo; numericId<=hi;numericId++) {
+			uint64 nodeIndex = index->nodeIndexFromId(numericId);
+			if(nodeIndex!=0){
+				index->nodeVertex(nodeIndex,x1,x2,x3);
+				if(true) {
+					float r=0.; float g=0.; float b=0.;
+					switch(numericId % 4) {
+					case 0:
+						r=1.;
+						break;
+					case 1:
+						g=1.;
+						break;
+					case 2:
+						b=1.;
+						break;
+					default:
+						r=1.; g=1.; b=1.;
+						break;
+					}
+					//	for(int i=0; i<3; i++) addEdgeColor(r,g,b);
+					int colorBase = viz->nFaceColors;
+					for(int i=0; i<3; i++) {
+						viz->addFaceColor(r,g,b);
+					}
+					viz->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
+
+					int indexBase = viz->nCoordinates;
+					viz->addCoordinate64(x1.x(),x1.y(),x1.z());
+					viz->addCoordinate64(x2.x(),x2.y(),x2.z());
+					viz->addCoordinate64(x3.x(),x3.y(),x3.z());
+					viz->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+
+//					printf("id: %llx ix: %llu",numericId,nodeIndex);
+//					cout << endl << flush;
+
+					if(true){
+						float size = pow(0.5,htmIdDepth+3);
+						float r = 0.4, g = 0.4, b = 0.6;
+						SpatialVector x = 3.*x1+x2+x3; x.normalize(); x *= 1.0+1.0e-6;
+						SpatialVector x_ = x1+x2+x3; x_.normalize();
+						if(false){
+							cout
+							<< " nI: " << nodeIndex
+							<< " x: " << x.x() << " " << x.y() << " " << x.z();
+						}
+						char *str = new char[256];
+						sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
+						viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
+						viz->addEdge(x,x_,0.5,0.5,0.9);
+					}
+				}
+			}
+		}
+	} while (range->getNext(lo,hi));
+
+	viz->addRectangle(*v0,*v1,*v2,*v3,r,g,b);
 	viz->addArcAtLatitudeDegrees(10.0,0.,80.0,1.0,0.,0.);
 	viz->addArcAtLatitudeDegrees(70.0,0.,80.0,1.0,0.,0.);
 
@@ -243,9 +342,9 @@ void testTenDegreeGrid(VizHTM *viz, int htmIdDepth) {
 	float dLon = 10;
 	for(float lat=-90; lat<=90; lat+= dLat) {
 		for(float lon=0; lon<=360; lon+= dLon) {
-			float r = 0.5*(1+cos(k*lon)); // r=0;
-			float g = 0.5*(1+sin(k*lon)); // g=0;
-			float b = 0.5*(1+sin(k*lat)); // b=0;
+			float r = 0.125+0.125*(1+cos(k*lon)); // r=0;
+			float g = 0.125+0.125*(1+sin(k*lon)); // g=0;
+			float b = 0.125+0.125*(1+sin(k*lat)); // b=0;
 			viz->addLatLonBoxEdgesDegrees(
 					lat + 0.25, lon + 0.25,
 					lat + dLat - 0.25, lon + dLon - 0.25,
@@ -310,7 +409,7 @@ void testLatLonSpiral(VizHTM* viz) { // Try to draw latlon lines.
 	int nEdges = nPoints-1;
 	float last_lat = lat_(0,nPoints);
 	float last_lon = lon_(0,nPoints);
-//	float last_r   = r_  (0,nPoints);
+	//	float last_r   = r_  (0,nPoints);
 	float *last_xyz= xyzFromLatLonDegrees(last_lat,last_lon);
 
 	for(int i=1; i <= nEdges; i++) {
@@ -329,34 +428,34 @@ void testLatLonSpiral(VizHTM* viz) { // Try to draw latlon lines.
 		last_xyz = xyz;
 		last_lat = lat;
 		last_lon = lon;
-//		last_r   = r;
+		//		last_r   = r;
 
 	}
 
 	viz->addEdge(SpatialVector(0.0,0.0,1.0),SpatialVector(0.0,0.0,-1.0),0.9,0.9,1.0);
 
-//	for(int i = 0;i < nPoints; i++) {
-//		float lat = -90.0 + (i*180.)/(nPoints-1);	float lon = -(i*16*4*90.)/(nPoints-1);
-//		float* xyz = xyzFromLatLonDegrees(lat,lon);
-//		//		cout << "1000: " << i << " ( " << xyz[0] << " " << xyz[1] << " " << xyz[2] << " ) " << endl;
-//		viz->addCoordinate(xyz[0],xyz[1],xyz[2]);
-//	}
-//	for(int i=0;i<nPoints;i++) {
-//		edgeColorBase = viz->nEdgeColors;
-//		float r = (i/(1.0*nPoints));
-//		float g = 1.0;
-//		float b = 1.0;
-//		viz->addEdgeColor(r,g,b);
-//		viz->addEdgeVertexColorIndices(edgeColorBase,edgeColorBase);
-//	}
-//	int nEdges = nPoints-1;
-//	for(int iPoint = 0; iPoint < nEdges; iPoint++) {
-//		viz->edgeIndices[viz->nEdgeIndices] = indexBase + iPoint; viz->nEdgeIndices++;
-//		viz->edgeIndices[viz->nEdgeIndices] = indexBase + iPoint + 1; viz->nEdgeIndices++;
-//		viz->edgeIndices[viz->nEdgeIndices] = SO_END_LINE_INDEX; viz->nEdgeIndices++;
-//	}
+	//	for(int i = 0;i < nPoints; i++) {
+	//		float lat = -90.0 + (i*180.)/(nPoints-1);	float lon = -(i*16*4*90.)/(nPoints-1);
+	//		float* xyz = xyzFromLatLonDegrees(lat,lon);
+	//		//		cout << "1000: " << i << " ( " << xyz[0] << " " << xyz[1] << " " << xyz[2] << " ) " << endl;
+	//		viz->addCoordinate(xyz[0],xyz[1],xyz[2]);
+	//	}
+	//	for(int i=0;i<nPoints;i++) {
+	//		edgeColorBase = viz->nEdgeColors;
+	//		float r = (i/(1.0*nPoints));
+	//		float g = 1.0;
+	//		float b = 1.0;
+	//		viz->addEdgeColor(r,g,b);
+	//		viz->addEdgeVertexColorIndices(edgeColorBase,edgeColorBase);
+	//	}
+	//	int nEdges = nPoints-1;
+	//	for(int iPoint = 0; iPoint < nEdges; iPoint++) {
+	//		viz->edgeIndices[viz->nEdgeIndices] = indexBase + iPoint; viz->nEdgeIndices++;
+	//		viz->edgeIndices[viz->nEdgeIndices] = indexBase + iPoint + 1; viz->nEdgeIndices++;
+	//		viz->edgeIndices[viz->nEdgeIndices] = SO_END_LINE_INDEX; viz->nEdgeIndices++;
+	//	}
 
-//		cout << "1000: " << nCoordinates << " " << nEdgeColors << " " << nFaceColors << " " << nEdgeIndices << " " << nFaceIndices << endl << endl;
+	//		cout << "1000: " << nCoordinates << " " << nEdgeColors << " " << nFaceColors << " " << nEdgeIndices << " " << nFaceIndices << endl << endl;
 }
 
 void testTriaxis(VizHTM* viz) {
@@ -382,7 +481,7 @@ void testIJKRGBFace(VizHTM* viz) {
 
 int main(int argc, char *argv[]) {
 	const char* mainName = "VizHTM-main";
-	cout << mainName << endl;
+	cout << mainName << " starting." << endl;
 
 	float64 PI = atan2(0,-1); // cout << "PI=" << PI << endl << flush;
 	SpatialVector xHat = SpatialVector(1.,0.,0.);
@@ -394,8 +493,8 @@ int main(int argc, char *argv[]) {
 	cout << "allocated." << endl << flush;
 
 	if(false) testLatLonSpiral(viz);
-	if(false) testAddRectangle(viz,5);
-	if(true) testTenDegreeGrid(viz,5);
+	if(true) testAddRectangle(viz,4);
+	if(false) testTenDegreeGrid(viz,5);
 
 	if(false) testTriaxis(viz);
 	if(false) testIJKRGBFace(viz);
@@ -421,7 +520,7 @@ int main(int argc, char *argv[]) {
 	selectionRoot->policy = SoSelection::SINGLE;
 
 	SoSeparator *root = new SoSeparator;
-//	root->ref(); // TODO Figure out ->ref();
+	//	root->ref(); // TODO Figure out ->ref();
 
 	root->addChild(viz->makeRoot());
 
@@ -436,7 +535,9 @@ int main(int argc, char *argv[]) {
 	SoQt::mainLoop();
 
 	delete viewer;
-//	root->unref();
+	//	root->unref();
+
+	cout << mainName << " starting." << endl;
 
 	return 0;
 }
