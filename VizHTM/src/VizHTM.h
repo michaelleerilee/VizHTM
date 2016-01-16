@@ -21,6 +21,10 @@
 
 class VizHTM {
 
+	/**
+	 * Provide visualization support for HTM or other related geometries.
+	 */
+
 public:
 	VizHTM(int nArray);
 

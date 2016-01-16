@@ -334,6 +334,220 @@ void testAddRectangle(VizHTM *viz, int htmIdDepth) {
 	} while (range->getNext(lo,hi));
 }
 
+struct KeyPair {
+	Key lo; Key hi;
+};
+KeyPair HTMRangeAtDepthFromHTMRange(int htmIdDepth, Key lo, Key hi) {
+	int level = htmIdDepth + 1; // htmIdDepth is used to set maxlevel in the index. aka olevel.
+	int depthLo = depthOfId(lo);
+	if(depthLo<level) {
+		lo = lo << (2*(level-depthLo));
+	}
+	int depthHi = depthOfId(hi);
+	if(depthHi<level) {
+		for(int shift=0; shift < (level-depthHi); shift++) {
+			hi = hi << 2;
+			hi += 3; // TODO Determine if I am overthinking it?
+		}
+	}
+	KeyPair depthAdaptedRange;
+	depthAdaptedRange.lo = lo;
+	depthAdaptedRange.hi = hi;
+	return depthAdaptedRange;
+}
+HtmRange *HTMRangeAtDepthFromIntersection(int htmIdDepth,HtmRange *range1, HtmRange *range2){
+//	cout << "Comparing..." << endl << flush;
+	HtmRange *resultRange = new HtmRange();
+	resultRange->purge();
+	Key lo1,hi1,lo2,hi2;
+	range1->reset();
+	uint64 indexp1 = range1->getNext(lo1,hi1);
+	do {
+		KeyPair testRange1 = HTMRangeAtDepthFromHTMRange(htmIdDepth,lo1,hi1);
+		range2->reset();
+		uint64 indexp2 = range2->getNext(lo2,hi2);
+		bool intersects = false;
+		do {
+			KeyPair testRange2 = HTMRangeAtDepthFromHTMRange(htmIdDepth,lo2,hi2);
+			intersects = testRange2.lo <= testRange1.hi
+					&& testRange2.hi >= testRange1.lo;
+//			cout << "lh1,lh2: "
+//					<< lo1 << " " << hi1 << ", "
+//					<< lo2 << " " << hi2 << ", "
+//					<< intersects << flush;
+			if(intersects){
+				Key lo_ = max(testRange1.lo,testRange2.lo);
+				Key hi_ = min(testRange1.hi,testRange2.hi);
+				resultRange->addRange(lo_,hi_);
+//				cout << ", added "
+//						<< lo_ << " "
+//						<< hi_ << flush;
+			}
+//			cout << "." << endl << flush;
+		} while (range2->getNext(lo2,hi2));
+	} while (range1->getNext(lo1,hi1));
+	resultRange->defrag();
+	return resultRange;
+}
+
+void testTwoRectangle(VizHTM *viz, int htmIdDepth) {
+	int saveDepth = 5;
+
+	SpatialIndex *index = new SpatialIndex(htmIdDepth,saveDepth);
+
+	SpatialDomain domain1 = SpatialDomain(index);
+	domain1.setOlevel(htmIdDepth); // Note this sets the olevel on the convexes.
+
+	SpatialDomain domain2 = SpatialDomain(index);
+	domain2.setOlevel(htmIdDepth); // Note this sets the olevel on the convexes.
+
+	if(true){
+	SpatialVector *v0 = VectorFromLatLonDegrees(10.0,0.0);
+	SpatialVector *v1 = VectorFromLatLonDegrees(30.0,-10.0);
+	SpatialVector *v2 = VectorFromLatLonDegrees(60.0,10.0);
+	SpatialVector *v3 = VectorFromLatLonDegrees(40.0,20.0);
+	float r = 1.0;
+	float g = 0.0;
+	float b = 1.0;
+
+	RangeConvex *rc = new RangeConvex(v0,v1,v2,v3);
+//	cout << "nConstraints: " << rc->numConstraints() << endl << flush;
+	//	SpatialConstraint *sc = new SpatialConstraint(SpatialVector(0.,0.,1.),0.5);
+	//	viz->addConstraint(*sc,1.0,1.0,1.0);
+	//	rc->add(*sc);
+	rc->setOlevel(htmIdDepth); // Note this is supposed to be done when added to the domain.
+	domain1.add(*rc);
+
+	viz->addRectangle(*v0,*v1,*v2,*v3,r,g,b);
+	}
+
+	if(true){
+	SpatialVector *v0 = VectorFromLatLonDegrees(30.0,20.0);
+	SpatialVector *v1 = VectorFromLatLonDegrees(30.0,-10.0);
+	SpatialVector *v2 = VectorFromLatLonDegrees(20.0,0.0);
+	SpatialVector *v3 = VectorFromLatLonDegrees(20.0,30.0);
+	float r = 1.0;
+	float g = 1.0;
+	float b = 0.0;
+
+	RangeConvex *rc = new RangeConvex(v0,v1,v2,v3);
+//	cout << "nConstraints: " << rc->numConstraints() << endl << flush;
+	//	SpatialConstraint *sc = new SpatialConstraint(SpatialVector(0.,0.,1.),0.5);
+	//	viz->addConstraint(*sc,1.0,1.0,1.0);
+	//	rc->add(*sc);
+	rc->setOlevel(htmIdDepth); // Note this is supposed to be done when added to the domain.
+	domain2.add(*rc);
+	viz->addRectangle(*v0,*v1,*v2,*v3,r,g,b);
+	}
+
+//	return;
+
+	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
+
+	HtmRange *range1 = new HtmRange();
+	range1->purge();
+	bool overlap1 = domain1.intersect(index,range1,varlen_individualHTMIds);
+	range1->defrag();
+	range1->reset();
+
+	HtmRange *range2 = new HtmRange();
+	range2->purge();
+	bool overlap2 = domain2.intersect(index,range2,varlen_individualHTMIds);
+	range2->defrag();
+	range2->reset();
+
+	Key lo = 0, hi = 0;
+	uint64 indexp = 0;
+
+	HtmRange *resultRange = HTMRangeAtDepthFromIntersection(htmIdDepth,range1,range2);
+
+	HtmRange *range = resultRange;
+	range->reset();
+	indexp = range->getNext(lo,hi);
+	SpatialVector x1,x2,x3;
+//	if(indexp)
+	do {
+//		cout << "original lo,hi= " << lo << " " << hi << " " << flush;
+
+		// Leaves are at a depth of maxlevel+1
+
+		int level = htmIdDepth + 1; // htmIdDepth is used to set maxlevel in the index. aka olevel.
+
+		int depthLo = depthOfId(lo);
+		if(depthLo<level) {
+			lo = lo << (2*(level-depthLo));
+		}
+		int depthHi = depthOfId(hi);
+		if(depthHi<level) {
+			for(int shift=0; shift < (level-depthHi); shift++) {
+				hi = hi << 2;
+				hi += 3; // TODO Determine if I am overthinking it?
+			}
+		}
+//		cout << "   fixed lo,hi= " << lo << " " << hi << " "
+//				<< "depth lo,hi,level= "
+//				<< depthLo << " "
+//				<< depthHi << " "
+//				<< level << " "
+//				<< endl << flush;
+		for(uint64 numericId=lo; numericId<=hi;numericId++) {
+			uint64 nodeIndex = index->nodeIndexFromId(numericId);
+			if(nodeIndex!=0){
+				index->nodeVertex(nodeIndex,x1,x2,x3);
+				if(true) {
+					float r=0.; float g=0.; float b=0.;
+					switch(numericId % 4) {
+					case 0:
+						r=1.;
+						break;
+					case 1:
+						g=1.;
+						break;
+					case 2:
+						b=1.;
+						break;
+					default:
+						r=1.; g=1.; b=1.;
+						break;
+					}
+					//	for(int i=0; i<3; i++) addEdgeColor(r,g,b);
+					int colorBase = viz->nFaceColors;
+					for(int i=0; i<3; i++) {
+						viz->addFaceColor(r,g,b);
+					}
+					viz->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
+
+					int indexBase = viz->nCoordinates;
+					viz->addCoordinate64(x1.x(),x1.y(),x1.z());
+					viz->addCoordinate64(x2.x(),x2.y(),x2.z());
+					viz->addCoordinate64(x3.x(),x3.y(),x3.z());
+					viz->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+
+//					printf("id: %llx ix: %llu",numericId,nodeIndex);
+//					cout << endl << flush;
+
+					if(true){
+						float size = pow(0.5,htmIdDepth+3);
+						float r = 0.4, g = 0.4, b = 0.6;
+						SpatialVector x = 3.*x1+x2+x3; x.normalize(); x *= 1.0+1.0e-6;
+						SpatialVector x_ = x1+x2+x3; x_.normalize();
+						if(false){
+							cout
+							<< " nI: " << nodeIndex
+							<< " x: " << x.x() << " " << x.y() << " " << x.z();
+						}
+						char *str = new char[256];
+						sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
+						viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
+						viz->addEdge(x,x_,0.5,0.5,0.9);
+					}
+				}
+			}
+		}
+	} while (range->getNext(lo,hi));
+}
+
+
 void testTenDegreeGrid(VizHTM *viz, int htmIdDepth) {
 	int saveDepth = 5;
 	float64 PI = atan2(0,-1);
@@ -494,7 +708,8 @@ int main(int argc, char *argv[]) {
 	cout << "allocated." << endl << flush;
 
 	if(false) testLatLonSpiral(viz);
-	if(true) testAddRectangle(viz,4);
+	if(false) testAddRectangle(viz,4);
+	if(true) testTwoRectangle(viz,6);
 	if(true) testTenDegreeGrid(viz,5);
 
 	if(false) testTriaxis(viz);
