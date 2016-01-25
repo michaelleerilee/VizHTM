@@ -334,9 +334,22 @@ void testAddRectangle(VizHTM *viz, int htmIdDepth) {
 	} while (range->getNext(lo,hi));
 }
 
+/**
+ * struct KeyPair is a lightweight aggregate a single interval [lo,hi] for HtmRange
+ */
 struct KeyPair {
 	Key lo; Key hi;
 };
+
+/**
+ * Translate an HtmRange to one at a greater depth.  If the desired depth is
+ * less that the depth implicit in the input range (lo & hi), then just return
+ * an HtmRange constructed from the input range without modification.
+ * @param htmIdDepth
+ * @param lo the low end of the range
+ * @param hi the high end of the range
+ * @return depthAdaptedRange an HtmRange
+ */
 KeyPair HTMRangeAtDepthFromHTMRange(int htmIdDepth, Key lo, Key hi) {
 	int level = htmIdDepth + 1; // htmIdDepth is used to set maxlevel in the index. aka olevel.
 	int depthLo = depthOfId(lo);
@@ -347,7 +360,7 @@ KeyPair HTMRangeAtDepthFromHTMRange(int htmIdDepth, Key lo, Key hi) {
 	if(depthHi<level) {
 		for(int shift=0; shift < (level-depthHi); shift++) {
 			hi = hi << 2;
-			hi += 3; // TODO Determine if I am overthinking it?
+			hi += 3; /// Increment hi by 3 to catch all of the faces at that level.
 		}
 	}
 	KeyPair depthAdaptedRange;
@@ -355,6 +368,14 @@ KeyPair HTMRangeAtDepthFromHTMRange(int htmIdDepth, Key lo, Key hi) {
 	depthAdaptedRange.hi = hi;
 	return depthAdaptedRange;
 }
+
+/**
+ *
+ * @param htmIdDepth
+ * @param range1
+ * @param range2
+ * @return
+ */
 HtmRange *HTMRangeAtDepthFromIntersection(int htmIdDepth,HtmRange *range1, HtmRange *range2){
 //	cout << "Comparing..." << endl << flush;
 	HtmRange *resultRange = new HtmRange();
