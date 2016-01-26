@@ -64,8 +64,8 @@ void testConstraintAD(VizHTM *viz, SpatialVector a, float64 d) {
 
 void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdDepth) {
 
-	int saveDepth = 5;
-	SpatialIndex *index = new SpatialIndex(htmIdDepth,saveDepth);
+	int saveLevel = 5;
+	SpatialIndex *index = new SpatialIndex(htmIdDepth,saveLevel);
 	SpatialDomain domain = SpatialDomain(index);
 	domain.add(convex);
 	domain.setOlevel(htmIdDepth);
@@ -98,7 +98,7 @@ void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdD
 		// cout << " indexp,lo,hi: " << indexp << " " << lo << " " << hi << endl << flush;
 		int k = 0; int kMax = 10000;
 		int triangles = 0; int tMax = 10000;
-		// cout << " index-depth: " << index->getMaxlevel() << " -saveDepth: " << index->getBildLevel() << endl << flush;
+		// cout << " index-depth: " << index->getMaxlevel() << " -saveLevel: " << index->getBildLevel() << endl << flush;
 		do {
 			k++;
 			//			for(uint64 nodeIndex=lo; nodeIndex <= min(lo+10,hi); nodeIndex++){
@@ -214,9 +214,9 @@ void testTwoConstraints(VizHTM *viz, int htmIdDepth) {
 }
 
 void testAddRectangle(VizHTM *viz, int htmIdDepth) {
-	int saveDepth = 5;
+	int saveLevel = 5;
 
-	SpatialIndex *index = new SpatialIndex(htmIdDepth,saveDepth);
+	SpatialIndex *index = new SpatialIndex(htmIdDepth,saveLevel);
 	SpatialDomain domain = SpatialDomain(index);
 	domain.setOlevel(htmIdDepth); // Note this sets the olevel on the convexes.
 
@@ -345,38 +345,38 @@ struct KeyPair {
  * Translate an HtmRange to one at a greater depth.  If the desired depth is
  * less that the depth implicit in the input range (lo & hi), then just return
  * an HtmRange constructed from the input range without modification.
- * @param htmIdDepth
+ * @param htmIdLevel
  * @param lo the low end of the range
  * @param hi the high end of the range
  * @return depthAdaptedRange an HtmRange
  */
-KeyPair HTMRangeAtDepthFromHTMRange(int htmIdDepth, Key lo, Key hi) {
-	int level = htmIdDepth + 1; // htmIdDepth is used to set maxlevel in the index. aka olevel.
-	int depthLo = depthOfId(lo);
-	if(depthLo<level) {
-		lo = lo << (2*(level-depthLo));
+KeyPair HTMRangeAtLevelFromHTMRange(int htmIdLevel, Key lo, Key hi) {
+	// htmIdLevel is used to set maxlevel in the index. aka olevel.
+	int levelLo = levelOfId(lo);
+	if(levelLo<htmIdLevel) {
+		lo = lo << (2*(htmIdLevel-levelLo));
 	}
-	int depthHi = depthOfId(hi);
-	if(depthHi<level) {
-		for(int shift=0; shift < (level-depthHi); shift++) {
+	int levelHi = levelOfId(hi);
+	if(levelHi<htmIdLevel) {
+		for(int shift=0; shift < (htmIdLevel-levelHi); shift++) {
 			hi = hi << 2;
 			hi += 3; /// Increment hi by 3 to catch all of the faces at that level.
 		}
 	}
-	KeyPair depthAdaptedRange;
-	depthAdaptedRange.lo = lo;
-	depthAdaptedRange.hi = hi;
-	return depthAdaptedRange;
+	KeyPair levelAdaptedRange;
+	levelAdaptedRange.lo = lo;
+	levelAdaptedRange.hi = hi;
+	return levelAdaptedRange;
 }
 
 /**
  *
- * @param htmIdDepth
+ * @param htmIdLevel
  * @param range1
  * @param range2
  * @return
  */
-HtmRange *HTMRangeAtDepthFromIntersection(int htmIdDepth,HtmRange *range1, HtmRange *range2){
+HtmRange *HTMRangeAtLevelFromIntersection(int htmIdLevel,HtmRange *range1, HtmRange *range2){
 //	cout << "Comparing..." << endl << flush;
 	HtmRange *resultRange = new HtmRange();
 	resultRange->purge();
@@ -384,12 +384,12 @@ HtmRange *HTMRangeAtDepthFromIntersection(int htmIdDepth,HtmRange *range1, HtmRa
 	range1->reset();
 	uint64 indexp1 = range1->getNext(lo1,hi1);
 	do {
-		KeyPair testRange1 = HTMRangeAtDepthFromHTMRange(htmIdDepth,lo1,hi1);
+		KeyPair testRange1 = HTMRangeAtLevelFromHTMRange(htmIdLevel,lo1,hi1);
 		range2->reset();
 		uint64 indexp2 = range2->getNext(lo2,hi2);
 		bool intersects = false;
 		do {
-			KeyPair testRange2 = HTMRangeAtDepthFromHTMRange(htmIdDepth,lo2,hi2);
+			KeyPair testRange2 = HTMRangeAtLevelFromHTMRange(htmIdLevel,lo2,hi2);
 			intersects = testRange2.lo <= testRange1.hi
 					&& testRange2.hi >= testRange1.lo;
 //			cout << "lh1,lh2: "
@@ -411,16 +411,16 @@ HtmRange *HTMRangeAtDepthFromIntersection(int htmIdDepth,HtmRange *range1, HtmRa
 	return resultRange;
 }
 
-void testTwoRectangle(VizHTM *viz, int htmIdDepth) {
-	int saveDepth = 5;
+void testTwoRectangle(VizHTM *viz, int htmIdLevel) {
+	int saveLevel = 5;
 
-	SpatialIndex *index = new SpatialIndex(htmIdDepth,saveDepth);
+	SpatialIndex *index = new SpatialIndex(htmIdLevel,saveLevel);
 
 	SpatialDomain domain1 = SpatialDomain(index);
-	domain1.setOlevel(htmIdDepth); // Note this sets the olevel on the convexes.
+	domain1.setOlevel(htmIdLevel); // Note this sets the olevel on the convexes.
 
 	SpatialDomain domain2 = SpatialDomain(index);
-	domain2.setOlevel(htmIdDepth); // Note this sets the olevel on the convexes.
+	domain2.setOlevel(htmIdLevel); // Note this sets the olevel on the convexes.
 
 	if(true){
 	SpatialVector *v0 = VectorFromLatLonDegrees(10.0,0.0);
@@ -436,7 +436,7 @@ void testTwoRectangle(VizHTM *viz, int htmIdDepth) {
 	//	SpatialConstraint *sc = new SpatialConstraint(SpatialVector(0.,0.,1.),0.5);
 	//	viz->addConstraint(*sc,1.0,1.0,1.0);
 	//	rc->add(*sc);
-	rc->setOlevel(htmIdDepth); // Note this is supposed to be done when added to the domain.
+	rc->setOlevel(htmIdLevel); // Note this is supposed to be done when added to the domain.
 	domain1.add(*rc);
 
 	viz->addRectangle(*v0,*v1,*v2,*v3,r,g,b);
@@ -456,7 +456,7 @@ void testTwoRectangle(VizHTM *viz, int htmIdDepth) {
 	//	SpatialConstraint *sc = new SpatialConstraint(SpatialVector(0.,0.,1.),0.5);
 	//	viz->addConstraint(*sc,1.0,1.0,1.0);
 	//	rc->add(*sc);
-	rc->setOlevel(htmIdDepth); // Note this is supposed to be done when added to the domain.
+	rc->setOlevel(htmIdLevel); // Note this is supposed to be done when added to the domain.
 	domain2.add(*rc);
 	viz->addRectangle(*v0,*v1,*v2,*v3,r,g,b);
 	}
@@ -480,7 +480,7 @@ void testTwoRectangle(VizHTM *viz, int htmIdDepth) {
 	Key lo = 0, hi = 0;
 	uint64 indexp = 0;
 
-	HtmRange *resultRange = HTMRangeAtDepthFromIntersection(htmIdDepth,range1,range2);
+	HtmRange *resultRange = HTMRangeAtLevelFromIntersection(htmIdLevel,range1,range2);
 
 	HtmRange *range = resultRange;
 	range->reset();
@@ -492,7 +492,7 @@ void testTwoRectangle(VizHTM *viz, int htmIdDepth) {
 
 		// Leaves are at a depth of maxlevel+1
 
-		int level = htmIdDepth + 1; // htmIdDepth is used to set maxlevel in the index. aka olevel.
+		int level = htmIdLevel + 1; // htmIdDepth is used to set maxlevel in the index. aka olevel.
 
 		int depthLo = depthOfId(lo);
 		if(depthLo<level) {
@@ -548,7 +548,7 @@ void testTwoRectangle(VizHTM *viz, int htmIdDepth) {
 //					cout << endl << flush;
 
 					if(true){
-						float size = pow(0.5,htmIdDepth+3);
+						float size = pow(0.5,htmIdLevel+3);
 						float r = 0.4, g = 0.4, b = 0.6;
 						SpatialVector x = 3.*x1+x2+x3; x.normalize(); x *= 1.0+1.0e-6;
 						SpatialVector x_ = x1+x2+x3; x_.normalize();
@@ -570,7 +570,7 @@ void testTwoRectangle(VizHTM *viz, int htmIdDepth) {
 
 
 void testTenDegreeGrid(VizHTM *viz, int htmIdDepth) {
-	int saveDepth = 5;
+	int saveLevel = 5;
 	float64 PI = atan2(0,-1);
 	float64 k  = 2*PI/360.;
 
