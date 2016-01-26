@@ -40,300 +40,6 @@
 
 using namespace std;
 
-void testAnEdge(VizHTM *viz) {
-	int colorBase = viz->nEdgeColors;
-	viz->addEdgeColor(0,1,1);
-	viz->addEdgeColor(0,1,1);
-	viz->addEdgeVertexColorIndices(colorBase,colorBase+1);
-	int coordBase = viz->nCoordinates;
-	viz->addEdgeIndices(coordBase,coordBase+1);
-}
-
-void testConstraint(VizHTM *viz, SpatialConstraint sc) {
-	viz->addConstraint(sc,1.0,0.5,1.0);
-}
-
-void testConstraintAD(VizHTM *viz, SpatialVector a, float64 d) {
-	SpatialConstraint sc = SpatialConstraint(a,d);
-	cout << " a in sc(a,d)? " << sc.contains(a) << endl << flush;
-	cout << " acos(a*a),s " << acos(a*a) << " " << sc.coneAngle() << endl << flush;
-	cout << " i in sc(a,d)? " << sc.contains(SpatialVector(1.0,0.0,0.0)) << endl << flush;
-	cout << " acos(i*a),s " << acos(SpatialVector(1.0,0.0,0.0)*a) << " " << sc.coneAngle() << endl << flush;
-	testConstraint(viz,sc);
-}
-
-void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdDepth) {
-
-	int saveLevel = 5;
-	SpatialIndex *index = new SpatialIndex(htmIdDepth,saveLevel);
-	SpatialDomain domain = SpatialDomain(index);
-	domain.add(convex);
-	domain.setOlevel(htmIdDepth);
-
-	HtmRange *range = new HtmRange();
-
-	range->purge();
-	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
-	bool overlap = domain.intersect(index,range,varlen_individualHTMIds);
-
-	Key lo = 0; Key hi = 0;
-	SpatialVector v1,v2,v3;
-	if(false)
-		cout
-		<< " overlap: " << overlap
-		<< " nRanges: " << range->nranges() << flush;
-	range->defrag();
-	if(false)
-		cout
-		<< " nRangeDefrag: " << range->nranges()
-		<< " nConvexes: " << domain.numConvexes()
-		<< endl << flush;
-
-	//		overlap = false;
-
-	if(overlap) {
-		range->reset();
-		uint64 indexp = range->getNext(lo,hi);
-		//		indexp = range->getNext(lo,hi);
-		// cout << " indexp,lo,hi: " << indexp << " " << lo << " " << hi << endl << flush;
-		int k = 0; int kMax = 10000;
-		int triangles = 0; int tMax = 10000;
-		// cout << " index-depth: " << index->getMaxlevel() << " -saveLevel: " << index->getBildLevel() << endl << flush;
-		do {
-			k++;
-			//			for(uint64 nodeIndex=lo; nodeIndex <= min(lo+10,hi); nodeIndex++){
-			for(uint64 numericId=lo; numericId <= hi && triangles < tMax; numericId++){
-				triangles ++;
-				uint64 nodeIndex = index->nodeIndexFromId(numericId);
-
-				if(false){
-					cout
-					<< "working " << flush
-					<< " triangles: " << triangles << flush
-					<< " numericId: " << numericId << flush
-					<< " nodeIndex: " << nodeIndex << flush;
-					cout << " k=" << k << flush;
-				}
-
-				index->nodeVertex(nodeIndex,v1,v2,v3);
-
-				if(false){
-					cout << "..." << flush;
-					cout
-					<< " v1: " << v1.x() << " " << v1.y() << " " << v1.z()
-					<< " v2: " << v2.x() << " " << v2.y() << " " << v2.z()
-					<< " v3: " << v1.x() << " " << v3.y() << " " << v3.z() << flush;
-				}
-
-				if(true){
-					float size = pow(0.5,htmIdDepth+3);
-					float r = 0.4, g = 0.4, b = 0.6;
-					SpatialVector x = 3.*v1+v2+v3; x.normalize(); x *= 1.0+1.0e-6;
-					SpatialVector x_ = v1+v2+v3; x_.normalize();
-					if(false){
-						cout
-						<< " nI: " << nodeIndex
-						<< " x: " << x.x() << " " << x.y() << " " << x.z();
-					}
-					char *str = new char[256];
-					sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
-					viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
-					viz->addEdge(x,x_,0.1,0.1,0.1);
-				}
-
-				int indexBase = viz->nCoordinates;
-				int colorBase = viz->nFaceColors;
-				if(true) {
-					float r=0.; float g=0.; float b=0.;
-					switch(numericId % 4) {
-					case 0:
-						r=1.;
-						break;
-					case 1:
-						g=1.;
-						break;
-					case 2:
-						b=1.;
-						break;
-					default:
-						r=1.; g=1.; b=1.;
-						break;
-					}
-					//	for(int i=0; i<3; i++) addEdgeColor(r,g,b);
-					for(int i=0; i<3; i++) {
-						viz->addFaceColor(r,g,b);
-					}
-					viz->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
-
-					viz->addCoordinate64(v1.x(),v1.y(),v1.z());
-					viz->addCoordinate64(v2.x(),v2.y(),v2.z());
-					viz->addCoordinate64(v3.x(),v3.y(),v3.z());
-					//	addEdgeIndicesTriangle(indexBase,indexBase+1,indexBase+2);
-					viz->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
-					//	cout << " ( " << indexBase << " " << indexBase+1 << " " << indexBase+2 << ") ";
-				}
-				if(false) cout << endl << flush;;
-			}
-		} while (range->getNext(lo,hi) && k < kMax && triangles < tMax);
-	}
-	//	cout << "overlap done " << endl << flush;
-
-
-
-}
-
-void testTwoConstraints(VizHTM *viz, int htmIdDepth) {
-	SpatialVector o = SpatialVector(0.0,0.0,0.0);
-
-	//	SpatialVector a = SpatialVector(1.0,0.0,0.0);
-	SpatialVector a = randomVector();
-	//	SpatialVector a = SpatialVector(1.0,1.0,0.0); a.normalize();
-
-	SpatialVector as = 1.05*a;
-
-	//	float64 d = 0.9999;
-	float64 d = 0.99;
-	SpatialConstraint sc = SpatialConstraint(a,d);
-
-	if(false) testConstraintAD(viz,a,d);
-
-	RangeConvex convex = RangeConvex();
-	convex.add(sc);
-
-	//	SpatialVector a1 = a+randomVector()*0.15; a1.normalize();
-	//	SpatialConstraint sc1 = SpatialConstraint(a1,0.99);
-
-	SpatialVector a1 = -1*a; a1.normalize();
-	SpatialConstraint sc1 = SpatialConstraint(a1,0.995);
-	sc1.invert();
-	// SpatialConstraint(randomVector(),0.99);
-	viz->addConstraint(sc1,0.5,1.0,1.0);
-	convex.add(sc1);
-
-	testConvexHtmRangeIntersection(viz,convex,htmIdDepth);
-}
-
-void testAddRectangle(VizHTM *viz, int htmIdDepth) {
-	int saveLevel = 5;
-
-	SpatialIndex *index = new SpatialIndex(htmIdDepth,saveLevel);
-	SpatialDomain domain = SpatialDomain(index);
-	domain.setOlevel(htmIdDepth); // Note this sets the olevel on the convexes.
-
-	SpatialVector *v0 = VectorFromLatLonDegrees(10.0,0.0);
-	SpatialVector *v1 = VectorFromLatLonDegrees(70.0,0.0);
-	SpatialVector *v2 = VectorFromLatLonDegrees(70.0,80.0);
-	SpatialVector *v3 = VectorFromLatLonDegrees(10.0,80.0);
-	float r = 0.1;
-	float g = 0.1;
-	float b = 0.9;
-
-	RangeConvex *rc = new RangeConvex(v0,v1,v2,v3);
-//	cout << "nConstraints: " << rc->numConstraints() << endl << flush;
-	//	SpatialConstraint *sc = new SpatialConstraint(SpatialVector(0.,0.,1.),0.5);
-	//	viz->addConstraint(*sc,1.0,1.0,1.0);
-	//	rc->add(*sc);
-	rc->setOlevel(htmIdDepth); // Note this is supposed to be done when added to the domain.
-	domain.add(*rc);
-
-	viz->addRectangle(*v0,*v1,*v2,*v3,r,g,b);
-	viz->addArcAtLatitudeDegrees(10.0,0.,80.0,1.0,0.,0.);
-	viz->addArcAtLatitudeDegrees(70.0,0.,80.0,1.0,0.,0.);
-
-//	return;
-
-	HtmRange *range = new HtmRange();
-	range->purge();
-	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
-	bool overlap = domain.intersect(index,range,varlen_individualHTMIds);
-	range->defrag();
-	range->reset();
-	Key lo = 0, hi = 0;
-	uint64 indexp = range->getNext(lo,hi);
-	// The indexes lo and hi are not restricted to being at one depth.
-	//	cout << "indexp: " << indexp << endl << flush;
-	SpatialVector x1,x2,x3;
-	do {
-//		cout << "original lo,hi= " << lo << " " << hi << " " << flush;
-
-		// Leaves are at a depth of maxlevel+1
-
-		int level = htmIdDepth + 1; // htmIdDepth is used to set maxlevel in the index. aka olevel.
-
-		int depthLo = depthOfId(lo);
-		if(depthLo<level) {
-			lo = lo << (2*(level-depthLo));
-		}
-		int depthHi = depthOfId(hi);
-		if(depthHi<level) {
-			for(int shift=0; shift < (level-depthHi); shift++) {
-				hi = hi << 2;
-				hi += 3; // TODO Determine if I am overthinking it?
-			}
-		}
-//		cout << "   fixed lo,hi= " << lo << " " << hi << " "
-//				<< "depth lo,hi,level= "
-//				<< depthLo << " "
-//				<< depthHi << " "
-//				<< level << " "
-//				<< endl << flush;
-		for(uint64 numericId=lo; numericId<=hi;numericId++) {
-			uint64 nodeIndex = index->nodeIndexFromId(numericId);
-			if(nodeIndex!=0){
-				index->nodeVertex(nodeIndex,x1,x2,x3);
-				if(true) {
-					float r=0.; float g=0.; float b=0.;
-					switch(numericId % 4) {
-					case 0:
-						r=1.;
-						break;
-					case 1:
-						g=1.;
-						break;
-					case 2:
-						b=1.;
-						break;
-					default:
-						r=1.; g=1.; b=1.;
-						break;
-					}
-					//	for(int i=0; i<3; i++) addEdgeColor(r,g,b);
-					int colorBase = viz->nFaceColors;
-					for(int i=0; i<3; i++) {
-						viz->addFaceColor(r,g,b);
-					}
-					viz->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
-
-					int indexBase = viz->nCoordinates;
-					viz->addCoordinate64(x1.x(),x1.y(),x1.z());
-					viz->addCoordinate64(x2.x(),x2.y(),x2.z());
-					viz->addCoordinate64(x3.x(),x3.y(),x3.z());
-					viz->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
-
-//					printf("id: %llx ix: %llu",numericId,nodeIndex);
-//					cout << endl << flush;
-
-					if(true){
-						float size = pow(0.5,htmIdDepth+3);
-						float r = 0.4, g = 0.4, b = 0.6;
-						SpatialVector x = 3.*x1+x2+x3; x.normalize(); x *= 1.0+1.0e-6;
-						SpatialVector x_ = x1+x2+x3; x_.normalize();
-						if(false){
-							cout
-							<< " nI: " << nodeIndex
-							<< " x: " << x.x() << " " << x.y() << " " << x.z();
-						}
-						char *str = new char[256];
-						sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
-						viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
-						viz->addEdge(x,x_,0.5,0.5,0.9);
-					}
-				}
-			}
-		}
-	} while (range->getNext(lo,hi));
-}
-
 /**
  * struct KeyPair is a lightweight aggregate a single interval [lo,hi] for HtmRange
  */
@@ -342,13 +48,13 @@ struct KeyPair {
 };
 
 /**
- * Translate an HtmRange to one at a greater depth.  If the desired depth is
- * less that the depth implicit in the input range (lo & hi), then just return
+ * Translate an HtmRange to one at a greater level.  If the desired level is
+ * less that the level implicit in the input range (lo & hi), then just return
  * an HtmRange constructed from the input range without modification.
  * @param htmIdLevel
  * @param lo the low end of the range
  * @param hi the high end of the range
- * @return depthAdaptedRange an HtmRange
+ * @return levelAdaptedRange an HtmRange
  */
 KeyPair HTMRangeAtLevelFromHTMRange(int htmIdLevel, Key lo, Key hi) {
 	// htmIdLevel is used to set maxlevel in the index. aka olevel.
@@ -409,6 +115,280 @@ HtmRange *HTMRangeAtLevelFromIntersection(int htmIdLevel,HtmRange *range1, HtmRa
 	} while (range1->getNext(lo1,hi1));
 	resultRange->defrag();
 	return resultRange;
+}
+
+
+void testAnEdge(VizHTM *viz) {
+	int colorBase = viz->nEdgeColors;
+	viz->addEdgeColor(0,1,1);
+	viz->addEdgeColor(0,1,1);
+	viz->addEdgeVertexColorIndices(colorBase,colorBase+1);
+	int coordBase = viz->nCoordinates;
+	viz->addEdgeIndices(coordBase,coordBase+1);
+}
+
+void testConstraint(VizHTM *viz, SpatialConstraint sc) {
+	viz->addConstraint(sc,1.0,0.5,1.0);
+}
+
+void testConstraintAD(VizHTM *viz, SpatialVector a, float64 d) {
+	SpatialConstraint sc = SpatialConstraint(a,d);
+	cout << " a in sc(a,d)? " << sc.contains(a) << endl << flush;
+	cout << " acos(a*a),s " << acos(a*a) << " " << sc.coneAngle() << endl << flush;
+	cout << " i in sc(a,d)? " << sc.contains(SpatialVector(1.0,0.0,0.0)) << endl << flush;
+	cout << " acos(i*a),s " << acos(SpatialVector(1.0,0.0,0.0)*a) << " " << sc.coneAngle() << endl << flush;
+	testConstraint(viz,sc);
+}
+
+void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdLevel) {
+
+	int saveLevel = 5;
+	SpatialIndex *index = new SpatialIndex(htmIdLevel,saveLevel);
+	SpatialDomain domain = SpatialDomain(index);
+	domain.add(convex);
+	domain.setOlevel(htmIdLevel);
+
+	HtmRange *range = new HtmRange();
+
+	range->purge();
+	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
+	bool overlap = domain.intersect(index,range,varlen_individualHTMIds);
+
+	Key lo = 0; Key hi = 0;
+	SpatialVector v1,v2,v3;
+	if(false)
+		cout
+		<< " overlap: " << overlap
+		<< " nRanges: " << range->nranges() << flush;
+	range->defrag();
+	if(false)
+		cout
+		<< " nRangeDefrag: " << range->nranges()
+		<< " nConvexes: " << domain.numConvexes()
+		<< endl << flush;
+
+	//		overlap = false;
+
+	if(overlap) {
+		range->reset();
+		uint64 indexp = range->getNext(lo,hi);
+		//		indexp = range->getNext(lo,hi);
+		// cout << " indexp,lo,hi: " << indexp << " " << lo << " " << hi << endl << flush;
+		int k = 0; int kMax = 10000;
+		int triangles = 0; int tMax = 10000;
+		do {
+			k++;
+			//			for(uint64 nodeIndex=lo; nodeIndex <= min(lo+10,hi); nodeIndex++){
+			for(uint64 numericId=lo; numericId <= hi && triangles < tMax; numericId++){
+				triangles ++;
+				uint64 nodeIndex = index->nodeIndexFromId(numericId);
+
+				if(false){
+					cout
+					<< "working " << flush
+					<< " triangles: " << triangles << flush
+					<< " numericId: " << numericId << flush
+					<< " nodeIndex: " << nodeIndex << flush;
+					cout << " k=" << k << flush;
+				}
+
+				index->nodeVertex(nodeIndex,v1,v2,v3);
+
+				if(false){
+					cout << "..." << flush;
+					cout
+					<< " v1: " << v1.x() << " " << v1.y() << " " << v1.z()
+					<< " v2: " << v2.x() << " " << v2.y() << " " << v2.z()
+					<< " v3: " << v1.x() << " " << v3.y() << " " << v3.z() << flush;
+				}
+
+				if(true){
+					float size = pow(0.5,htmIdLevel+3);
+					float r = 0.4, g = 0.4, b = 0.6;
+					SpatialVector x = 3.*v1+v2+v3; x.normalize(); x *= 1.0+1.0e-6;
+					SpatialVector x_ = v1+v2+v3; x_.normalize();
+					if(false){
+						cout
+						<< " nI: " << nodeIndex
+						<< " x: " << x.x() << " " << x.y() << " " << x.z();
+					}
+					char *str = new char[256];
+					sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
+					viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
+					viz->addEdge(x,x_,0.1,0.1,0.1);
+				}
+
+				int indexBase = viz->nCoordinates;
+				int colorBase = viz->nFaceColors;
+				if(true) {
+					float r=0.; float g=0.; float b=0.;
+					switch(numericId % 4) {
+					case 0:
+						r=1.;
+						break;
+					case 1:
+						g=1.;
+						break;
+					case 2:
+						b=1.;
+						break;
+					default:
+						r=1.; g=1.; b=1.;
+						break;
+					}
+					//	for(int i=0; i<3; i++) addEdgeColor(r,g,b);
+					for(int i=0; i<3; i++) {
+						viz->addFaceColor(r,g,b);
+					}
+					viz->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
+
+					viz->addCoordinate64(v1.x(),v1.y(),v1.z());
+					viz->addCoordinate64(v2.x(),v2.y(),v2.z());
+					viz->addCoordinate64(v3.x(),v3.y(),v3.z());
+					//	addEdgeIndicesTriangle(indexBase,indexBase+1,indexBase+2);
+					viz->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+					//	cout << " ( " << indexBase << " " << indexBase+1 << " " << indexBase+2 << ") ";
+				}
+				if(false) cout << endl << flush;;
+			}
+		} while (range->getNext(lo,hi) && k < kMax && triangles < tMax);
+	}
+	//	cout << "overlap done " << endl << flush;
+
+
+
+}
+
+void testTwoConstraints(VizHTM *viz, int htmIdLevel) {
+	SpatialVector o = SpatialVector(0.0,0.0,0.0);
+
+	//	SpatialVector a = SpatialVector(1.0,0.0,0.0);
+	SpatialVector a = randomVector();
+	//	SpatialVector a = SpatialVector(1.0,1.0,0.0); a.normalize();
+
+	SpatialVector as = 1.05*a;
+
+	//	float64 d = 0.9999;
+	float64 d = 0.99;
+	SpatialConstraint sc = SpatialConstraint(a,d);
+
+	if(false) testConstraintAD(viz,a,d);
+
+	RangeConvex convex = RangeConvex();
+	convex.add(sc);
+
+	//	SpatialVector a1 = a+randomVector()*0.15; a1.normalize();
+	//	SpatialConstraint sc1 = SpatialConstraint(a1,0.99);
+
+	SpatialVector a1 = -1*a; a1.normalize();
+	SpatialConstraint sc1 = SpatialConstraint(a1,0.995);
+	sc1.invert();
+	// SpatialConstraint(randomVector(),0.99);
+	viz->addConstraint(sc1,0.5,1.0,1.0);
+	convex.add(sc1);
+
+	testConvexHtmRangeIntersection(viz,convex,htmIdLevel);
+}
+
+void testAddRectangle(VizHTM *viz, int htmIdLevel) {
+	int saveLevel = 5;
+
+	SpatialIndex *index = new SpatialIndex(htmIdLevel,saveLevel);
+	SpatialDomain domain = SpatialDomain(index);
+	domain.setOlevel(htmIdLevel); // Note this sets the olevel on the convexes.
+
+	SpatialVector *v0 = VectorFromLatLonDegrees(10.0,0.0);
+	SpatialVector *v1 = VectorFromLatLonDegrees(70.0,0.0);
+	SpatialVector *v2 = VectorFromLatLonDegrees(70.0,80.0);
+	SpatialVector *v3 = VectorFromLatLonDegrees(10.0,80.0);
+	float r = 0.1;
+	float g = 0.1;
+	float b = 0.9;
+
+	RangeConvex *rc = new RangeConvex(v0,v1,v2,v3);
+//	cout << "nConstraints: " << rc->numConstraints() << endl << flush;
+	//	SpatialConstraint *sc = new SpatialConstraint(SpatialVector(0.,0.,1.),0.5);
+	//	viz->addConstraint(*sc,1.0,1.0,1.0);
+	//	rc->add(*sc);
+	rc->setOlevel(htmIdLevel); // Note this is supposed to be done when added to the domain.
+	domain.add(*rc);
+
+	viz->addRectangle(*v0,*v1,*v2,*v3,r,g,b);
+	viz->addArcAtLatitudeDegrees(10.0,0.,80.0,1.0,0.,0.);
+	viz->addArcAtLatitudeDegrees(70.0,0.,80.0,1.0,0.,0.);
+
+//	return;
+
+	HtmRange *range = new HtmRange();
+	range->purge();
+	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
+	bool overlap = domain.intersect(index,range,varlen_individualHTMIds);
+	range->defrag();
+	range->reset();
+	Key lo = 0, hi = 0;
+	uint64 indexp = range->getNext(lo,hi);
+	SpatialVector x1,x2,x3;
+	do {
+		KeyPair adjustedRange = HTMRangeAtLevelFromHTMRange(htmIdLevel,lo,hi);
+
+		lo = adjustedRange.lo;
+		hi = adjustedRange.hi;
+
+		for(uint64 numericId=lo; numericId<=hi;numericId++) {
+			uint64 nodeIndex = index->nodeIndexFromId(numericId);
+			if(nodeIndex!=0){
+				index->nodeVertex(nodeIndex,x1,x2,x3);
+				if(true) {
+					float r=0.; float g=0.; float b=0.;
+					switch(numericId % 4) {
+					case 0:
+						r=1.;
+						break;
+					case 1:
+						g=1.;
+						break;
+					case 2:
+						b=1.;
+						break;
+					default:
+						r=1.; g=1.; b=1.;
+						break;
+					}
+					//	for(int i=0; i<3; i++) addEdgeColor(r,g,b);
+					int colorBase = viz->nFaceColors;
+					for(int i=0; i<3; i++) {
+						viz->addFaceColor(r,g,b);
+					}
+					viz->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
+
+					int indexBase = viz->nCoordinates;
+					viz->addCoordinate64(x1.x(),x1.y(),x1.z());
+					viz->addCoordinate64(x2.x(),x2.y(),x2.z());
+					viz->addCoordinate64(x3.x(),x3.y(),x3.z());
+					viz->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+
+//					printf("id: %llx ix: %llu",numericId,nodeIndex);
+//					cout << endl << flush;
+
+					if(true){
+						float size = pow(0.5,htmIdLevel+3);
+						float r = 0.4, g = 0.4, b = 0.6;
+						SpatialVector x = 3.*x1+x2+x3; x.normalize(); x *= 1.0+1.0e-6;
+						SpatialVector x_ = x1+x2+x3; x_.normalize();
+						if(false){
+							cout
+							<< " nI: " << nodeIndex
+							<< " x: " << x.x() << " " << x.y() << " " << x.z();
+						}
+						char *str = new char[256];
+						sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
+						viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
+						viz->addEdge(x,x_,0.5,0.5,0.9);
+					}
+				}
+			}
+		}
+	} while (range->getNext(lo,hi));
 }
 
 void testTwoRectangle(VizHTM *viz, int htmIdLevel) {
@@ -488,29 +468,6 @@ void testTwoRectangle(VizHTM *viz, int htmIdLevel) {
 	SpatialVector x1,x2,x3;
 //	if(indexp)
 	do {
-//		cout << "original lo,hi= " << lo << " " << hi << " " << flush;
-
-		// Leaves are at a depth of maxlevel+1
-
-		int level = htmIdLevel + 1; // htmIdDepth is used to set maxlevel in the index. aka olevel.
-
-		int depthLo = depthOfId(lo);
-		if(depthLo<level) {
-			lo = lo << (2*(level-depthLo));
-		}
-		int depthHi = depthOfId(hi);
-		if(depthHi<level) {
-			for(int shift=0; shift < (level-depthHi); shift++) {
-				hi = hi << 2;
-				hi += 3; // TODO Determine if I am overthinking it?
-			}
-		}
-//		cout << "   fixed lo,hi= " << lo << " " << hi << " "
-//				<< "depth lo,hi,level= "
-//				<< depthLo << " "
-//				<< depthHi << " "
-//				<< level << " "
-//				<< endl << flush;
 		for(uint64 numericId=lo; numericId<=hi;numericId++) {
 			uint64 nodeIndex = index->nodeIndexFromId(numericId);
 			if(nodeIndex!=0){
@@ -569,7 +526,7 @@ void testTwoRectangle(VizHTM *viz, int htmIdLevel) {
 }
 
 
-void testTenDegreeGrid(VizHTM *viz, int htmIdDepth) {
+void testTenDegreeGrid(VizHTM *viz, int htmIdLevel) {
 	int saveLevel = 5;
 	float64 PI = atan2(0,-1);
 	float64 k  = 2*PI/360.;
