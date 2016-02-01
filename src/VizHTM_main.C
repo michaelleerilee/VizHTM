@@ -20,6 +20,8 @@
 #include "SpatialVector.h"
 #include "SpatialInterface.h"
 
+#include "BitShiftNameEncoding.h"
+
 #include <Inventor/Qt/SoQt.h>
 #include <Inventor/Qt/viewers/SoQtExaminerViewer.h>
 
@@ -531,6 +533,19 @@ void plotHTMInterval(VizHTM *viz, SpatialIndex index, htmRange interval) {
 	}
 }
 
+void testHTMRange(VizHTM *viz, int htmIdLevel, const char *n0, const char *n1) {
+	int buildLevel = 5;
+	SpatialIndex *index = new SpatialIndex(htmIdLevel,buildLevel);
+	BitShiftNameEncoding name0 = BitShiftNameEncoding(n0);
+	BitShiftNameEncoding name1 = BitShiftNameEncoding(n1);
+
+	htmRange interval;
+	interval.lo = name0.getId();
+	interval.hi = name1.getId();
+
+	plotHTMInterval(viz,*index,interval);
+}
+
 
 void testTwoRectangle(VizHTM *viz, int htmIdLevel) {
 	int saveLevel = 5;
@@ -911,11 +926,38 @@ int main(int argc, char *argv[]) {
 	cout << "allocated." << endl << flush;
 
 	if(true) testTenDegreeGrid(viz,5);
+	if(false) testHTMRange(viz,1,"N0","N0");
+	if(false) testHTMRange(viz,2,"N033","N033");
+
+	if(false) {
+		int level = 2;
+		testHTMRange(viz,level,"N01","N01");
+		testHTMRange(viz,level,"N11","N11");
+		testHTMRange(viz,level,"N21","N21");
+		testHTMRange(viz,level,"N31","N31");
+	}
+
+	if(true) {
+		int level = 5;
+		testHTMRange(viz,level,"N01","N01");
+		testHTMRange(viz,level+1,"N11","N11");
+		testHTMRange(viz,level+2,"N21","N21");
+		testHTMRange(viz,level+3,"N31","N31");
+	}
+
+	if(false){
+		char *htmName = new char[32];
+		strcpy(htmName,"N0");
+		for(int j=1; j<15; j++){
+			testHTMRange(viz,j,htmName,htmName);
+			strcat(htmName,"3");
+		}
+	}
 
 	if(false) testLatLonSpiral(viz);
 	if(false) testAddRectangle(viz,4);
 	if(false) testTwoRectangle(viz,6);
-	if(false) {
+	if(false) { // Test Georgia multiple times
 		int s0 = 49; int s1 = 49; int sDelta = 1;
 		for(int s=s0; s<=s1; s+=sDelta){
 			cout << "hullStep=" << s << endl << flush;
@@ -926,7 +968,7 @@ int main(int argc, char *argv[]) {
 			testGeorgia(viz,8,s,r,g,b);
 		}
 	}
-	if(true) {
+	if(false) { // Test Georgia
 			float r=0.5; float g=0.8; float b=0.4;
 			testGeorgia(viz,6,-1,r,g,b);
 	}
