@@ -927,6 +927,7 @@ int main(int argc, char *argv[]) {
 
 	if(true) testTenDegreeGrid(viz,5);
 	if(false) testHTMRange(viz,1,"N0","N0");
+	if(true) testHTMRange(viz,4,"N0","N0");
 	if(false) testHTMRange(viz,2,"N033","N033");
 
 	if(false) {
@@ -937,8 +938,9 @@ int main(int argc, char *argv[]) {
 		testHTMRange(viz,level,"N31","N31");
 	}
 
-	if(true) {
+	if(false) {
 		int level = 5;
+		level = 1;
 		testHTMRange(viz,level,"N01","N01");
 		testHTMRange(viz,level+1,"N11","N11");
 		testHTMRange(viz,level+2,"N21","N21");
