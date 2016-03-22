@@ -8,6 +8,7 @@
 #ifndef VIZHTM_H_
 #define VIZHTM_H_
 
+#include "SpatialIndex.h"
 #include "SpatialVector.h"
 #include "SpatialConstraint.h"
 
@@ -29,11 +30,14 @@ public:
 	VizHTM(int nArray);
 
 
-	void addEdge(SpatialVector x0, SpatialVector x1, float r, float g, float b);
+	void addEdge(
+			const SpatialVector x0,
+			const SpatialVector x1,
+			float r, float g, float b, float a=-1.);
 	void addEdgeAndSphere(SpatialVector x0, SpatialVector x1, float r, float g, float b,
 						  SpatialVector s0, float rs, float gs, float bs, float radius);
 
-	void addEdgeColor(float r, float g, float b);
+	void addEdgeColor(float r, float g, float b, float a=-1.);
 	void addFaceColor(float r, float g, float b);
 	void addCoordinate(float x, float y, float z);
 	void addCoordinate64(float64 x, float64 y, float64 z);
@@ -60,10 +64,10 @@ public:
 			float r2, float g2, float b2);
 
 	void addRectangle(
-			SpatialVector x0,
-			SpatialVector x1,
-			SpatialVector x2,
-			SpatialVector x3,
+			const SpatialVector x0,
+			const SpatialVector x1,
+			const SpatialVector x2,
+			const SpatialVector x3,
 			float r, float g, float b);
 
 	void addLatLonBoxEdgesDegrees(
@@ -72,8 +76,35 @@ public:
 			float r, float g, float b
 			);
 
-	void addArc(SpatialVector x0, SpatialVector x1, float r, float g, float b);
+	void addArc(
+			const SpatialVector x0,
+			const SpatialVector x1,
+			float r, float g, float b, float a=-1.);
 	void addArcAtLatitudeDegrees(float64 lat, float64 lon0, float64 lon1, float r, float g, float b);
+
+	void addEdgesFromIndexAndId(
+			const SpatialIndex *index, uint64 htmId,
+			float r, float g, float b, float a=-1.);
+	void addEdgesFromIndexAndName(
+			SpatialIndex *index, const char* htmIdName,
+			float r, float g, float b);
+	void addEdgesFromIndexAndLatLonDegrees(
+			SpatialIndex *index,
+			float64 lat, float64 lon,
+			float r, float g, float b
+			);
+
+	void addArcFromIndexAndId(
+			SpatialIndex *index, uint64 htmId,
+			float r, float g, float b, float a=-1.);
+	void addArcFromIndexAndName(
+			SpatialIndex *index, const char* htmIdName,
+			float r, float g, float b, float a=-1.);
+	void addArcFromIndexAndLatLonDegrees(
+			SpatialIndex *index,
+			float64 lat, float64 lon,
+			float r, float g, float b, float a=-1.
+			);
 
 	void addConstraint(SpatialVector a, float64 d, float r, float g, float b);
 	void addConstraint(SpatialConstraint c, float r, float g, float b);
@@ -99,6 +130,8 @@ public:
 
 	int   	nEdgeColors;
 	float 	(*edgeColors)[3];
+	float   (*edgeTransparencies);
+	bool    edgeTransparency = false;
 	int		nEdgeVertexColorIndices;
 	int		*edgeVertexColorIndices;
 
@@ -115,6 +148,9 @@ public:
 
 	int 	nFaceIndices;
 	int   	*faceIndices;
+
+	float   lineWidth = -1;
+	float   sphereComplexity = -1;
 
 	struct annotation {
 		SpatialVector *v;

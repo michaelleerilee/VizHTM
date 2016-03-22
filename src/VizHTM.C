@@ -38,6 +38,10 @@
 #include <Inventor/nodes/SoFont.h>
 #include <Inventor/nodes/SoTransform.h>
 #include <Inventor/nodes/SoText3.h>
+
+#include <Inventor/nodes/SoDrawStyle.h>
+#include <Inventor/nodes/SoComplexity.h>
+
 // #include <Inventor/nodes/.h>
 
 
@@ -46,44 +50,51 @@ using namespace std;
 
 VizHTM::VizHTM(int nArray) : nArray(nArray) {
 
-	nCoordinates 		= 0;
+	nCoordinates 		    = 0;
 
-	nEdgeIndices 		= 0;
-	nEdgeVertexColorIndices =0;
-	nEdgeColors = 0;
+	nEdgeIndices 		    = 0;
+	nEdgeVertexColorIndices = 0;
+	nEdgeColors             = 0;
 
-	nFaces 				= 0;
-	nFaceIndices 		= 0;
-	nFaceVertexColorIndices =0;
-	nFaceColors = 0;
+	nFaces 				    = 0;
+	nFaceIndices 		    = 0;
+	nFaceVertexColorIndices = 0;
+	nFaceColors             = 0;
 
-	nSpheres    = 0;
+	nSpheres                = 0;
 
-	faceColors 	=  new float[nArray][3];
-	faceVertexColorIndices = new int[nArray];
+	faceColors 	            = new float[nArray][3];
+	faceVertexColorIndices  = new int[nArray];
 
-	edgeColors 	=  new float[nArray][3];
-	edgeVertexColorIndices = new int[nArray];
+	edgeColors 	            = new float[nArray][3];
+	edgeTransparencies      = new float[nArray];
+	edgeVertexColorIndices  = new int[nArray];
 
-	fCoordinates 	=  new float[nArray][3];
+	fCoordinates 	        = new float[nArray][3];
 
-	sphereIndices 		= new int[nArray];
-	sphereColors  	=  new float[nArray][3];
-	fRadii        		= new float[nArray];
+	sphereIndices 		    = new int[nArray];
+	sphereColors  	        = new float[nArray][3];
+	fRadii        		    = new float[nArray];
 
 	for(int i = 0; i < nArray; i++) fRadii[i] = 0.;
-	edgeIndices = new int[nArray];
-	faceIndices = new int[nArray];
+	edgeIndices             = new int[nArray];
+	faceIndices             = new int[nArray];
 
-	nAnnotations = 0;
-	annotations  = new annotation[nArray];
+	nAnnotations            = 0;
+	annotations             = new annotation[nArray];
 
 }
 
-void VizHTM::addEdgeColor(float r, float g, float b){
+void VizHTM::addEdgeColor(float r, float g, float b, float a){
 	edgeColors[nEdgeColors][0] = r;
 	edgeColors[nEdgeColors][1] = g;
 	edgeColors[nEdgeColors][2] = b;
+	if(a == -1.) {
+		edgeTransparencies[nEdgeColors] = 0.; // The default case.
+	} else {
+		edgeTransparencies[nEdgeColors] = a;
+		edgeTransparency = true; // If we ever see a transparency, turn it on.
+	}
 	nEdgeColors++;
 }
 
@@ -337,6 +348,12 @@ SoSeparator* VizHTM::makeRoot() {
 
 	SoSeparator *root = new SoSeparator;
 
+	if(lineWidth != -1) {
+		SoDrawStyle *style = new SoDrawStyle;
+		style->lineWidth.setValue(lineWidth);
+		root->addChild(style);
+	}
+
 	SoCoordinate3 *coordinates = new SoCoordinate3;
 	coordinates->point.setValues(0,nCoordinates,fCoordinates);
 	root->addChild(coordinates);
@@ -345,6 +362,9 @@ SoSeparator* VizHTM::makeRoot() {
 
 	SoMaterial *edgeMaterials = new SoMaterial;
 	edgeMaterials->diffuseColor.setValues(0,nEdgeColors,edgeColors);
+	if(edgeTransparency) {
+		edgeMaterials->transparency.setValues(0,nEdgeColors,edgeTransparencies);
+	}
 	edgeNode->addChild(edgeMaterials);
 
 	SoMaterialBinding *edgeMaterialBinding = new SoMaterialBinding;
@@ -388,11 +408,20 @@ SoSeparator* VizHTM::makeRoot() {
 
 	if(nSpheres>0){ // If we added spheres, then add them to the graph.
 		SoSeparator *sphereNodes = new SoSeparator;
+
+		SoComplexity *complexity = new SoComplexity;
+		if(sphereComplexity != -1) {
+			complexity->value.setValue(sphereComplexity);
+		}
+		sphereNodes->addChild(complexity);
+
 		for(int iSphere = 0; iSphere < nSpheres; iSphere++) {
 			SoSeparator *sphereNode = new SoSeparator;
 
 			SoMaterial  *sphereMaterials = new SoMaterial;
 			sphereMaterials->diffuseColor.setValue(sphereColors[iSphere]);
+			sphereMaterials->ambientColor.setValue(sphereColors[iSphere]);
+//			sphereMaterials->specularColor.setValue(sphereColors[iSphere]);
 			sphereNode->addChild(sphereMaterials);
 
 			SoTranslation *T = new SoTranslation;
@@ -462,7 +491,7 @@ int rollDieWithFourSides() {
 
 double uniformDouble() {
 	static std::default_random_engine e{};
-	static std::uniform_real_distribution<double> d{0.,1.};
+	static std::uniform_real_distribution<double> d{0,1};
 	//uniform_int_distribution<int> d{0,3};
 	return d(e);
 }
@@ -471,15 +500,19 @@ SpatialVector randomVector() {
 	SpatialVector r = SpatialVector(
 			uniformDouble(),
 			uniformDouble(),
-			uniformDouble());
+			uniformDouble()
+			);
 	r.normalize();
 	return r;
 }
 
-void VizHTM::addEdge(SpatialVector x0, SpatialVector x1, float r, float g, float b) {
+void VizHTM::addEdge(
+		const SpatialVector x0,
+		const SpatialVector x1,
+		float r, float g, float b, float a) {
 	int colorBase = nEdgeColors;
-	addEdgeColor(r,g,b);
-	addEdgeColor(r,g,b);
+	addEdgeColor(r,g,b,a);
+	addEdgeColor(r,g,b,a);
 	addEdgeVertexColorIndices(colorBase,colorBase+1);
 
 	int coordBase = nCoordinates;
@@ -586,7 +619,12 @@ SpatialVector unitVector(SpatialVector x) {
 	return n;
 }
 
-void VizHTM::addRectangle(SpatialVector x0, SpatialVector x1, SpatialVector x2, SpatialVector x3, float r, float g, float b) {
+void VizHTM::addRectangle(
+		const SpatialVector x0,
+		const SpatialVector x1,
+		const SpatialVector x2,
+		const SpatialVector x3,
+		float r, float g, float b) {
 	addArc(x0,x1,r,g,b);
 	addArc(x1,x2,r,g,b);
 	addArc(x2,x3,r,g,b);
@@ -610,17 +648,20 @@ void VizHTM::addLatLonBoxEdgesDegrees(
 			);
 }
 
-void VizHTM::addArc(SpatialVector x0, SpatialVector x1,float r, float g, float b) {
+void VizHTM::addArc(
+		const SpatialVector x0,
+		const SpatialVector x1,
+		float r, float g, float b, float alpha) {
 	const int steps = 20;
 	SpatialVector dx = x1-x0;
 	SpatialVector *last = new SpatialVector(x0);
 	for(double i=1; i<steps-1; i++) {
 		double a = i / (steps - 1);
 		SpatialVector *next = new SpatialVector(x0 + a * dx); next->normalize();
-		addEdge(*last,*next, r, g, b);
+		addEdge(*last,*next, r, g, b, alpha);
 		last = next;
 	}
-	addEdge(*last,x1,r,g,b);
+	addEdge(*last,x1,r,g,b,alpha);
 }
 
 void VizHTM::addArcAtLatitudeDegrees(float64 lat, float64 lon0, float64 lon1, float r, float g, float b) {
@@ -641,3 +682,80 @@ void VizHTM::addArcAtLatitudeDegrees(float64 lat, float64 lon0, float64 lon1, fl
 
 }
 
+void VizHTM::addEdgesFromIndexAndId(
+		const SpatialIndex *index, uint64 htmId,
+		float r, float g, float b, float a
+		) {
+	SpatialVector v0, v1, v2;
+	uint64 nodeIndex = index->nodeIndexFromId(htmId);
+//	cout << "htmId:  " << htmId << endl << flush;
+//	cout << "nodeId: " << nodeIndex << endl << flush;
+	index->nodeVertex(nodeIndex,v0,v1,v2);
+	addEdge(v0,v1,r,g,b,a);
+	addEdge(v1,v2,r,g,b,a);
+	addEdge(v2,v0,r,g,b,a);
+}
+
+void VizHTM::addEdgesFromIndexAndName(
+		SpatialIndex *index, const char* htmIdName,
+		float r, float g, float b
+		) {
+	SpatialVector v0, v1, v2;
+	uint64 htmId = index->idByName(htmIdName);
+	uint64 nodeIndex = index->nodeIndexFromId(htmId);
+	index->nodeVertex(nodeIndex,v0,v1,v2);
+	addEdge(v0,v1,r,g,b);
+	addEdge(v1,v2,r,g,b);
+	addEdge(v2,v0,r,g,b);
+}
+
+void VizHTM::addEdgesFromIndexAndLatLonDegrees(
+		SpatialIndex *index, float64 lat, float64 lon,
+		float r, float g, float b
+		) {
+	SpatialVector v0, v1, v2;
+	uint64 htmId = index->idByLatLon(lat,lon);
+	uint64 nodeIndex = index->nodeIndexFromId(htmId);
+	index->nodeVertex(nodeIndex,v0,v1,v2);
+	addEdge(v0,v1,r,g,b);
+	addEdge(v1,v2,r,g,b);
+	addEdge(v2,v0,r,g,b);
+}
+
+void VizHTM::addArcFromIndexAndId(
+		SpatialIndex *index, uint64 htmId,
+		float r, float g, float b, float a
+		) {
+	SpatialVector v0, v1, v2;
+	uint64 nodeIndex = index->nodeIndexFromId(htmId);
+	index->nodeVertex(nodeIndex,v0,v1,v2);
+	addArc(v0,v1,r,g,b,a);
+	addArc(v1,v2,r,g,b,a);
+	addArc(v2,v0,r,g,b,a);
+}
+
+void VizHTM::addArcFromIndexAndName(
+		SpatialIndex *index, const char* htmIdName,
+		float r, float g, float b, float a
+		) {
+	SpatialVector v0, v1, v2;
+	uint64 htmId = index->idByName(htmIdName);
+	uint64 nodeIndex = index->nodeIndexFromId(htmId);
+	index->nodeVertex(nodeIndex,v0,v1,v2);
+	addArc(v0,v1,r,g,b,a);
+	addArc(v1,v2,r,g,b,a);
+	addArc(v2,v0,r,g,b,a);
+}
+
+void VizHTM::addArcFromIndexAndLatLonDegrees(
+		SpatialIndex *index, float64 lat, float64 lon,
+		float r, float g, float b, float a
+		) {
+	SpatialVector v0, v1, v2;
+	uint64 htmId = index->idByLatLon(lat,lon);
+	uint64 nodeIndex = index->nodeIndexFromId(htmId);
+	index->nodeVertex(nodeIndex,v0,v1,v2);
+	addArc(v0,v1,r,g,b,a);
+	addArc(v1,v2,r,g,b,a);
+	addArc(v2,v0,r,g,b,a);
+}
