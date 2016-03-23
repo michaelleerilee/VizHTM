@@ -96,41 +96,41 @@ HtmRange *HTMRangeAtLevelFromIntersection(int htmIdLevel, HtmRange *range1, HtmR
 	range1->reset();
 	uint64 indexp1 = range1->getNext(lo1,hi1);
 	if (!indexp1) return 0;
-	cout << "indexp1: " << indexp1 << endl << flush;
-	cout << "l,lo,hi1: " << htmIdLevel << " " << lo1 << " " << hi1 << endl << flush;
-	cout << "a" << flush;
+//	cout << "indexp1: " << indexp1 << endl << flush;
+//	cout << "l,lo,hi1: " << htmIdLevel << " " << lo1 << " " << hi1 << endl << flush;
+//	cout << "a" << flush;
 	do {
-		cout << "b" << endl << flush;
+//		cout << "b" << endl << flush;
 		KeyPair testRange1 = HTMRangeAtLevelFromHTMRange(htmIdLevel,lo1,hi1);
 		range2->reset();
 		uint64 indexp2 = range2->getNext(lo2,hi2);
 		if(!indexp2) return 0;
-		cout << "indexp2: " << indexp2 << endl << flush;
-		cout << "l,lo,hi2: " << htmIdLevel << " " << lo2 << " " << hi2 << endl << flush;
+//		cout << "indexp2: " << indexp2 << endl << flush;
+//		cout << "l,lo,hi2: " << htmIdLevel << " " << lo2 << " " << hi2 << endl << flush;
 		bool intersects = false;
 		do {
-			cout << "c" << endl << flush;
+//			cout << "c" << endl << flush;
 			KeyPair testRange2 = HTMRangeAtLevelFromHTMRange(htmIdLevel,lo2,hi2);
 			intersects = testRange2.lo <= testRange1.hi
 					&& testRange2.hi >= testRange1.lo;
-						cout << "lh1,lh2: "
-								<< lo1 << " " << hi1 << ", "
-								<< lo2 << " " << hi2 << ", "
-								<< intersects << flush;
+//						cout << "lh1,lh2: "
+//								<< lo1 << " " << hi1 << ", "
+//								<< lo2 << " " << hi2 << ", "
+//								<< intersects << flush;
 			if(intersects){
 				Key lo_ = max(testRange1.lo,testRange2.lo);
 				Key hi_ = min(testRange1.hi,testRange2.hi);
 				resultRange->addRange(lo_,hi_);
-								cout << ", added "
-										<< lo_ << " "
-										<< hi_ << flush;
+//								cout << ", added "
+//										<< lo_ << " "
+//										<< hi_ << flush;
 			}
-						cout << "." << endl << flush;
+//						cout << "." << endl << flush;
 		} while (range2->getNext(lo2,hi2));
 	} while (range1->getNext(lo1,hi1));
-	cout << "d" << flush;
+//	cout << "d" << flush;
 	if(resultRange->nranges()>0)resultRange->defrag();
-	cout << "e" << flush;
+//	cout << "e" << flush;
 	return resultRange;
 }
 
@@ -150,10 +150,10 @@ void testConstraint(VizHTM *viz, SpatialConstraint sc) {
 
 void testConstraintAD(VizHTM *viz, SpatialVector a, float64 d) {
 	SpatialConstraint sc = SpatialConstraint(a,d);
-	cout << " a in sc(a,d)? " << sc.contains(a) << endl << flush;
-	cout << " acos(a*a),s " << acos(a*a) << " " << sc.coneAngle() << endl << flush;
-	cout << " i in sc(a,d)? " << sc.contains(SpatialVector(1.0,0.0,0.0)) << endl << flush;
-	cout << " acos(i*a),s " << acos(SpatialVector(1.0,0.0,0.0)*a) << " " << sc.coneAngle() << endl << flush;
+//	cout << " a in sc(a,d)? " << sc.contains(a) << endl << flush;
+//	cout << " acos(a*a),s " << acos(a*a) << " " << sc.coneAngle() << endl << flush;
+//	cout << " i in sc(a,d)? " << sc.contains(SpatialVector(1.0,0.0,0.0)) << endl << flush;
+//	cout << " acos(i*a),s " << acos(SpatialVector(1.0,0.0,0.0)*a) << " " << sc.coneAngle() << endl << flush;
 	testConstraint(viz,sc);
 }
 
@@ -163,7 +163,7 @@ void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdL
 	SpatialIndex *index = new SpatialIndex(htmIdLevel,saveLevel);
 	SpatialDomain domain = SpatialDomain(index);
 	domain.add(convex);
-	domain.setOlevel(htmIdLevel);
+//	domain.setOlevel(htmIdLevel);
 
 	HtmRange *range = new HtmRange();
 
@@ -173,16 +173,16 @@ void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdL
 
 	Key lo = 0; Key hi = 0;
 	SpatialVector v1,v2,v3;
-	if(false)
-		cout
-		<< " overlap: " << overlap
-		<< " nRanges: " << range->nranges() << flush;
+//	if(false)
+//		cout
+//		<< " overlap: " << overlap
+//		<< " nRanges: " << range->nranges() << flush;
 	range->defrag();
-	if(false)
-		cout
-		<< " nRangeDefrag: " << range->nranges()
-		<< " nConvexes: " << domain.numConvexes()
-		<< endl << flush;
+//	if(false)
+//		cout
+//		<< " nRangeDefrag: " << range->nranges()
+//		<< " nConvexes: " << domain.numConvexes()
+//		<< endl << flush;
 
 	//		overlap = false;
 
@@ -200,35 +200,35 @@ void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdL
 				triangles ++;
 				uint64 nodeIndex = index->nodeIndexFromId(numericId);
 
-				if(false){
-					cout
-					<< "working " << flush
-					<< " triangles: " << triangles << flush
-					<< " numericId: " << numericId << flush
-					<< " nodeIndex: " << nodeIndex << flush;
-					cout << " k=" << k << flush;
-				}
+//				if(false){
+//					cout
+//					<< "working " << flush
+//					<< " triangles: " << triangles << flush
+//					<< " numericId: " << numericId << flush
+//					<< " nodeIndex: " << nodeIndex << flush;
+//					cout << " k=" << k << flush;
+//				}
 
 				index->nodeVertex(nodeIndex,v1,v2,v3);
 
-				if(false){
-					cout << "..." << flush;
-					cout
-					<< " v1: " << v1.x() << " " << v1.y() << " " << v1.z()
-					<< " v2: " << v2.x() << " " << v2.y() << " " << v2.z()
-					<< " v3: " << v1.x() << " " << v3.y() << " " << v3.z() << flush;
-				}
+//				if(false){
+//					cout << "..." << flush;
+//					cout
+//					<< " v1: " << v1.x() << " " << v1.y() << " " << v1.z()
+//					<< " v2: " << v2.x() << " " << v2.y() << " " << v2.z()
+//					<< " v3: " << v1.x() << " " << v3.y() << " " << v3.z() << flush;
+//				}
 
 				if(true){
 					float size = pow(0.5,htmIdLevel+3);
 					float r = 0.4, g = 0.4, b = 0.6;
 					SpatialVector x = 3.*v1+v2+v3; x.normalize(); x *= 1.0+1.0e-6;
 					SpatialVector x_ = v1+v2+v3; x_.normalize();
-					if(false){
-						cout
-						<< " nI: " << nodeIndex
-						<< " x: " << x.x() << " " << x.y() << " " << x.z();
-					}
+//					if(false){
+//						cout
+//						<< " nI: " << nodeIndex
+//						<< " x: " << x.x() << " " << x.y() << " " << x.z();
+//					}
 					char *str = new char[256];
 					sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
 					viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
@@ -266,7 +266,7 @@ void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdL
 					viz->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
 					//	cout << " ( " << indexBase << " " << indexBase+1 << " " << indexBase+2 << ") ";
 				}
-				if(false) cout << endl << flush;;
+//				if(false) cout << endl << flush;
 			}
 		} while (range->getNext(lo,hi) && k < kMax && triangles < tMax);
 	}
@@ -312,7 +312,7 @@ void testAddRectangle(VizHTM *viz, int htmIdLevel) {
 
 	SpatialIndex *index = new SpatialIndex(htmIdLevel,saveLevel);
 	SpatialDomain domain = SpatialDomain(index);
-	domain.setOlevel(htmIdLevel); // Note this sets the olevel on the convexes.
+//	domain.setOlevel(htmIdLevel); // Note this sets the olevel on the convexes.
 
 	SpatialVector *v0 = VectorFromLatLonDegrees(10.0,0.0);
 	SpatialVector *v1 = VectorFromLatLonDegrees(70.0,0.0);
@@ -392,11 +392,11 @@ void testAddRectangle(VizHTM *viz, int htmIdLevel) {
 						float r = 0.4, g = 0.4, b = 0.6;
 						SpatialVector x = 3.*x1+x2+x3; x.normalize(); x *= 1.0+1.0e-6;
 						SpatialVector x_ = x1+x2+x3; x_.normalize();
-						if(false){
-							cout
-							<< " nI: " << nodeIndex
-							<< " x: " << x.x() << " " << x.y() << " " << x.z();
-						}
+//						if(false){
+//							cout
+//							<< " nI: " << nodeIndex
+//							<< " x: " << x.x() << " " << x.y() << " " << x.z();
+//						}
 						char *str = new char[256];
 						sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
 						viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
@@ -518,7 +518,7 @@ void intersectTwoRectangles(
 	SpatialDomain domain2 = SpatialDomain(index);
 //	domain2.setOlevel(htmIdLevel); // Note this sets the olevel on the convexes.
 
-	cout << "1" << flush;
+//	cout << "1" << flush;
 	if(true){
 //		SpatialVector *v0 = VectorFromLatLonDegrees(30.0,20.0);
 //		SpatialVector *v1 = VectorFromLatLonDegrees(30.0,-10.0);
@@ -537,7 +537,7 @@ void intersectTwoRectangles(
 //		rc.setOlevel(htmIdLevel); // Note this is supposed to be done when added to the domain.
 		domain1.add(rc);
 	}
-	cout << "2" << flush;
+//	cout << "2" << flush;
 	if(true){
 //		SpatialVector *v0 = VectorFromLatLonDegrees(10.0,0.0);
 //		SpatialVector *v1 = VectorFromLatLonDegrees(30.0,-10.0);
@@ -558,70 +558,70 @@ void intersectTwoRectangles(
 	}
 
 //		return;
-	cout << "3" << flush;
+//	cout << "3" << flush;
 	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
 
-	cout << "." << flush;
+//	cout << "." << flush;
 //	HtmRange range1 = HtmRange();
 	HtmRange range1;
 	range1.purge();
 	bool overlap1 = domain1.intersect(index,&range1,varlen_individualHTMIds);
-	cout << "." << flush;
+//	cout << "." << flush;
 	range1.defrag();
 	range1.reset();
 	if(range1.nranges()==0)return;
 
-	cout << "." << flush;
-
-	cout << "4" << flush;
-	cout << " overlap1: " << overlap1 << ";" << flush;
-	cout << endl << flush;
+//	cout << "." << flush;
+//
+//	cout << "4" << flush;
+//	cout << " overlap1: " << overlap1 << ";" << flush;
+//	cout << endl << flush;
 
 	Key lo = 0, hi = 0;
 	uint64 indexp = 0;
 
-	cout << " range1.ranges(): " << range1.nranges() << endl << flush;
+//	cout << " range1.ranges(): " << range1.nranges() << endl << flush;
 	range1.reset();
 	indexp = range1.getNext(lo,hi);
-	cout << " range1indexp " << indexp << endl << flush;
-	cout << " range1.lo,hi " << lo << " " << hi << endl << flush;
-	cout << "        level " << levelOfId(lo) << endl << flush;
+//	cout << " range1indexp " << indexp << endl << flush;
+//	cout << " range1.lo,hi " << lo << " " << hi << endl << flush;
+//	cout << "        level " << levelOfId(lo) << endl << flush;
 
 	HtmRange range2 = HtmRange();
 	range2.purge();
 	bool overlap2 = domain2.intersect(index,&range2,varlen_individualHTMIds);
-	cout << "." << flush;
+//	cout << "." << flush;
 	range2.defrag();
 	range2.reset();
 	if(range2.nranges()==0)return;
 
-	cout << " overlap2: " << overlap2 << ";" << flush;
-	cout << endl << flush;
-
-	cout << " range2.ranges(): " << range2.nranges() << endl << flush;
+//	cout << " overlap2: " << overlap2 << ";" << flush;
+//	cout << endl << flush;
+//
+//	cout << " range2.ranges(): " << range2.nranges() << endl << flush;
 	range2.reset();
 	indexp = range2.getNext(lo,hi);
-	cout << " range2indexp " << indexp << endl << flush;
-	cout << " range2.lo,hi " << lo << " " << hi << endl << flush;
-	cout << "        level " << levelOfId(lo) << endl << flush;
+//	cout << " range2indexp " << indexp << endl << flush;
+//	cout << " range2.lo,hi " << lo << " " << hi << endl << flush;
+//	cout << "        level " << levelOfId(lo) << endl << flush;
 
 	range1.reset(); range2.reset();
 	HtmRange *resultRange = HTMRangeAtLevelFromIntersection(htmIdLevel,&range1,&range2);
 	if(!resultRange) return;
 
-	cout << "5" << flush;
+//	cout << "5" << flush;
 	HtmRange *range = resultRange;
 
 	range->reset();
-	cout << "6" << flush;
+//	cout << "6" << flush;
 	lo=0; hi=0;
 	indexp = range->getNext(lo,hi);
 	SpatialVector x1,x2,x3;
 
-	cout << "7" << flush;
+//	cout << "7" << flush;
 //		if(indexp) //?
-	cout << "lo,hi: " << lo << " " << hi << endl << flush;
-	cout << "indexp: " << indexp << endl << flush;
+//	cout << "lo,hi: " << lo << " " << hi << endl << flush;
+//	cout << "indexp: " << indexp << endl << flush;
 	if(indexp) //?
 	do {
 		for(uint64 numericId=lo; numericId<=hi;numericId++) {
@@ -931,12 +931,12 @@ void testPlotDataSetIntersection(VizHTM *viz) {
 
 	const SpatialVector zHat = SpatialVector(0.,0.,1.);
 	for(int i=0; i<600; i++){
-		cout << "i: " << i << endl << flush;
+//		cout << "i: " << i << endl << flush;
 
 		double delta = 10.;
 		double lat = -80. + 160.0*uniformDouble();
 		double lon = 360.0 * uniformDouble();
-		cout << " udll: " << delta << " " << lat << " " << lon << endl << flush;
+//		cout << " udll: " << delta << " " << lat << " " << lon << endl << flush;
 		u0.setLatLonDegrees(lat,lon);
 		u1.setLatLonDegrees(lat+delta,lon);
 		u2.setLatLonDegrees(lat+delta,lon+delta);
@@ -944,12 +944,12 @@ void testPlotDataSetIntersection(VizHTM *viz) {
 
 		double dlat = 12.0*(uniformDouble()-0.5);
 		double dlon = 12.0*(uniformDouble()-0.5);
-		cout << "dlat,dlon: " << dlat << " " << dlon << endl << flush;
+//		cout << "dlat,dlon: " << dlat << " " << dlon << endl << flush;
 		double theta = 90.0*uniformDouble();
 //		lat = uniformDouble(-80.,80.);
 //		lon = uniformDouble(10.,350.);
 		lat+=dlat; lon+=dlon;
-		cout << " vdll: " << delta << " " << lat << " " << lon << endl << flush;
+//		cout << " vdll: " << delta << " " << lat << " " << lon << endl << flush;
 		v0.setLatLonDegrees(lat,lon+sin(theta)*delta);
 		v1.setLatLonDegrees(lat+cos(theta)*delta,lon+sin(theta)*delta);
 		v2.setLatLonDegrees(lat+sin(theta)*delta,lon+cos(theta)*delta);
@@ -1048,14 +1048,14 @@ void testPlotDataSetIntersection0(VizHTM *viz) {
 	int iFocus = 0;
 	int jFocus = 0;
 	SpatialIndex index(5,5);
-	cout << "intersecting" << endl << flush;
+//	cout << "intersecting" << endl << flush;
 	int count=0;
 	int i=0, j=0;
 	for(
 			vector<SpatialVector>::iterator iterU = granules0->begin();
 			iterU != granules0->end();
 			iterU++, i++) {
-		cout<< "u" << flush;
+//		cout<< "u" << flush;
 		SpatialVector u0 = *iterU++;
 		SpatialVector u1 = *iterU++;
 		SpatialVector u2 = *iterU++;
@@ -1065,15 +1065,15 @@ void testPlotDataSetIntersection0(VizHTM *viz) {
 				vector<SpatialVector>::iterator iterV = granules1->begin();
 				iterV != granules1->end();
 				iterV++, j++) {
-			cout << "v" << flush;
-			cout << "<ij= " << i << " " << j << " >" << flush;
+//			cout << "v" << flush;
+//			cout << "<ij= " << i << " " << j << " >" << flush;
 
 			SpatialVector v0 = *iterV++;
 			SpatialVector v1 = *iterV++;
 			SpatialVector v2 = *iterV++;
 			SpatialVector v3 = *iterV;
 
-			cout << "." << flush;
+//			cout << "." << flush;
 			if(!focus){
 				intersectTwoRectangles(
 						viz,
@@ -1093,7 +1093,7 @@ void testPlotDataSetIntersection0(VizHTM *viz) {
 					viz->addRectangle(v0,v1,v2,v3,0.0,0.,1.);
 				}
 			}
-			cout <<"+" << flush;
+//			cout <<"+" << flush;
 
 //			count++;
 //			if(count > 2000) return;
@@ -1153,11 +1153,11 @@ void plotHTMInterval(VizHTM *viz, SpatialIndex index, htmRange interval) {
 					float r = 0.4, g = 0.4, b = 0.6;
 					SpatialVector x = 3.*x1+x2+x3; x.normalize(); x *= 1.0+1.0e-6;
 					SpatialVector x_ = x1+x2+x3; x_.normalize();
-					if(false){
-						cout
-						<< " nI: " << nodeIndex
-						<< " x: " << x.x() << " " << x.y() << " " << x.z();
-					}
+//					if(false){
+//						cout
+//						<< " nI: " << nodeIndex
+//						<< " x: " << x.x() << " " << x.y() << " " << x.z();
+//					}
 					char *str = new char[256];
 					sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
 					viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
@@ -1188,10 +1188,10 @@ void testTwoRectangle(VizHTM *viz, int htmIdLevel) {
 	SpatialIndex *index = new SpatialIndex(htmIdLevel,saveLevel);
 
 	SpatialDomain domain1 = SpatialDomain(index);
-	domain1.setOlevel(htmIdLevel); // Note this sets the olevel on the convexes.
+//	domain1.setOlevel(htmIdLevel); // Note this sets the olevel on the convexes.
 
 	SpatialDomain domain2 = SpatialDomain(index);
-	domain2.setOlevel(htmIdLevel); // Note this sets the olevel on the convexes.
+//	domain2.setOlevel(htmIdLevel); // Note this sets the olevel on the convexes.
 
 	if(true){
 		SpatialVector *v0 = VectorFromLatLonDegrees(10.0,0.0);
