@@ -55,6 +55,7 @@ struct KeyPair {
  * Translate an HtmRange to one at a greater level.  If the desired level is
  * less that the level implicit in the input range (lo & hi), then just return
  * an HtmRange constructed from the input range without modification.
+ * Note: Currently hardcoded for bit-shifted encoding
  * @param htmIdLevel
  * @param lo the low end of the range
  * @param hi the high end of the range
@@ -892,10 +893,10 @@ vector<SpatialVector> *plotCircularTrack(
 			v1 = pointFromReferenceAndDeltas(target,aheadOfTarget,thetaAlongTrackDegrees0+(isteps+1)*deltaAlongTrackDegrees,phiCrossTrackDegrees0+csteps*deltaCrossTrackDegrees);
 			v2 = pointFromReferenceAndDeltas(target,aheadOfTarget,thetaAlongTrackDegrees0+(isteps+1)*deltaAlongTrackDegrees,phiCrossTrackDegrees0+(csteps+1)*deltaCrossTrackDegrees);
 			v3 = pointFromReferenceAndDeltas(target,aheadOfTarget,thetaAlongTrackDegrees0+isteps*deltaAlongTrackDegrees,phiCrossTrackDegrees0+(csteps+1)*deltaCrossTrackDegrees);
-//			viz->addArc(*v0,*v1,r,g,b,alpha);
-//			viz->addArc(*v1,*v2,r,g,b,alpha);
-//			viz->addArc(*v2,*v3,r,g,b,alpha);
-//			viz->addArc(*v3,*v0,r,g,b,alpha);
+			viz->addArc(*v0,*v1,r,g,b,alpha);
+			viz->addArc(*v1,*v2,r,g,b,alpha);
+			viz->addArc(*v2,*v3,r,g,b,alpha);
+			viz->addArc(*v3,*v0,r,g,b,alpha);
 			granules->push_back(*v0);
 			granules->push_back(*v1);
 			granules->push_back(*v2);
@@ -993,19 +994,19 @@ void testPlotDataSetIntersection0(VizHTM *viz) {
 	vector<SpatialVector> *granules0, *granules1;
 
 	{
-	float64 latDegrees = 0.0;
-	float64 lonDegrees = 45.0;
+	float64 latDegrees = 0.3;
+	float64 lonDegrees = 45.7;
 	float64 groundTrackDegreesFromEast = 45.0;
-	float r = 0.3;
+	float r = 0.8;
 	float g = 0.3;
 	float b = 1.0;
 	float a = -1;
-	float64 thetaAlongTrackDegrees0 = -50;
-	float64 thetaAlongTrackDegrees1 =  50;
-	float64 phiCrossTrackDegrees0 =   -10;
-	float64 phiCrossTrackDegrees1 =    10;
-	float64 deltaAlongTrackDegrees = 10;
-	float64 deltaCrossTrackDegrees = 10;
+	float64 thetaAlongTrackDegrees0 = -180;
+	float64 thetaAlongTrackDegrees1 =  180;
+	float64 phiCrossTrackDegrees0 =   -4;
+	float64 phiCrossTrackDegrees1 =    4;
+	float64 deltaAlongTrackDegrees = 4;
+	float64 deltaCrossTrackDegrees = 8;
 
 	granules0 = plotCircularTrack(
 			viz,
@@ -1019,8 +1020,8 @@ void testPlotDataSetIntersection0(VizHTM *viz) {
 	}
 
 	{
-	float64 latDegrees = 0.0;
-	float64 lonDegrees = 45.0;
+	float64 latDegrees = 0.7;
+	float64 lonDegrees = 45.3;
 	float64 groundTrackDegreesFromEast = 5.0;
 	float r = 0.0;
 	float g = 0.8;
@@ -1043,6 +1044,11 @@ void testPlotDataSetIntersection0(VizHTM *viz) {
 			deltaAlongTrackDegrees,  deltaCrossTrackDegrees
 	);
 	}
+
+//	vector<SpatialVector> *tmp;
+//	tmp = granules0;
+//	granules0 = granules1;
+//	granules1 = tmp;
 
 	bool focus = false;
 	int iFocus = 0;
@@ -1577,7 +1583,8 @@ int main(int argc, char *argv[]) {
 
 	if(false) testPlotEdgesFromHTMNameInterval(viz); // Simple subdivision for Kuo. 2016-0317
 
-	if(true) testPlotDataSetIntersection(viz);
+	if(false) testPlotDataSetIntersection(viz);
+	if(true) testPlotDataSetIntersection0(viz);
 
 	if(false) {
 		int level = 2;
