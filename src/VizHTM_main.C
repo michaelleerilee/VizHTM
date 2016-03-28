@@ -15,6 +15,7 @@
 #include <random>
 #include <fstream>
 #include <vector>
+#include <array>
 
 #include "SpatialException.h"
 #include "SpatialIndex.h"
@@ -43,42 +44,6 @@
 #include "VizHTM_main.h"
 
 using namespace std;
-
-/**
- * struct KeyPair is a lightweight aggregate a single interval [lo,hi] for HtmRange
- */
-struct KeyPair {
-	Key lo; Key hi;
-};
-
-/**
- * Translate an HtmRange to one at a greater level.  If the desired level is
- * less that the level implicit in the input range (lo & hi), then just return
- * an HtmRange constructed from the input range without modification.
- * Note: Currently hardcoded for bit-shifted encoding
- * @param htmIdLevel
- * @param lo the low end of the range
- * @param hi the high end of the range
- * @return levelAdaptedRange an HtmRange
- */
-KeyPair HTMRangeAtLevelFromHTMRange(int htmIdLevel, Key lo, Key hi) {
-	// htmIdLevel is used to set maxlevel in the index. aka olevel.
-	int levelLo = levelOfId(lo);
-	if(levelLo<htmIdLevel) {
-		lo = lo << (2*(htmIdLevel-levelLo));
-	}
-	int levelHi = levelOfId(hi);
-	if(levelHi<htmIdLevel) {
-		for(int shift=0; shift < (htmIdLevel-levelHi); shift++) {
-			hi = hi << 2;
-			hi += 3; /// Increment hi by 3 to catch all of the faces at that level.
-		}
-	}
-	KeyPair levelAdaptedRange;
-	levelAdaptedRange.lo = lo;
-	levelAdaptedRange.hi = hi;
-	return levelAdaptedRange;
-}
 
 /**
  *
@@ -500,7 +465,7 @@ void plotHTMRange(VizHTM *viz, SpatialIndex index, HtmRange range) {
 
 
 void intersectTwoRectangles(
-		VizHTM *viz,
+		VizHTM *const viz,
 		const SpatialIndex  *index,
 		const SpatialVector *u0,
 		const SpatialVector *u1,
@@ -509,55 +474,25 @@ void intersectTwoRectangles(
 		const SpatialVector *v0,
 		const SpatialVector *v1,
 		const SpatialVector *v2,
-		const SpatialVector *v3
+		const SpatialVector *v3,
+		HtmRange *rangeU,
+		HtmRange *rangeV,
+		HtmRange *rangeIntersection
 		) {
 	int htmIdLevel = index->getLeafLevel();
 
 	SpatialDomain domain1 = SpatialDomain(index);
-//	domain1.setOlevel(htmIdLevel); // Note this sets the olevel on the convexes.
-
 	SpatialDomain domain2 = SpatialDomain(index);
-//	domain2.setOlevel(htmIdLevel); // Note this sets the olevel on the convexes.
-
 //	cout << "1" << flush;
 	if(true){
-//		SpatialVector *v0 = VectorFromLatLonDegrees(30.0,20.0);
-//		SpatialVector *v1 = VectorFromLatLonDegrees(30.0,-10.0);
-//		SpatialVector *v2 = VectorFromLatLonDegrees(20.0,0.0);
-//		SpatialVector *v3 = VectorFromLatLonDegrees(20.0,30.0);
-		float r = 0.0;
-		float g = 1.0;
-		float b = 1.0;
-//		viz->addRectangle(*u0,*u1,*u2,*u3,r,g,b);
-
 		RangeConvex rc = RangeConvex(u0,u1,u2,u3);
-		//	cout << "nConstraints: " << rc->numConstraints() << endl << flush;
-		//	SpatialConstraint *sc = new SpatialConstraint(SpatialVector(0.,0.,1.),0.5);
-		//	viz->addConstraint(*sc,1.0,1.0,1.0);
-		//	rc->add(*sc);
-//		rc.setOlevel(htmIdLevel); // Note this is supposed to be done when added to the domain.
 		domain1.add(rc);
 	}
 //	cout << "2" << flush;
 	if(true){
-//		SpatialVector *v0 = VectorFromLatLonDegrees(10.0,0.0);
-//		SpatialVector *v1 = VectorFromLatLonDegrees(30.0,-10.0);
-//		SpatialVector *v2 = VectorFromLatLonDegrees(60.0,10.0);
-//		SpatialVector *v3 = VectorFromLatLonDegrees(40.0,20.0);
-		float r = 1.0;
-		float g = 1.0;
-		float b = 0.0;
-//		viz->addRectangle(*v0,*v1,*v2,*v3,r,g,b);
-
 		RangeConvex rc = RangeConvex(v0,v1,v2,v3);
-		//	cout << "nConstraints: " << rc->numConstraints() << endl << flush;
-		//	SpatialConstraint *sc = new SpatialConstraint(SpatialVector(0.,0.,1.),0.5);
-		//	viz->addConstraint(*sc,1.0,1.0,1.0);
-		//	rc->add(*sc);
-//		rc.setOlevel(htmIdLevel); // Note this is supposed to be done when added to the domain. // !!!BUG!!!
 		domain2.add(rc);
 	}
-
 //		return;
 //	cout << "3" << flush;
 	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
@@ -570,10 +505,11 @@ void intersectTwoRectangles(
 //	cout << "." << flush;
 	range1.defrag();
 	range1.reset();
-	if(range1.nranges()==0)return;
+	//	if(range1.nranges()==0)return;
+	rangeU->addRange(&range1);
+	range1.reset();
 
 //	cout << "." << flush;
-//
 //	cout << "4" << flush;
 //	cout << " overlap1: " << overlap1 << ";" << flush;
 //	cout << endl << flush;
@@ -588,13 +524,24 @@ void intersectTwoRectangles(
 //	cout << " range1.lo,hi " << lo << " " << hi << endl << flush;
 //	cout << "        level " << levelOfId(lo) << endl << flush;
 
+//	cout << "." << flush;
 	HtmRange range2 = HtmRange();
 	range2.purge();
+//	cout << "." << flush;
 	bool overlap2 = domain2.intersect(index,&range2,varlen_individualHTMIds);
 //	cout << "." << flush;
 	range2.defrag();
 	range2.reset();
-	if(range2.nranges()==0)return;
+//	cout << "." << flush;
+//	if(range2.nranges()==0)return;
+	rangeV->addRange(&range2);
+//	cout << "." << flush;
+//	rangeV->defrag();
+//	cout << "." << flush;
+	range2.reset();
+
+
+//	cout << "5" << flush;
 
 //	cout << " overlap2: " << overlap2 << ";" << flush;
 //	cout << endl << flush;
@@ -607,83 +554,129 @@ void intersectTwoRectangles(
 //	cout << "        level " << levelOfId(lo) << endl << flush;
 
 	range1.reset(); range2.reset();
-	HtmRange *resultRange = HTMRangeAtLevelFromIntersection(htmIdLevel,&range1,&range2);
-	if(!resultRange) return;
 
-//	cout << "5" << flush;
-	HtmRange *range = resultRange;
-
-	range->reset();
+	if(range1.nranges()*range2.nranges()==0) return;
 //	cout << "6" << flush;
-	lo=0; hi=0;
-	indexp = range->getNext(lo,hi);
-	SpatialVector x1,x2,x3;
-
+//	HtmRange *resultRange = HTMRangeAtLevelFromIntersection(htmIdLevel,&range1,&range2);
+	HtmRange *resultRange = range1.HTMRangeAtLevelFromIntersection(&range2,htmIdLevel);
+	if(!resultRange) return;
 //	cout << "7" << flush;
-//		if(indexp) //?
-//	cout << "lo,hi: " << lo << " " << hi << endl << flush;
-//	cout << "indexp: " << indexp << endl << flush;
-	if(indexp) //?
-	do {
-		for(uint64 numericId=lo; numericId<=hi;numericId++) {
-			uint64 nodeIndex = index->nodeIndexFromId(numericId);
-			if(nodeIndex!=0){
-				viz->addEdgesFromIndexAndId(index,numericId,0.2,1.0,0.2);
-				if(false){
-					index->nodeVertex(nodeIndex,x1,x2,x3);
-					if(true) {
-						float r=0.; float g=0.; float b=0.;
-						switch(numericId % 4) {
-						case 0:
-							r=1.;
-							break;
-						case 1:
-							g=1.;
-							break;
-						case 2:
-							b=1.;
-							break;
-						default:
-							r=1.; g=1.; b=1.;
-							break;
-						}
-						//					for(int i=0; i<3; i++) viz->addEdgeColor(r,g,b);
-						int colorBase = viz->nFaceColors;
-						for(int i=0; i<3; i++) {
-							viz->addFaceColor(r,g,b);
-						}
-						viz->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
+	rangeIntersection->addRange(resultRange); // Note: resultRange is copied piece by piece here.
+//	cout << "8" << flush;
+	rangeIntersection->defrag();
+//	cout << "9" << flush;
+//	cout << "+" << range1.nranges() << "," << range2.nranges() << flush;
 
-						int indexBase = viz->nCoordinates;
-						viz->addCoordinate64(x1.x(),x1.y(),x1.z());
-						viz->addCoordinate64(x2.x(),x2.y(),x2.z());
-						viz->addCoordinate64(x3.x(),x3.y(),x3.z());
-						viz->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
-					}
-					//					printf("id: %llx ix: %llu",numericId,nodeIndex);
-					//					cout << endl << flush;
+	HtmRange *range = resultRange;
+//	viz->addHTMRange(index,range,0.,0.7,0.7);
 
-					if(true){
-						float size = pow(0.5,htmIdLevel+3);
-						float r = 0.4, g = 0.4, b = 0.6;
-						SpatialVector x = 3.*x1+x2+x3; x.normalize(); x *= 1.0+1.0e-6;
-						SpatialVector x_ = x1+x2+x3; x_.normalize();
+//	HtmRange *red = new HtmRange;
+//	HtmRange *blue = new HtmRange;
+//	HtmRange *green = new HtmRange;
+//	range1.reset();
+//	indexp = range1.getNext(lo,hi);
+//	if(indexp) {
+//		do {
+////			cout << "r2.contains: " << lo << " " << hi << " " << range2.contains(lo,hi) << endl << flush;
+//			int ret = range2.contains(lo,hi);
+//			if(ret == -1) {
+//				red->addRange(lo,hi);
+//			} else if (ret == 0 ) {
+//				green->addRange(lo,hi);
+//			} else {
+//				blue->addRange(lo,hi);
+//			}
+//		} while(range1.getNext(lo,hi));
+//		viz->addHTMRange(index,red,0.7,0.,0.);
+//		viz->addHTMRange(index,green,0.,0.7,0.);
+//		viz->addHTMRange(index,blue,0.,0.,0.7);
+//		cout << "red" << endl;
+//		red->print(HtmRange::BOTH,cout);
+//		cout << "green" << endl;
+//		green->print(HtmRange::BOTH,cout);
+//		cout << "blue" << endl;
+//		blue->print(HtmRange::BOTH, cout);
+//	}
+//  delete red, blue, green;
+//
+//	range1.reset();
+////	HtmRange *range1_ = &range1;
+////	viz->addHTMRange(index,&range1,0.7,0.,0.);
+
+	if(false) {
+		range->reset();
+		//	cout << "6" << flush;
+		lo=0; hi=0;
+		indexp = range->getNext(lo,hi);
+		SpatialVector x1,x2,x3;
+
+		//	cout << "7" << flush;
+		//		if(indexp) //?
+		//	cout << "lo,hi: " << lo << " " << hi << endl << flush;
+		//	cout << "indexp: " << indexp << endl << flush;
+		if(indexp) //?
+			do {
+				for(uint64 numericId=lo; numericId<=hi;numericId++) {
+					uint64 nodeIndex = index->nodeIndexFromId(numericId);
+					if(nodeIndex!=0){
+						viz->addEdgesFromIndexAndId(index,numericId,0.2,1.0,0.2);
 						if(false){
-							cout
-							<< " nI: " << nodeIndex
-							<< " x: " << x.x() << " " << x.y() << " " << x.z();
+							index->nodeVertex(nodeIndex,x1,x2,x3);
+							if(true) {
+								float r=0.; float g=0.; float b=0.;
+								switch(numericId % 4) {
+								case 0:
+									r=1.;
+									break;
+								case 1:
+									g=1.;
+									break;
+								case 2:
+									b=1.;
+									break;
+								default:
+									r=1.; g=1.; b=1.;
+									break;
+								}
+								//					for(int i=0; i<3; i++) viz->addEdgeColor(r,g,b);
+								int colorBase = viz->nFaceColors;
+								for(int i=0; i<3; i++) {
+									viz->addFaceColor(r,g,b);
+								}
+								viz->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
+
+								int indexBase = viz->nCoordinates;
+								viz->addCoordinate64(x1.x(),x1.y(),x1.z());
+								viz->addCoordinate64(x2.x(),x2.y(),x2.z());
+								viz->addCoordinate64(x3.x(),x3.y(),x3.z());
+								viz->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+							}
+							//					printf("id: %llx ix: %llu",numericId,nodeIndex);
+							//					cout << endl << flush;
+
+							if(true){
+								float size = pow(0.5,htmIdLevel+3);
+								float r = 0.4, g = 0.4, b = 0.6;
+								SpatialVector x = 3.*x1+x2+x3; x.normalize(); x *= 1.0+1.0e-6;
+								SpatialVector x_ = x1+x2+x3; x_.normalize();
+								if(false){
+									cout
+									<< " nI: " << nodeIndex
+									<< " x: " << x.x() << " " << x.y() << " " << x.z();
+								}
+								char *str = new char[256];
+								sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
+								viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
+								viz->addEdge(x,x_,0.5,0.5,0.9);
+							}
 						}
-						char *str = new char[256];
-						sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
-						viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
-						viz->addEdge(x,x_,0.5,0.5,0.9);
 					}
 				}
-			}
-		}
-	} while (range->getNext(lo,hi));
+			} while (range->getNext(lo,hi));
+	}
 
-	delete resultRange;
+	delete resultRange; // Should replace with a local var.
+
 }
 
 
@@ -719,7 +712,7 @@ void plotEdgesOrArcFromHTMNameInterval(
 	}
 	uint64 loId = index->idByName(loName);
 	uint64 hiId = index->idByName(hiName);
-	cout << "loId,hiId: " << loId << " " << hiId << endl << flush;
+//	cout << "loId,hiId: " << loId << " " << hiId << endl << flush;
 	for(uint64 id = loId; id <= hiId; id++) {
 		if(edges) {
 			viz->addEdgesFromIndexAndId(
@@ -819,7 +812,11 @@ void testPlotEdgesFromHTMNameInterval0(
 			);
 }
 
-SpatialVector *pointFromReferenceAndDeltas(SpatialVector target, SpatialVector aheadOfTarget, float64 deltaAlongDegrees, float64 deltaCrossDegrees) {
+SpatialVector *pointFromReferenceAndDeltas(
+		const SpatialVector target,
+		const SpatialVector aheadOfTarget,
+		const float64 deltaAlongDegrees,
+		const float64 deltaCrossDegrees) {
 	float64 k = 2.*M_PI/360.0;
 	SpatialVector L = target^aheadOfTarget;
 	return new SpatialVector(
@@ -829,20 +826,25 @@ SpatialVector *pointFromReferenceAndDeltas(SpatialVector target, SpatialVector a
 					+ cos(k*deltaAlongDegrees)*target));
 }
 
-vector<SpatialVector> *plotCircularTrack(
+vector<SpatialVector> plotCircularTrack(
 		VizHTM *viz,
 		float64 latDegrees, float64 lonDegrees,
 		float64 groundTrackDegreesFromEast,
 		float r, float g, float b, float alpha,
 		float64 thetaAlongTrackDegrees0, float64 thetaAlongTrackDegrees1,
 		float64 phiCrossTrackDegrees0, float64 phiCrossTrackDegrees1,
-		float64 deltaAlongTrackDegrees, float64 deltaCrossTrackDegrees
+		float64 deltaAlongTrackDegrees, float64 deltaCrossTrackDegrees,
+		float64 EarthRotationDegreePerAlong360Degrees=0.0
 		) {
 
-	vector<SpatialVector> *granules = new vector<SpatialVector>;
+	if( EarthRotationDegreePerAlong360Degrees != 0.0 ) {
+		cout << "plotCircularTrack::Warning! EarthRotationAndPrecessionNotImplemented!!!" << endl << flush;
+	}
+
+	vector<SpatialVector> granules;
 
 	SpatialVector target; target.setLatLonDegrees(latDegrees,lonDegrees);
-	SpatialVector north = SpatialVector(0.,0.,1.);
+	const SpatialVector north = SpatialVector(0.,0.,1.);
 	SpatialVector dTargetHat, L;
 	if(abs(north*target)!=1) {
 		SpatialVector east  = north^target; east.normalize();
@@ -868,15 +870,36 @@ vector<SpatialVector> *plotCircularTrack(
 
 //	float64 k = 2.*M_PI/360.0;
 
+	const float64 RadiansPerDegree = 2.*M_PI/360.0;
+	const float64 shiftDuringOrbit0 = (EarthRotationDegreePerAlong360Degrees/360.0)*thetaAlongTrackDegrees0*RadiansPerDegree;
+	SpatialVector target0 = target.rotatedAbout(north,shiftDuringOrbit0); target0.normalize();
+	SpatialVector aheadOfTarget0 = L^target0; aheadOfTarget0.normalize();
 	SpatialVector* x0 =
-			pointFromReferenceAndDeltas(target,aheadOfTarget,thetaAlongTrackDegrees0,0.);
-//			sin(k*thetaAlongTrackDegrees0)*aheadOfTarget
-//			+ cos(k*thetaAlongTrackDegrees0)*target;
+			pointFromReferenceAndDeltas(
+					target0,
+					aheadOfTarget0,
+					thetaAlongTrackDegrees0,
+					0.);
+
+	const float64 shiftDuringOrbit1 = (EarthRotationDegreePerAlong360Degrees/360.0)*thetaAlongTrackDegrees1*RadiansPerDegree;
+	SpatialVector target1 = target.rotatedAbout(north,shiftDuringOrbit1); target1.normalize();
+	SpatialVector aheadOfTarget1 = L^target1; aheadOfTarget1.normalize();
 	SpatialVector* x1 =
-			pointFromReferenceAndDeltas(target,aheadOfTarget,thetaAlongTrackDegrees1,0.);
-//			sin(k*thetaAlongTrackDegrees1)*aheadOfTarget
-//			+ cos(k*thetaAlongTrackDegrees1)*target;
-	viz->addArc(*x0,*x1,1.,1.,1.);
+			pointFromReferenceAndDeltas(
+					target1,
+					aheadOfTarget1,
+					thetaAlongTrackDegrees1,
+					0.);
+
+//	cout << "s0: " << shiftDuringOrbit0 << endl << flush;
+//	cout << "s1: " << shiftDuringOrbit1 << endl << flush;
+//	cout << "t0: " << target0 << endl << flush;
+//	cout << "t:  " << target << endl << flush;
+//	cout << "t1: " << target1 << endl << flush;
+//	cout << "x0: " << *x0 << endl << flush;
+//	cout << "x1: " << *x1 << endl << flush;
+	viz->addArc(*x0,target,1,1,1,-1.0,200);
+	viz->addArc(target,*x1,1,1,1,-1.0,200);
 
 	int steps = (thetaAlongTrackDegrees1-thetaAlongTrackDegrees0)/deltaAlongTrackDegrees;
 	int crossSteps = (phiCrossTrackDegrees1-phiCrossTrackDegrees0)/deltaCrossTrackDegrees;
@@ -897,10 +920,10 @@ vector<SpatialVector> *plotCircularTrack(
 			viz->addArc(*v1,*v2,r,g,b,alpha);
 			viz->addArc(*v2,*v3,r,g,b,alpha);
 			viz->addArc(*v3,*v0,r,g,b,alpha);
-			granules->push_back(*v0);
-			granules->push_back(*v1);
-			granules->push_back(*v2);
-			granules->push_back(*v3);
+			granules.push_back(*v0);
+			granules.push_back(*v1);
+			granules.push_back(*v2);
+			granules.push_back(*v3);
 		}
 	}
 	return granules;
@@ -910,6 +933,12 @@ vector<SpatialVector> *plotCircularTrack(
 void testPlotDataSetIntersection(VizHTM *viz) {
 	SpatialIndex index(5,5);
 	SpatialVector u0, u1, u2, u3, v0, v1, v2, v3;
+
+	HtmRange *rangeU = new HtmRange;
+	HtmRange *rangeV = new HtmRange;
+	HtmRange *rangeIntersect = new HtmRange;
+
+	rangeU->purge(); rangeV->purge(); rangeIntersect->purge();
 
 	if(false){
 		u0.setLatLonDegrees(10.0,0.0);
@@ -926,12 +955,15 @@ void testPlotDataSetIntersection(VizHTM *viz) {
 				viz,
 				&index,
 				&u0,&u1,&u2,&u3,
-				&v0,&v1,&v2,&v3
+				&v0,&v1,&v2,&v3,
+				rangeU,
+				rangeV,
+				rangeIntersect
 				);
 	}
 
 	const SpatialVector zHat = SpatialVector(0.,0.,1.);
-	for(int i=0; i<600; i++){
+	for(int i=0; i<10; i++){
 //		cout << "i: " << i << endl << flush;
 
 		double delta = 10.;
@@ -964,7 +996,10 @@ void testPlotDataSetIntersection(VizHTM *viz) {
 					viz,
 					&index,
 					&u0,&u1,&u2,&u3,
-					&v0,&v1,&v2,&v3
+					&v0,&v1,&v2,&v3,
+					rangeU,
+					rangeV,
+					rangeIntersect
 			);
 		}
 //		if(i!=i){
@@ -983,80 +1018,116 @@ void testPlotDataSetIntersection(VizHTM *viz) {
 				viz->addRectangle(v0,v1,v2,v3,r,g,b);
 			}
 		}
+//		cout << "+" << endl << flush;
 	}
+
+	viz->addHTMRange(&index,rangeU,1.0,0.0,0.0,0.7);
+	viz->addHTMRange(&index,rangeV,0.0,1.0,0.0,0.7);
+	viz->addHTMRange(&index,rangeIntersect,0.0,0.5,1.0,0.2);
+
+	delete rangeU, rangeV, rangeIntersect;
 }
 
-void testPlotDataSetIntersection0(VizHTM *viz) {
+
+array<vector<SpatialVector>,2> DataIntersectionDriver(
+		VizHTM *viz) {
+	vector<SpatialVector> granules0, granules1;
+
+	{
+		float64 latDegrees = 0.3;
+		float64 lonDegrees = 45.7;
+		float64 groundTrackDegreesFromEast = 45.0;
+		float r = 0.8;
+		float g = 0.3;
+		float b = 1.0;
+		float a = -1;
+		float64 thetaAlongTrackDegrees0 = -100;
+		float64 thetaAlongTrackDegrees1 =  100;
+		float64 phiCrossTrackDegrees0 =   -4;
+		float64 phiCrossTrackDegrees1 =    4;
+		float64 deltaAlongTrackDegrees = 4;
+		float64 deltaCrossTrackDegrees = 8;
+
+		granules0 = plotCircularTrack(
+				viz,
+				latDegrees,  lonDegrees,
+				groundTrackDegreesFromEast,
+				r,  g,  b,  a,
+				thetaAlongTrackDegrees0,  thetaAlongTrackDegrees1,
+				phiCrossTrackDegrees0,  phiCrossTrackDegrees1,
+				deltaAlongTrackDegrees,  deltaCrossTrackDegrees
+		);
+	}
+
+	{
+		float64 latDegrees = 0.7;
+		float64 lonDegrees = 45.3;
+		float64 groundTrackDegreesFromEast = 5.0;
+		float r = 0.0;
+		float g = 0.8;
+		float b = 0.8;
+		float a = -1;
+		float64 thetaAlongTrackDegrees0 = -40;
+		float64 thetaAlongTrackDegrees1 =  40;
+		float64 phiCrossTrackDegrees0 =   -5;
+		float64 phiCrossTrackDegrees1 =    5;
+		float64 deltaAlongTrackDegrees = 2.5;
+		float64 deltaCrossTrackDegrees = 2.5;
+
+		granules1 = plotCircularTrack(
+				viz,
+				latDegrees,  lonDegrees,
+				groundTrackDegreesFromEast,
+				r,  g,  b,  a,
+				thetaAlongTrackDegrees0,  thetaAlongTrackDegrees1,
+				phiCrossTrackDegrees0,  phiCrossTrackDegrees1,
+				deltaAlongTrackDegrees,  deltaCrossTrackDegrees
+		);
+	}
+	return {granules0,granules1};
+}
+
+void testPlotDataSetIntersection0_PlotHtmRangeContains(VizHTM *viz, uint htmIdLevel=4, uint saveLevel=5) {
+	SpatialIndex index(htmIdLevel,saveLevel);
 	viz->lineWidth = 1.5;
 	viz->sphereComplexity = 1.0;
 	plotBlockingSphere(viz,0.3,0.3,0.3,0.99);
 
+	array<vector<SpatialVector>,2> granuleSets;
 	vector<SpatialVector> *granules0, *granules1;
 
-	{
-	float64 latDegrees = 0.3;
-	float64 lonDegrees = 45.7;
-	float64 groundTrackDegreesFromEast = 45.0;
-	float r = 0.8;
-	float g = 0.3;
-	float b = 1.0;
-	float a = -1;
-	float64 thetaAlongTrackDegrees0 = -180;
-	float64 thetaAlongTrackDegrees1 =  180;
-	float64 phiCrossTrackDegrees0 =   -4;
-	float64 phiCrossTrackDegrees1 =    4;
-	float64 deltaAlongTrackDegrees = 4;
-	float64 deltaCrossTrackDegrees = 8;
+	granuleSets = DataIntersectionDriver(viz);
+	granules0 = &(granuleSets[0]);
+	granules1 = &(granuleSets[1]);
 
-	granules0 = plotCircularTrack(
-			viz,
-			latDegrees,  lonDegrees,
-			groundTrackDegreesFromEast,
-			r,  g,  b,  a,
-			thetaAlongTrackDegrees0,  thetaAlongTrackDegrees1,
-			phiCrossTrackDegrees0,  phiCrossTrackDegrees1,
-			deltaAlongTrackDegrees,  deltaCrossTrackDegrees
-	);
-	}
-
-	{
-	float64 latDegrees = 0.7;
-	float64 lonDegrees = 45.3;
-	float64 groundTrackDegreesFromEast = 5.0;
-	float r = 0.0;
-	float g = 0.8;
-	float b = 0.8;
-	float a = -1;
-	float64 thetaAlongTrackDegrees0 = -40;
-	float64 thetaAlongTrackDegrees1 =  40;
-	float64 phiCrossTrackDegrees0 =   -5;
-	float64 phiCrossTrackDegrees1 =    5;
-	float64 deltaAlongTrackDegrees = 5;
-	float64 deltaCrossTrackDegrees = 5;
-
-	granules1 = plotCircularTrack(
-			viz,
-			latDegrees,  lonDegrees,
-			groundTrackDegreesFromEast,
-			r,  g,  b,  a,
-			thetaAlongTrackDegrees0,  thetaAlongTrackDegrees1,
-			phiCrossTrackDegrees0,  phiCrossTrackDegrees1,
-			deltaAlongTrackDegrees,  deltaCrossTrackDegrees
-	);
-	}
-
+//	cout << "100" << endl << flush;
 //	vector<SpatialVector> *tmp;
 //	tmp = granules0;
 //	granules0 = granules1;
 //	granules1 = tmp;
 
+	HtmRange *rangeU = new HtmRange;
+	HtmRange *rangeV = new HtmRange;
+	HtmRange *rangeIntersect = new HtmRange;
+	rangeU->purge();
+	rangeV->purge();
+	rangeIntersect->purge();
+
+//	cout << "200" << endl << flush;
+
 	bool focus = false;
 	int iFocus = 0;
 	int jFocus = 0;
-	SpatialIndex index(5,5);
+//	SpatialIndex index(3,5);
+
+//	cout << "300" << endl << flush;
+
 //	cout << "intersecting" << endl << flush;
 	int count=0;
 	int i=0, j=0;
+//	cout << "uv<" << (granules0->size()/4)
+//			<< "," << (granules1->size()/4)
+//			<< ">" << endl << flush;
 	for(
 			vector<SpatialVector>::iterator iterU = granules0->begin();
 			iterU != granules0->end();
@@ -1085,7 +1156,10 @@ void testPlotDataSetIntersection0(VizHTM *viz) {
 						viz,
 						&index,
 						&u0,&u1,&u2,&u3,
-						&v0,&v1,&v2,&v3
+						&v0,&v1,&v2,&v3,
+						rangeU,
+						rangeV,
+						rangeIntersect
 				);
 			} else {
 				if((iFocus==i)&&(jFocus==j)){
@@ -1093,21 +1167,157 @@ void testPlotDataSetIntersection0(VizHTM *viz) {
 							viz,
 							&index,
 							&u0,&u1,&u2,&u3,
-							&v0,&v1,&v2,&v3
+							&v0,&v1,&v2,&v3,
+							rangeU,
+							rangeV,
+							rangeIntersect
 					);
 					viz->addRectangle(u0,u1,u2,u3,1.0,0.,0.);
 					viz->addRectangle(v0,v1,v2,v3,0.0,0.,1.);
 				}
 			}
-//			cout <<"+" << flush;
+			count++;
 
-//			count++;
-//			if(count > 2000) return;
-//			return;
 		}
 	}
 
+	rangeU->defrag(); rangeV->defrag();
+
+	Key lo=-1, hi=-1;
+	HtmRange red, blue, green;
+	HtmRange *range1, *range2;
+	range1=rangeU;
+	range2=rangeV;
+	// range2=rangeIntersect;
+	range1->reset();
+	int indexp = range1->getNext(lo,hi);
+	if(indexp) {
+		do {
+			//			cout << "r2.contains: " << lo << " " << hi << " " << range2.contains(lo,hi) << endl << flush;
+			int ret = range2->contains(lo,hi);
+			if(ret == -1) {
+				red.addRange(lo,hi);
+			} else if (ret == 0 ) {
+				green.addRange(lo,hi);
+			} else {
+				blue.addRange(lo,hi);
+			}
+		} while(range1->getNext(lo,hi));
+		viz->addHTMRange(&index,&red,0.7,0.,0.);
+		viz->addHTMRange(&index,&green,0.,0.7,0.);
+		viz->addHTMRange(&index,&blue,0.,0.,0.7);
+		//			cout << "red" << endl;
+		//			red->print(HtmRange::BOTH,cout);
+		//			cout << "green" << endl;
+		//			green->print(HtmRange::BOTH,cout);
+		//			cout << "blue" << endl;
+		//			blue->print(HtmRange::BOTH, cout);
+	}
+
+	delete rangeU, rangeV, rangeIntersect;
+
 }
+
+
+
+void testPlotDataSetIntersection0_PlotIntersectTwoRectanglesOutput(VizHTM *viz, uint htmIdLevel=4, uint saveLevel=5) {
+	SpatialIndex index(htmIdLevel,saveLevel);
+
+	viz->lineWidth = 1.5;
+	viz->sphereComplexity = 1.0;
+	plotBlockingSphere(viz,0.3,0.3,0.3,0.99);
+
+	array<vector<SpatialVector>,2> granuleSets;
+	vector<SpatialVector> *granules0, *granules1;
+
+	granuleSets = DataIntersectionDriver(viz);
+	granules0 = &(granuleSets[0]);
+	granules1 = &(granuleSets[1]);
+
+//	vector<SpatialVector> *tmp;
+//	tmp = granules0;
+//	granules0 = granules1;
+//	granules1 = tmp;
+
+	HtmRange *rangeU = new HtmRange;
+	HtmRange *rangeV = new HtmRange;
+	HtmRange *rangeIntersect = new HtmRange;
+	rangeU->purge();
+	rangeV->purge();
+	rangeIntersect->purge();
+
+	bool focus = false;
+	int iFocus = 0;
+	int jFocus = 0;
+//	cout << "intersecting" << endl << flush;
+	int count=0;
+	int i=0, j=0;
+//	cout << "uv<" << (granules0->size()/4)
+//			<< "," << (granules1->size()/4)
+//			<< ">" << flush;
+	for(
+			vector<SpatialVector>::iterator iterU = granules0->begin();
+			iterU != granules0->end();
+			iterU++, i++) {
+//		cout<< "u" << flush;
+		SpatialVector u0 = *iterU++;
+		SpatialVector u1 = *iterU++;
+		SpatialVector u2 = *iterU++;
+		SpatialVector u3 = *iterU;
+		j=0;
+		for(
+				vector<SpatialVector>::iterator iterV = granules1->begin();
+				iterV != granules1->end();
+				iterV++, j++) {
+//			cout << "v" << flush;
+//			cout << "<ij= " << i << " " << j << " >" << flush;
+
+			SpatialVector v0 = *iterV++;
+			SpatialVector v1 = *iterV++;
+			SpatialVector v2 = *iterV++;
+			SpatialVector v3 = *iterV;
+
+//			cout << "." << flush;
+			if(!focus){
+				intersectTwoRectangles(
+						viz,
+						&index,
+						&u0,&u1,&u2,&u3,
+						&v0,&v1,&v2,&v3,
+						rangeU,
+						rangeV,
+						rangeIntersect
+				);
+			} else {
+				if((iFocus==i)&&(jFocus==j)){
+					intersectTwoRectangles(
+							viz,
+							&index,
+							&u0,&u1,&u2,&u3,
+							&v0,&v1,&v2,&v3,
+							rangeU,
+							rangeV,
+							rangeIntersect
+					);
+					viz->addRectangle(u0,u1,u2,u3,1.0,0.,0.);
+					viz->addRectangle(v0,v1,v2,v3,0.0,0.,1.);
+				}
+			}
+			count++;
+		}
+	}
+	viz->addHTMRange(&index,rangeIntersect,0.1,0.9,0.1,0.);
+	viz->addHTMRange(&index,rangeU,1.0,0.1,0.1,0.);
+	viz->addHTMRange(&index,rangeV,0.1,0.1,1.0,0.);
+
+	delete rangeU, rangeV, rangeIntersect;
+
+}
+
+
+
+
+
 
 void plotHTMInterval(VizHTM *viz, SpatialIndex index, htmRange interval) {
 	size_t htmIdLevel = index.getMaxlevel();
@@ -1584,7 +1794,8 @@ int main(int argc, char *argv[]) {
 	if(false) testPlotEdgesFromHTMNameInterval(viz); // Simple subdivision for Kuo. 2016-0317
 
 	if(false) testPlotDataSetIntersection(viz);
-	if(true) testPlotDataSetIntersection0(viz);
+	if(false) testPlotDataSetIntersection0_PlotHtmRangeContains(viz,4);
+	if(true) testPlotDataSetIntersection0_PlotIntersectTwoRectanglesOutput(viz,6);
 
 	if(false) {
 		int level = 2;

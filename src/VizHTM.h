@@ -8,9 +8,11 @@
 #ifndef VIZHTM_H_
 #define VIZHTM_H_
 
+#include "HtmRange.h"
 #include "SpatialIndex.h"
 #include "SpatialVector.h"
 #include "SpatialConstraint.h"
+#include "SpatialInterface.h"
 
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSwitch.h>
@@ -79,7 +81,8 @@ public:
 	void addArc(
 			const SpatialVector x0,
 			const SpatialVector x1,
-			float r, float g, float b, float a=-1.);
+			float r, float g, float b, float a=-1.,
+			int steps=-1);
 	void addArcAtLatitudeDegrees(float64 lat, float64 lon0, float64 lon1, float r, float g, float b);
 
 	void addEdgesFromIndexAndId(
@@ -111,6 +114,12 @@ public:
 
 	SoSeparator* makeText(SpatialVector *a, const char *text, float size, float r, float g, float b);
 	void addAnnotation(SpatialVector *a, const char *annotation, float size, float r, float g, float b);
+
+	void addHTMInterval(SpatialIndex index, htmRange interval);
+
+	void addHTMRange(
+			const SpatialIndex *index, HtmRange *range,
+			float r, float g, float b, float a=-1.);
 
 	void debug_dump();
 

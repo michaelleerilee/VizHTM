@@ -16,7 +16,6 @@
 #include "SpatialException.h"
 #include "SpatialIndex.h"
 #include "SpatialVector.h"
-#include "SpatialInterface.h"
 
 #include <Inventor/Qt/SoQt.h>
 #include <Inventor/Qt/viewers/SoQtExaminerViewer.h>
@@ -651,10 +650,16 @@ void VizHTM::addLatLonBoxEdgesDegrees(
 void VizHTM::addArc(
 		const SpatialVector x0,
 		const SpatialVector x1,
-		float r, float g, float b, float alpha) {
-	const int steps = 20;
+		float r, float g, float b, float alpha,
+		int steps) {
 	SpatialVector dx = x1-x0;
 	SpatialVector *last = new SpatialVector(x0);
+	if(steps<0) {
+		steps = 20;
+		if(dx.length()>0.5){
+			steps = 180;
+		}
+	}
 	for(double i=1; i<steps-1; i++) {
 		double a = i / (steps - 1);
 		SpatialVector *next = new SpatialVector(x0 + a * dx); next->normalize();
@@ -691,9 +696,11 @@ void VizHTM::addEdgesFromIndexAndId(
 //	cout << "htmId:  " << htmId << endl << flush;
 //	cout << "nodeId: " << nodeIndex << endl << flush;
 	index->nodeVertex(nodeIndex,v0,v1,v2);
-	addEdge(v0,v1,r,g,b,a);
-	addEdge(v1,v2,r,g,b,a);
-	addEdge(v2,v0,r,g,b,a);
+	if(nodeIndex) {
+		addEdge(v0,v1,r,g,b,a);
+		addEdge(v1,v2,r,g,b,a);
+		addEdge(v2,v0,r,g,b,a);
+	}
 }
 
 void VizHTM::addEdgesFromIndexAndName(
@@ -759,3 +766,85 @@ void VizHTM::addArcFromIndexAndLatLonDegrees(
 	addArc(v1,v2,r,g,b,a);
 	addArc(v2,v0,r,g,b,a);
 }
+
+void VizHTM::addHTMRange(
+		const SpatialIndex *index, HtmRange *range,
+		float r, float g, float b, float a) {
+	if(!range) return;
+	range->reset();
+	Key lo=0, hi=0;
+	int indexp = range->getNext(lo,hi);
+	if(indexp) {
+		do {
+			for(uint numericId=lo; numericId<=hi; numericId++) {
+				addEdgesFromIndexAndId(index,numericId,r,g,b,a);
+			}
+		} while (range->getNext(lo,hi));
+	}
+}
+
+void VizHTM::addHTMInterval(SpatialIndex index, htmRange interval) {
+	size_t htmIdLevel = index.getMaxlevel();
+	Key lo = interval.lo;
+	Key hi = interval.hi;
+	SpatialVector x1,x2,x3;
+	KeyPair adjustedRange = HTMRangeAtLevelFromHTMRange(htmIdLevel,lo,hi);
+	lo = adjustedRange.lo;
+	hi = adjustedRange.hi;
+
+	for(uint64 numericId=lo; numericId<=hi;numericId++) {
+		uint64 nodeIndex = index.nodeIndexFromId(numericId);
+		if(nodeIndex!=0){
+			index.nodeVertex(nodeIndex,x1,x2,x3);
+			if(true) {
+				float r=0.; float g=0.; float b=0.;
+				switch(numericId % 4) {
+				case 0:
+					r=1.;
+					break;
+				case 1:
+					g=1.;
+					break;
+				case 2:
+					b=1.;
+					break;
+				default:
+					r=1.; g=1.; b=1.;
+					break;
+				}
+				//	for(int i=0; i<3; i++) addEdgeColor(r,g,b);
+				int colorBase = this->nFaceColors;
+				for(int i=0; i<3; i++) {
+					this->addFaceColor(r,g,b);
+				}
+				this->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
+
+				int indexBase = this->nCoordinates;
+				this->addCoordinate64(x1.x(),x1.y(),x1.z());
+				this->addCoordinate64(x2.x(),x2.y(),x2.z());
+				this->addCoordinate64(x3.x(),x3.y(),x3.z());
+				this->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+
+				//					printf("id: %llx ix: %llu",numericId,nodeIndex);
+				//					cout << endl << flush;
+
+				if(true){
+					float size = pow(0.5,htmIdLevel+3);
+					float r = 0.4, g = 0.4, b = 0.6;
+					SpatialVector x = 3.*x1+x2+x3; x.normalize(); x *= 1.0+1.0e-6;
+					SpatialVector x_ = x1+x2+x3; x_.normalize();
+//					if(false){
+//						cout
+//						<< " nI: " << nodeIndex
+//						<< " x: " << x.x() << " " << x.y() << " " << x.z();
+//					}
+					char *str = new char[256];
+					sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
+					this->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
+					this->addEdge(x,x_,0.5,0.5,0.9);
+				}
+			}
+		}
+	}
+}
+
