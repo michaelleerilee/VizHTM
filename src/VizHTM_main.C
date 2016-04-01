@@ -1029,6 +1029,64 @@ void testPlotDataSetIntersection(VizHTM *viz) {
 }
 
 
+array<vector<SpatialVector>,2> DataIntersectionDriver1(
+		VizHTM *viz) {
+	vector<SpatialVector> granules0, granules1;
+
+	{
+		float64 latDegrees = 0.3;
+		float64 lonDegrees = 45.7;
+		float64 groundTrackDegreesFromEast = 45.0;
+		float r = 0.8;
+		float g = 0.3;
+		float b = 1.0;
+		float a = -1;
+		float64 thetaAlongTrackDegrees0 = -30;
+		float64 thetaAlongTrackDegrees1 =  -5;
+		float64 phiCrossTrackDegrees0 =   -5;
+		float64 phiCrossTrackDegrees1 =    0;
+		float64 deltaAlongTrackDegrees = 3.5;
+		float64 deltaCrossTrackDegrees = 8;
+
+		granules0 = plotCircularTrack(
+				viz,
+				latDegrees,  lonDegrees,
+				groundTrackDegreesFromEast,
+				r,  g,  b,  a,
+				thetaAlongTrackDegrees0,  thetaAlongTrackDegrees1,
+				phiCrossTrackDegrees0,  phiCrossTrackDegrees1,
+				deltaAlongTrackDegrees,  deltaCrossTrackDegrees
+		);
+	}
+
+	{
+		float64 latDegrees = 0.7;
+		float64 lonDegrees = 45.3;
+		float64 groundTrackDegreesFromEast = 5.0;
+		float r = 0.0;
+		float g = 0.8;
+		float b = 0.8;
+		float a = -1;
+		float64 thetaAlongTrackDegrees0 = 7.5;
+		float64 thetaAlongTrackDegrees1 =  10;
+		float64 phiCrossTrackDegrees0 =   -5;
+		float64 phiCrossTrackDegrees1 =    -2.5;
+		float64 deltaAlongTrackDegrees = 2.5;
+		float64 deltaCrossTrackDegrees = 2.5;
+
+		granules1 = plotCircularTrack(
+				viz,
+				latDegrees,  lonDegrees,
+				groundTrackDegreesFromEast,
+				r,  g,  b,  a,
+				thetaAlongTrackDegrees0,  thetaAlongTrackDegrees1,
+				phiCrossTrackDegrees0,  phiCrossTrackDegrees1,
+				deltaAlongTrackDegrees,  deltaCrossTrackDegrees
+		);
+	}
+	return {granules0,granules1};
+}
+
 array<vector<SpatialVector>,2> DataIntersectionDriver(
 		VizHTM *viz) {
 	vector<SpatialVector> granules0, granules1;
@@ -1041,12 +1099,12 @@ array<vector<SpatialVector>,2> DataIntersectionDriver(
 		float g = 0.3;
 		float b = 1.0;
 		float a = -1;
-		float64 thetaAlongTrackDegrees0 = -100;
-		float64 thetaAlongTrackDegrees1 =  100;
+		float64 thetaAlongTrackDegrees0 = -30;
+		float64 thetaAlongTrackDegrees1 =  30;
 		float64 phiCrossTrackDegrees0 =   -4;
 		float64 phiCrossTrackDegrees1 =    4;
 		float64 deltaAlongTrackDegrees = 4;
-		float64 deltaCrossTrackDegrees = 8;
+		float64 deltaCrossTrackDegrees = 4;
 
 		granules0 = plotCircularTrack(
 				viz,
@@ -1087,11 +1145,15 @@ array<vector<SpatialVector>,2> DataIntersectionDriver(
 	return {granules0,granules1};
 }
 
+
+
 void testPlotDataSetIntersection0_PlotHtmRangeContains(VizHTM *viz, uint htmIdLevel=4, uint saveLevel=5) {
 	SpatialIndex index(htmIdLevel,saveLevel);
 	viz->lineWidth = 1.5;
 	viz->sphereComplexity = 1.0;
-	plotBlockingSphere(viz,0.3,0.3,0.3,0.99);
+	if(htmIdLevel>2) {
+		plotBlockingSphere(viz,0.3,0.3,0.3,0.99);
+	}
 
 	array<vector<SpatialVector>,2> granuleSets;
 	vector<SpatialVector> *granules0, *granules1;
@@ -1181,7 +1243,7 @@ void testPlotDataSetIntersection0_PlotHtmRangeContains(VizHTM *viz, uint htmIdLe
 		}
 	}
 
-	rangeU->defrag(); rangeV->defrag();
+	rangeU->defrag(); rangeV->defrag(); // TODO Defrag led to a little strangeness. May require double-checking.
 
 	Key lo=-1, hi=-1;
 	HtmRange red, blue, green;
@@ -1195,6 +1257,7 @@ void testPlotDataSetIntersection0_PlotHtmRangeContains(VizHTM *viz, uint htmIdLe
 		do {
 			//			cout << "r2.contains: " << lo << " " << hi << " " << range2.contains(lo,hi) << endl << flush;
 			int ret = range2->contains(lo,hi);
+//			cout << "r2.cont: lo,hi,ret: " << lo << " " << " " << hi << " " << ret << endl << flush;
 			if(ret == -1) {
 				red.addRange(lo,hi);
 			} else if (ret == 0 ) {
@@ -1214,6 +1277,15 @@ void testPlotDataSetIntersection0_PlotHtmRangeContains(VizHTM *viz, uint htmIdLe
 		//			blue->print(HtmRange::BOTH, cout);
 	}
 
+//	cout << "r1: " << endl << flush;
+//	range1->print(HtmRange::BOTH,cout,false);
+//	cout << "r2: " << endl << flush;
+//	range2->print(HtmRange::BOTH,cout,false);
+//
+//	cout << " r1.contains(141,141) == true : " << range1->contains(141,141) << endl << flush;
+//	cout << " r1.contains(143,143) == true : " << range1->contains(143,143) << endl << flush;
+//	cout << " r1.contains(130,131) == true : " << range1->contains(130,131) << endl << flush;
+
 	delete rangeU, rangeV, rangeIntersect;
 
 }
@@ -1225,7 +1297,9 @@ void testPlotDataSetIntersection0_PlotIntersectTwoRectanglesOutput(VizHTM *viz, 
 
 	viz->lineWidth = 1.5;
 	viz->sphereComplexity = 1.0;
-	plotBlockingSphere(viz,0.3,0.3,0.3,0.99);
+	if(htmIdLevel>2) {
+		plotBlockingSphere(viz,0.3,0.3,0.3,0.99);
+	}
 
 	array<vector<SpatialVector>,2> granuleSets;
 	vector<SpatialVector> *granules0, *granules1;
@@ -1306,9 +1380,9 @@ void testPlotDataSetIntersection0_PlotIntersectTwoRectanglesOutput(VizHTM *viz, 
 			count++;
 		}
 	}
-	viz->addHTMRange(&index,rangeIntersect,0.1,0.9,0.1,0.);
-	viz->addHTMRange(&index,rangeU,1.0,0.1,0.1,0.);
-	viz->addHTMRange(&index,rangeV,0.1,0.1,1.0,0.);
+	viz->addHTMRange(&index,rangeIntersect,0.9,0.1,0.9,0.);
+	viz->addHTMRange(&index,rangeU,0.5,0.9,0.1,0.);
+	viz->addHTMRange(&index,rangeV,0.1,0.9,0.5,0.);
 
 	delete rangeU, rangeV, rangeIntersect;
 
@@ -1794,8 +1868,8 @@ int main(int argc, char *argv[]) {
 	if(false) testPlotEdgesFromHTMNameInterval(viz); // Simple subdivision for Kuo. 2016-0317
 
 	if(false) testPlotDataSetIntersection(viz);
-	if(false) testPlotDataSetIntersection0_PlotHtmRangeContains(viz,4);
-	if(true) testPlotDataSetIntersection0_PlotIntersectTwoRectanglesOutput(viz,6);
+	if(true) testPlotDataSetIntersection0_PlotHtmRangeContains(viz,5); // 7
+	if(false) testPlotDataSetIntersection0_PlotIntersectTwoRectanglesOutput(viz,5);
 
 	if(false) {
 		int level = 2;
