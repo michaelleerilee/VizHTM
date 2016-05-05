@@ -5,10 +5,10 @@
  *      Author: mrilee
  */
 
-
-
-
 #include "VizHTM.h"
+
+#include <unistd.h>
+#include <getopt.h>
 
 #include <iostream>
 #include <iomanip>
@@ -23,6 +23,7 @@
 #include "SpatialInterface.h"
 
 #include "BitShiftNameEncoding.h"
+#include "EmbeddedLevelNameEncoding.h"
 
 #include <Inventor/Qt/SoQt.h>
 #include <Inventor/Qt/viewers/SoQtExaminerViewer.h>
@@ -1385,12 +1386,153 @@ void testPlotDataSetIntersection0_PlotIntersectTwoRectanglesOutput(VizHTM *viz, 
 	viz->addHTMRange(&index,rangeV,0.1,0.9,0.5,0.);
 
 	delete rangeU, rangeV, rangeIntersect;
+}
+
+void testMultiResolutionHtmRange(VizHTM *viz) {
+
+	SpatialIndex index;
+	uint64 htmId;
+	HtmRange *r = new HtmRange; // Use bitshifted format
+
+	htmId = index.idByName("N01");
+	r->addRange(htmId,htmId);
+	viz->addHTMRange(r,0.1,0.8,0.8,0.0);
+
+	htmId = index.idByName("N0133");
+	r->purge();
+	r->addRange(htmId,htmId);
+	viz->addHTMRange(r,0.8,0.1,0.1,0.0);
+
+	htmId = index.idByName("N013333");
+	r->purge();
+	r->addRange(htmId,htmId);
+	viz->addHTMRange(r,0.8,0.1,0.8,0.0);
+
+	r->purge();
+	htmId = index.idByName("N21");
+	r->addRange(htmId,htmId);
+	htmId = index.idByName("N2133");
+	r->addRange(htmId-3,htmId);
+	htmId = index.idByName("N213333");
+	r->addRange(htmId-3,htmId);
+	viz->addHTMRange(r,0.1,0.6,0.9,0.0);
 
 }
 
 
+void printHtmIdInfo(uint64 id){
+	BitShiftNameEncoding rightJustified;
+	EmbeddedLevelNameEncoding leftJustified;
+	string name;
+	name = rightJustified.nameById(id);
+	cout << "HtmIdInfo " << id << " ";
+	cout << hex << id << dec << " " ;
+	cout << rightJustified.nameById(id) << " ";
+	cout << leftJustified.idByName(rightJustified.nameById(id)) << " ";
+	cout << hex << leftJustified.idByName(rightJustified.nameById(id)) << dec << " ";
+
+	leftJustified.setName(rightJustified.nameById(id));
+	cout << leftJustified.getId_NoEmbeddedLevel() << " ";
+	cout << hex << leftJustified.getId_NoEmbeddedLevel() << dec << " ";
+	cout << endl << flush;
+}
+
+void testLevelChunk(VizHTM *viz) {
+
+	bool referenceGrid = false;
+	bool level3 = false;
+	bool level4 = false;
+	bool faces  = true;
+	bool level5 = true;
+	bool printInfo = true;
+	viz->lineWidth = 1.5;
+
+	if(referenceGrid) {
+		testTenDegreeGridRGB(viz,0.6,0.6,0.6);
+		viz->sphereComplexity = 1.0;
+//		if(htmIdLevel>2) {
+			plotBlockingSphere(viz,0.3,0.3,0.3,0.99);
+//		}
+	}
+
+	SpatialIndex *index3 = new SpatialIndex(3,5);
+	SpatialIndex *index4 = new SpatialIndex(4,5);
+	SpatialIndex *index5 = new SpatialIndex(5,5);
+	uint64 htmId;
+	HtmRange *r = new HtmRange;
+
+	if(level3){
+		r->purge();
+		r->addRange(1023,1023);
+		viz->addHTMRange(r,0.1,0.8,0.1,0.0);
+		//	viz->addArcFromIndexAndId(index3,1023,0.1,0.8,0.1,0.0);
+	}
+
+	if(level4){
+		r->purge();
+		r->addRange(4092,4095);
+		//	r->addRange(4092,4092);
+		viz->addHTMRange(r,0.8,0.1,0.8,0.0);
+		//	viz->addArcFromIndexAndId(index4,4092,0.1,0.8,0.8,0.0);
+	}
+
+	if(faces){
+		float intensity = 0.5;
+		viz->addFaceFromIndexAndId(
+				index4,4092,
+				intensity, 0, 0,
+				intensity, 0, 0,
+				intensity, 0, 0
+		);
+		viz->addFaceFromIndexAndId(
+				index4,4093,
+				0, intensity, 0,
+				0, intensity, 0,
+				0, intensity, 0
+		);
+		viz->addFaceFromIndexAndId(
+				index4,4094,
+				0, 0, intensity,
+				0, 0, intensity,
+				0, 0, intensity
+		);
+		viz->addFaceFromIndexAndId(
+				index4,4095,
+				intensity, intensity, intensity,
+				intensity, intensity, intensity,
+				intensity, intensity, intensity
+		);
+	}
+
+	if(level5){
+		//	r->purge();
+		////	r->addRange(16368,16383);
+		//	r->addRange(16368,16368);
+		//	viz->addHTMRange(r,0.1,0.1,0.8,0.0);
+		for(int i=0;i<16;i++){
+			viz->addArcFromIndexAndId(index5,16368+i,0.1,0.8,0.8,0.0);
+		}
+	}
+
+	if(printInfo) {
+		printHtmIdInfo(1023);
+		printHtmIdInfo(4092);
+		printHtmIdInfo(4093);
+		printHtmIdInfo(4094);
+		printHtmIdInfo(4095);
+		printHtmIdInfo(16368);
+		printHtmIdInfo(16368+3);
+		printHtmIdInfo(16372);
+		printHtmIdInfo(16372+3);
+		printHtmIdInfo(16376);
+		printHtmIdInfo(16376+3);
+		printHtmIdInfo(16380);
+		printHtmIdInfo(16383);
+	}
 
 
+	delete index3, index4, index5, r;
+}
 
 
 void plotHTMInterval(VizHTM *viz, SpatialIndex index, htmRange interval) {
@@ -1470,7 +1612,6 @@ void testHTMRange(VizHTM *viz, int htmIdLevel, const char *n0, const char *n1) {
 
 	plotHTMInterval(viz,*index,interval);
 }
-
 
 void testTwoRectangle(VizHTM *viz, int htmIdLevel) {
 	int saveLevel = 5;
@@ -1603,7 +1744,6 @@ void testTwoRectangle(VizHTM *viz, int htmIdLevel) {
 		}
 	} while (range->getNext(lo,hi));
 }
-
 
 
 void testTenDegreeGrid(VizHTM *viz) {
@@ -1843,8 +1983,124 @@ void testAddEdgesFromIndexAndName(VizHTM* viz, const char* htmIdName, int saveLe
 }
 
 int main(int argc, char *argv[]) {
+
 	const char* mainName = "VizHTM-main";
-	cout << mainName << " starting." << endl;
+
+	int c;
+	static int verbose_flag=0, help_flag=0, quiet_flag=0;
+	static int
+		testLevelChunk_flag=0,
+		testMultiResolutionHtmRange_flag=0,
+		testTriaxis_flag=0,
+		testAddRectangle_flag=0,
+		testTwoRectangle_flag=0,
+		testLatLonSpiral_flag=0,
+		testGeorgia_flag=0,
+		testPlotDataSetIntersection_flag=0,
+		testPlotDataSetIntersectionRangeContains_flag=0,
+		testPlotDataSetIntersectionNativeIntersect_flag=0,
+		testTenDegreeGrid_flag=0,
+		testHTMRangeToLevel15_flag=0;
+
+	static int
+		level_     = 0,
+		saveLevel_ = 0;
+
+	vector<string> htmNames; htmNames.clear();
+
+	char *cvalue = NULL;
+	static struct option long_options[] =
+	{
+			// { "name", no/required _argument, flag to set, ShortForm
+
+			// These options set flags.
+			// {"verbose", no_argument, &verbose_flag, 1},
+			{"help",    no_argument, &help_flag,                  1},
+			{"quiet",   no_argument, &quiet_flag,                 2},
+			{"testLevelChunk", no_argument, &testLevelChunk_flag, 3},
+			{"testMultiResolutionHtmRange", no_argument, &testMultiResolutionHtmRange_flag, 4},
+			{"testTriaxis", no_argument, &testTriaxis_flag, 5},
+			{"testAddRectangle", no_argument, &testAddRectangle_flag, 6},
+			{"testTwoRectangle", no_argument, &testTwoRectangle_flag, 7},
+			{"testLatLonSpiral", no_argument, &testLatLonSpiral_flag, 8},
+			{"testGeorgia", no_argument, &testGeorgia_flag, 9},
+			{"testPlotDataSetIntersection", no_argument, &testPlotDataSetIntersection_flag, 10},
+			{"testPlotDataSetIntersectionRangeContains", no_argument, &testPlotDataSetIntersectionRangeContains_flag, 11},
+			{"testPlotDataSetIntersectionNativeIntersect", no_argument, &testPlotDataSetIntersectionNativeIntersect_flag, 12},
+			{"testTenDegreeGrid", no_argument, &testTenDegreeGrid_flag, 13},
+			{"testHTMRangeToLevel15", no_argument, &testHTMRangeToLevel15_flag, 14},
+
+			// These options are not setters.
+			// {"add",     no_argument,       0, 'a'},
+			// {"append",  no_argument,       0, 'b'},
+			// {"delete",  required_argument, 0, 'd'},
+			// {"create",  required_argument, 0, 'c'},
+			// {"file",    required_argument, 0, 'f'},
+			// corresponds to parsing pattern "abc:d:f:"
+			// optarg has the data
+
+			{"level",      required_argument, 0, 1000},
+			{"saveLevel",  required_argument, 0, 1001},
+			{"htmName",   required_argument, 0, 1002},
+
+			{"test0",     required_argument,  0, 0},
+			{"test",      required_argument,  0, 't'},
+
+			{0, 0, 0, 0}
+	};
+	while (1) {
+		int option_index = 0;
+		c = getopt_long( argc, argv, "t:",
+				long_options, &option_index);
+		if (c == -1) { break; }
+
+		switch (c) {
+		case 0: // Arguments that do not have a short form.
+			if(long_options[option_index].flag != 0) {
+				break; // A flag was set.
+			}
+//			cout << long_options[option_index].name << endl << flush;
+			if(optarg) {
+//				cout << " optarg: " << optarg << endl << flush;
+			}
+			break;
+
+		case 1000:
+			sscanf(optarg,"%d",&level_);
+			break;
+		case 1001:
+			sscanf(optarg,"%d",&saveLevel_);
+			break;
+		case 1002:
+			htmNames.push_back(optarg);
+			break;
+		case 't':
+			// something
+			cout << "--test: " << optarg << endl << flush;
+			break;
+
+		default:
+			c = 0;
+			abort ();
+		}
+	}
+
+	if(!quiet_flag){
+		cout << mainName << " starting." << endl;
+	}
+	if(help_flag) {
+		cout << "help " << endl << flush;
+		int iOpt = 0;
+		while(long_options[iOpt].name != 0) {
+			cout << " --" << long_options[iOpt].name << flush;
+			cout << endl << flush;
+			iOpt++;
+		}
+		return 0;
+	}
+
+	if(level_==0) level_ = 4;
+	if(saveLevel_==0) saveLevel_ = 5;
 
 	float64 PI = atan2(0,-1); // cout << "PI=" << PI << endl << flush;
 	SpatialVector xHat = SpatialVector(1.,0.,0.);
@@ -1855,7 +2111,7 @@ int main(int argc, char *argv[]) {
 	VizHTM *viz = new VizHTM(NARRAY_);
 	cout << "allocated." << endl << flush;
 
-	if(false) testTenDegreeGrid(viz);
+	if(testTenDegreeGrid_flag) testTenDegreeGrid(viz);
 	if(false) testTenDegreeGridRGB(viz,0.6,0.6,0.6);
 	if(false) testHTMRange(viz,1,"N0","N0");
 	if(false) testHTMRange(viz,2,"N033","N033");
@@ -1867,9 +2123,20 @@ int main(int argc, char *argv[]) {
 
 	if(false) testPlotEdgesFromHTMNameInterval(viz); // Simple subdivision for Kuo. 2016-0317
 
-	if(false) testPlotDataSetIntersection(viz);
-	if(true) testPlotDataSetIntersection0_PlotHtmRangeContains(viz,5); // 7
-	if(false) testPlotDataSetIntersection0_PlotIntersectTwoRectanglesOutput(viz,5);
+	if(testPlotDataSetIntersection_flag) testPlotDataSetIntersection(viz);
+	if(testPlotDataSetIntersectionRangeContains_flag) testPlotDataSetIntersection0_PlotHtmRangeContains(viz,level_); // 7
+	if(testPlotDataSetIntersectionNativeIntersect_flag) testPlotDataSetIntersection0_PlotIntersectTwoRectanglesOutput(viz,level_);
+
+	if(testMultiResolutionHtmRange_flag) testMultiResolutionHtmRange(viz);
+
+
+	if(htmNames.size()>0) {
+		for(std::vector<string>::iterator it = htmNames.begin();
+				it != htmNames.end(); ++it ) {
+			string name = *it;
+			testHTMRange(viz,level_,name.c_str(),name.c_str());
+		}
+	}
 
 	if(false) {
 		int level = 2;
@@ -1887,7 +2154,7 @@ int main(int argc, char *argv[]) {
 		testHTMRange(viz,level+3,"N31","N31");
 	}
 
-	if(false){
+	if(testHTMRangeToLevel15_flag){
 		char *htmName = new char[32];
 		strcpy(htmName,"N0");
 		for(int j=1; j<15; j++){
@@ -1896,9 +2163,10 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if(false) testLatLonSpiral(viz);
-	if(false) testAddRectangle(viz,4);
-	if(false) testTwoRectangle(viz,6);
+	if(testLatLonSpiral_flag) testLatLonSpiral(viz);
+	if(testAddRectangle_flag) testAddRectangle(viz,level_);
+	if(testTwoRectangle_flag) testTwoRectangle(viz,level_);
+
 	if(false) { // Test Georgia multiple times
 		int s0 = 49; int s1 = 49; int sDelta = 1;
 		for(int s=s0; s<=s1; s+=sDelta){
@@ -1910,12 +2178,12 @@ int main(int argc, char *argv[]) {
 			testGeorgia(viz,8,s,r,g,b);
 		}
 	}
-	if(false) { // Test Georgia
+	if(testGeorgia_flag) { // Test Georgia
 			float r=0.5; float g=0.8; float b=0.4;
-			testGeorgia(viz,6,-1,r,g,b);
+			testGeorgia(viz,level_,-1,r,g,b);
 	}
 
-	if(false) testTriaxis(viz);
+	if(testTriaxis_flag) testTriaxis(viz);
 	if(false) testIJKRGBFace(viz);
 	if(false) testAnEdge(viz);
 	if(false) testText1(
@@ -1927,9 +2195,9 @@ int main(int argc, char *argv[]) {
 			0.99);
 	if(false) testTwoConstraints(viz,5);
 
+	if(testLevelChunk_flag) testLevelChunk(viz);
+
 	if(false) viz->debug_dump();
-
-
 
 	/**************** Start Graphics ****************/
 	QWidget *window = SoQt::init(argv[0]);

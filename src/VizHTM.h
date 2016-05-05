@@ -97,6 +97,13 @@ public:
 			float r, float g, float b
 			);
 
+	void addFaceFromIndexAndId(
+			const SpatialIndex *index, uint64 htmId,
+			float r0, float g0, float b0,
+			float r1, float g1, float b1,
+			float r2, float g2, float b2
+			);
+
 	void addArcFromIndexAndId(
 			SpatialIndex *index, uint64 htmId,
 			float r, float g, float b, float a=-1.);
@@ -116,10 +123,15 @@ public:
 	void addAnnotation(SpatialVector *a, const char *annotation, float size, float r, float g, float b);
 
 	void addHTMInterval(SpatialIndex index, htmRange interval);
+	void addHTMInterval(htmRange interval);
 
 	void addHTMRange(
 			const SpatialIndex *index, HtmRange *range,
 			float r, float g, float b, float a=-1.);
+	void addHTMRange(
+			HtmRange *range,
+			float r, float g, float b, float a=-1.
+			);
 
 	void debug_dump();
 

@@ -703,6 +703,45 @@ void VizHTM::addEdgesFromIndexAndId(
 	}
 }
 
+void VizHTM::addFaceFromIndexAndId(
+		const SpatialIndex *index, uint64 htmId,
+		float r0, float g0, float b0,
+		float r1, float g1, float b1,
+		float r2, float g2, float b2
+		) {
+	SpatialVector x1,x2,x3;
+	uint64 nodeIndex = index->nodeIndexFromId(htmId);
+//	cout << "htmId:  " << htmId << endl << flush;
+//	cout << "nodeId: " << nodeIndex << endl << flush;
+	index->nodeVertex(nodeIndex,x1,x2,x3);
+	if(nodeIndex) {
+//		addFace3(
+//				v0.x(), v0.y(), v0.z(),
+//				v1.x(), v1.y(), v1.z(),
+//				v2.x(), v2.y(), v2.z(),
+//				r0,g0,b0,
+//				r1,g1,b1,
+//				r2,g2,b2
+//				);
+
+		int colorBase = this->nFaceColors;
+		this->addFaceColor(r0,g0,b0);
+		this->addFaceColor(r1,g1,b1);
+		this->addFaceColor(r2,g2,b2);
+		this->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
+
+		int indexBase = this->nCoordinates;
+		this->addCoordinate64(x1.x(),x1.y(),x1.z());
+		this->addCoordinate64(x2.x(),x2.y(),x2.z());
+		this->addCoordinate64(x3.x(),x3.y(),x3.z());
+		this->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+
+//		addEdge(v0,v1,r,g,b,a);
+//		addEdge(v1,v2,r,g,b,a);
+//		addEdge(v2,v0,r,g,b,a);
+	}
+}
+
 void VizHTM::addEdgesFromIndexAndName(
 		SpatialIndex *index, const char* htmIdName,
 		float r, float g, float b
@@ -775,9 +814,41 @@ void VizHTM::addHTMRange(
 	Key lo=0, hi=0;
 	int indexp = range->getNext(lo,hi);
 	if(indexp) {
+		int loLevel = levelOfId(lo);
+		int hiLevel = levelOfId(hi);
+		if(loLevel!=hiLevel) {
+			cout << "addHTMRange error! lo level != hi level" << endl << flush;
+			return;
+		}
 		do {
 			for(uint numericId=lo; numericId<=hi; numericId++) {
 				addEdgesFromIndexAndId(index,numericId,r,g,b,a);
+			}
+		} while (range->getNext(lo,hi));
+	}
+}
+
+void VizHTM::addHTMRange(
+		HtmRange *range,
+		float r, float g, float b, float a) {
+	if(!range) return;
+	range->reset();
+	Key lo=0, hi=0;
+	int indexp = range->getNext(lo,hi);
+	if(indexp) {
+		SpatialIndex index = SpatialIndex(levelOfId(lo));
+		do {
+			int loLevel = levelOfId(lo);
+			int hiLevel = levelOfId(hi);
+			if(loLevel!=hiLevel) {
+				cout << "addHTMRange error! lo level != hi level" << endl << flush;
+				return;
+			}
+			if(index.getLeafLevel()!=levelOfId(lo)) {
+				index.setMaxlevel(levelOfId(lo));
+			}
+			for(uint numericId=lo; numericId<=hi; numericId++) {
+				addEdgesFromIndexAndId(&index,numericId,r,g,b,a);
 			}
 		} while (range->getNext(lo,hi));
 	}
@@ -848,3 +919,13 @@ void VizHTM::addHTMInterval(SpatialIndex index, htmRange interval) {
 	}
 }
 
+void VizHTM::addHTMInterval(htmRange interval) {
+	int loLevel = levelOfId(interval.lo);
+	int hiLevel = levelOfId(interval.hi);
+	if(loLevel!=hiLevel) {
+		cout << "addHTMInterval error! interval.lo level != interval.hi level" << endl << flush;
+		return;
+	}
+	SpatialIndex index = SpatialIndex(loLevel);
+	addHTMInterval(index,interval);
+}
