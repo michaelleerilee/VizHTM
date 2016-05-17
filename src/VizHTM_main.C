@@ -7,8 +7,13 @@
 
 #include "VizHTM.h"
 
+#include <shapefil.h>
+
 #include <unistd.h>
 #include <getopt.h>
+
+#include <QtOpenGL/QGL>
+#include <QtGui/QImage>
 
 #include <iostream>
 #include <iomanip>
@@ -1982,6 +1987,181 @@ void testAddEdgesFromIndexAndName(VizHTM* viz, const char* htmIdName, int saveLe
 	viz->addEdgesFromIndexAndName(index,htmIdName,0.6,0.6,0.9);
 }
 
+void testShapeFiles(VizHTM* viz) {
+
+	bool verbose = false;
+
+	if(true) {
+
+//	plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+	testTenDegreeGridRGB(viz,0.6,0.6,0.6);
+
+	//	string shapeFile = "data/ne_110m_coastline/ne_110m_coastline.shp"; // okay
+	string shapeFile = "data/ne_50m_coastline/ne_50m_coastline.shp"; // okay
+	// string shapeFile = "data/ne_10m_coastline/ne_10m_coastline.shp"; // Doesn't work yet.
+	float r = 0.5;
+	float g = 0.9;
+	float b = 0.9;
+
+	SHPHandle hSHP = SHPOpen(shapeFile.c_str(),"rb");
+
+	if(hSHP>0) {
+		cout << "file: " << shapeFile << " found." << endl << flush;
+
+		int nShapeType, nEntities;
+		double adfMinBound[4], adfMaxBound[4];
+		SHPGetInfo(hSHP, &nEntities, &nShapeType, adfMinBound, adfMaxBound );
+
+		cout << "nEntities: " << nEntities << ", nShapeType: " << nShapeType << endl << flush;
+
+		/* Debugging using string shapeFile = "data/ne_50m_coastline/ne_50m_coastline.shp";
+		   Asia and Africa
+			int nStart = 1387;
+			int nEnd   = 1388;
+		*/
+
+		int nStart = 0;
+		int nEnd   = nEntities;
+
+		for(int i=nStart; i < nEnd; i++ ) {
+			if(verbose){
+				if(i % 100 == 0) {
+					cout << "on entity " << i << endl << flush;
+				}
+			}
+			SHPObject* psShape = SHPReadObject(hSHP,i);
+			if(verbose){
+				cout << "<psShape>" << endl
+						<< " nSHPType  " << psShape->nSHPType  << " " << endl
+						<< " nVertices " << psShape->nVertices << " " << endl
+						<< " nParts    " << psShape->nParts    << " " << endl;
+				for(int ipart=0; ipart<psShape->nParts; ipart++) {
+					cout << "  part [" << ipart << "] = " << psShape->panPartStart[ipart] << endl;
+				}
+				cout << "</psShape>" << endl;
+			}
+			if(psShape->nSHPType == SHPT_ARC) {
+				double *yA = psShape->padfY;
+				double *xA = psShape->padfX;
+				int nVerts = psShape->nVertices;
+				int jStart = 0;
+				if(psShape->nParts != 0) {
+					for(int j=0; j < psShape->nParts; j++) {
+						jStart = psShape->panPartStart[j];
+						yA = psShape->padfY + psShape->panPartStart[j];
+						xA = psShape->padfX + psShape->panPartStart[j];
+						if(j < psShape->nParts-1) {
+							nVerts = psShape->panPartStart[j+1] - psShape->panPartStart[j];
+						} else {
+							nVerts = psShape->nVertices - psShape->panPartStart[j];
+						}
+						if(verbose) cout << "<addArcParts j,start=[" << j << ", " << jStart << "] nVerts= " << nVerts << " />" << endl;
+						if( true ) {
+//							float r_ = j/(psShape->nParts-1.0);
+							float r_ = r;
+							viz->addArcsFromLatLonDegrees(
+									yA, xA, nVerts,
+									false,
+									r_,g,b,-1.,3
+							);
+						}
+					}
+				} else {
+					if(verbose) cout << "<addArc 0,start=[ 0, " << jStart << "] nVerts= " << nVerts << " />" << endl;
+					if( true ) {
+						viz->addArcsFromLatLonDegrees(
+								yA, xA, nVerts,
+								false,
+								0.,g,b,-1.,3
+						);
+					}
+				}
+			}
+		}
+		if(verbose) cout << endl;
+		SHPClose(hSHP);
+	}
+
+	}
+
+	// http://www.libtiff.org/libtiff.html
+	string tifFilename = "data/NE1_50M_SR_W/NE1_50M_SR_W.tif";
+	QImage imageIn = QImage(tifFilename.c_str(),"tiff");
+	QImage image = imageIn.mirrored(false,true);
+
+	if (!image.isNull()) {
+//	if(true) {
+		uint32 w = image.width();  // lon
+		uint32 h = image.height(); // lat
+
+//		int w = 10800;
+//		int h =  5400;
+
+		cout << "w,h= " << w << ", " << h << endl;
+		size_t npixels = w * h;
+
+		float64 lat0 = -90.0;
+		float64 dlat = 180.0/(h-1);
+		float64 lon0 = -180.0;
+		float64 dlon = 360.0/(w-1);
+
+		int step = 10;
+		int i0 = 0; // w
+		int j0 = 0; // h
+		int i1 = w-step;
+		int j1 = h-step;
+
+//		// English Channel
+//		int i0 = 5400; // w
+//		int j0 = 4200; // h
+//		int d1 = 50;
+//		int i1 = i0+d1;
+//		int j1 = j0+d1;
+
+		// TODO fix last pixel column
+
+		viz->addLatLonBoxEdgesDegrees(
+				lat0+j0*dlat,lon0+i0*dlon,
+				lat0+j1*dlat,lon0+i1*dlon,
+				0.0,0.8,0.0
+				);
+
+		// ...process raster data...
+		for(int j=j0; j<j1; j += step) { // lat
+			for(int i=i0; i<i1; i += step) { // lon
+				QColor qc0, qc1, qc2, qc3;
+				qc0 = QColor(image.pixel(i,j)); // x,y
+				qc1 = QColor(image.pixel(i,j+step));
+				qc2 = QColor(image.pixel(i+step,j+step));
+				qc3 = QColor(image.pixel(i+step,j));
+
+//				int ic = (i-i0)*255/d1;
+//				int jc = (j-j0)*255/d1;
+//				int dc = step*255/d1;
+//				qc0 = QColor(ic,0,jc);
+//				qc1 = QColor(ic,0,jc+dc);
+//				qc2 = QColor(ic+dc,0,jc+dc);
+//				qc3 = QColor(ic+dc,0,jc);
+
+				viz->addFace4FromLatLonDegrees(
+						lat0+j*dlat,        lon0+i*dlon,
+						lat0+(j+step)*dlat, lon0+i*dlon,
+						lat0+(j+step)*dlat, lon0+(i+step)*dlon,
+						lat0+(j)*dlat,      lon0+(i+step)*dlon,
+						qc0.redF(), qc0.greenF(), qc0.blueF(),
+						qc1.redF(), qc1.greenF(), qc1.blueF(),
+						qc2.redF(), qc2.greenF(), qc2.blueF(),
+						qc3.redF(), qc3.greenF(), qc3.blueF()
+						);
+
+
+
+			}
+		}
+	}
+}
+
+
 int main(int argc, char *argv[]) {
 
 	const char* mainName = "VizHTM-main";
@@ -2196,6 +2376,8 @@ int main(int argc, char *argv[]) {
 	if(false) testTwoConstraints(viz,5);
 
 	if(testLevelChunk_flag) testLevelChunk(viz);
+
+	if(true) testShapeFiles(viz);
 
 	if(false) viz->debug_dump();
 

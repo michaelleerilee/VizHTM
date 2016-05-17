@@ -109,6 +109,9 @@ void VizHTM::addCoordinate(float x, float y, float z){
 	fCoordinates[nCoordinates][1] = y;
 	fCoordinates[nCoordinates][2] = z;
 	nCoordinates++;
+	if(nCoordinates> NARRAY_){
+		cout << "VizHTM::addCoordinate overflow ERROR" << endl << flush;
+	}
 }
 
 // TODO float64 to float;  Mea maxima culpa.
@@ -118,6 +121,9 @@ void VizHTM::addCoordinate64(float64 x, float64 y, float64 z){
 	fCoordinates[nCoordinates][1] = (float) y;
 	fCoordinates[nCoordinates][2] = (float) z;
 	nCoordinates++;
+	if(nCoordinates> NARRAY_){
+		cout << "VizHTM::addCoordinate64 overflow ERROR" << endl << flush;
+	}
 }
 
 void VizHTM::addCoordinate(const SpatialVector c) {
@@ -140,13 +146,19 @@ void VizHTM::addEdgeIndicesTriangle(int i0, int i1, int i2) {  // Generally i1 =
 	edgeIndices[nEdgeIndices] = i2; nEdgeIndices++;
 	edgeIndices[nEdgeIndices] = i0; nEdgeIndices++;
 	edgeIndices[nEdgeIndices] = SO_END_LINE_INDEX; nEdgeIndices++;
+	if(nEdgeIndices> NARRAY_){
+		cout << "VizHTM::addEdgeIndicesTriangle overflow ERROR" << endl << flush;
+	}
 }
 
 void VizHTM::addFaceIndices3(int i0, int i1, int i2) {  // Generally i2 = i1 + 1 = i0 + 2
-	faceIndices[nFaceIndices] = i0;   nFaceIndices++;
+	faceIndices[nFaceIndices] = i0; nFaceIndices++;
 	faceIndices[nFaceIndices] = i1; nFaceIndices++;
 	faceIndices[nFaceIndices] = i2; nFaceIndices++;
 	faceIndices[nFaceIndices] = SO_END_FACE_INDEX; nFaceIndices++;
+	if(nFaceIndices> NARRAY_){
+		cout << "VizHTM::addFaceIndices3 overflow ERROR" << endl << flush;
+	}
 }
 
 void VizHTM::addFace3(
@@ -166,6 +178,60 @@ void VizHTM::addFace3(
 	addCoordinate( x10,  x11,  x12);
 	addCoordinate( x20,  x21,  x22);
 	addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+}
+
+void VizHTM::addFace4(
+		float x00, float x01, float x02,
+		float x10, float x11, float x12,
+		float x20, float x21, float x22,
+		float x30, float x31, float x32,
+		float r0, float g0, float b0,
+		float r1, float g1, float b1,
+		float r2, float g2, float b2,
+		float r3, float g3, float b3
+		) {
+	addFace3(
+			x00,x01,x02,
+			x10,x11,x12,
+			x20,x21,x22,
+			r0, g0, b0,
+			r1, g1, b1,
+			r2, g2, b2
+	);
+	addFace3(
+			x00,x01,x02,
+			x20,x21,x22,
+			x30,x31,x32,
+			r0, g0, b0,
+			r2, g2, b2,
+			r3, g3, b3
+			);
+}
+void VizHTM::addFace4FromLatLonDegrees(
+		float64 lat0, float64 lon0,
+		float64 lat1, float64 lon1,
+		float64 lat2, float64 lon2,
+		float64 lat3, float64 lon3,
+		float r0, float g0, float b0,
+		float r1, float g1, float b1,
+		float r2, float g2, float b2,
+		float r3, float g3, float b3
+		) {
+	SpatialVector *x0 = VectorFromLatLonDegrees(lat0,lon0);
+	SpatialVector *x1 = VectorFromLatLonDegrees(lat1,lon1);
+	SpatialVector *x2 = VectorFromLatLonDegrees(lat2,lon2);
+	SpatialVector *x3 = VectorFromLatLonDegrees(lat3,lon3);
+	addFace4(
+			x0->x(),x0->y(),x0->z(),
+			x1->x(),x1->y(),x1->z(),
+			x2->x(),x2->y(),x2->z(),
+			x3->x(),x3->y(),x3->z(),
+			r0, g0, b0,
+			r1, g1, b1,
+			r2, g2, b2,
+			r3, g3, b3
+			);
+//	delete x0,x1,x2,x3;
 }
 
 void VizHTM::triaxis() {
@@ -382,17 +448,20 @@ SoSeparator* VizHTM::makeRoot() {
 
 	SoSeparator *faceNode = new SoSeparator;
 
+	SoMaterialBinding *faceMaterialBinding = new SoMaterialBinding;
+//	faceMaterialBinding->value = SoMaterialBinding::PER_VERTEX_INDEXED; // _INDEXED or not?
+	faceMaterialBinding->value = SoMaterialBinding::PER_VERTEX; // _INDEXED or not? // Why? Why? Why? // TODO WHY?
+	faceNode->addChild(faceMaterialBinding);
+
 	SoMaterial *faceMaterials = new SoMaterial;
 	faceMaterials->diffuseColor.setValues(0,nFaceColors,faceColors);
 	faceNode->addChild(faceMaterials);
 
-	SoMaterialBinding *faceMaterialBinding = new SoMaterialBinding;
-	faceMaterialBinding->value = SoMaterialBinding::PER_VERTEX_INDEXED; // _INDEXED or not?
-	faceNode->addChild(faceMaterialBinding);
-
 	SoShapeHints* pHints   = new SoShapeHints;
 	pHints->faceType       = SoShapeHints::UNKNOWN_FACE_TYPE;
 	pHints->vertexOrdering = SoShapeHints::CLOCKWISE;
+//	pHints->vertexOrdering = SoShapeHints::UNKNOWN_ORDERING;
+//	pHints->vertexOrdering = SoShapeHints::COUNTERCLOCKWISE;
 	faceNode->addChild(pHints);
 
 	SoIndexedFaceSet *faceSet = new SoIndexedFaceSet;
@@ -804,6 +873,24 @@ void VizHTM::addArcFromIndexAndLatLonDegrees(
 	addArc(v0,v1,r,g,b,a);
 	addArc(v1,v2,r,g,b,a);
 	addArc(v2,v0,r,g,b,a);
+}
+
+void VizHTM::addArcsFromLatLonDegrees(
+		float64 *lat, float64 *lon, int nPoints, bool close,
+		float r, float g, float b, float a, int steps
+		) {
+	SpatialVector v0, v1, v2;
+	int i = 0;
+	v0.setLatLonDegrees(lat[i],lon[i]);
+	v1 = v0;
+	for(i=1; i < nPoints; i++) {
+		v2.setLatLonDegrees(lat[i],lon[i]);
+		addArc(v1,v2,r,g,b,a,steps);
+		v1 = v2;
+	}
+	if(close) {
+		addArc(v2,v0,r,g,b,a,steps);
+	}
 }
 
 void VizHTM::addHTMRange(

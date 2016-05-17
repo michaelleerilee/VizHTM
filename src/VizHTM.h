@@ -20,7 +20,8 @@
 // 64M 67108864
 //  1M  1048576
 
-#define NARRAY_ 1048576
+//#define NARRAY_ 1048576
+#define NARRAY_ 10000000
 
 class VizHTM {
 
@@ -64,6 +65,27 @@ public:
 			float r0, float g0, float b0,
 			float r1, float g1, float b1,
 			float r2, float g2, float b2);
+
+	void addFace4(
+			float x00, float x01, float x02,
+			float x10, float x11, float x12,
+			float x20, float x21, float x22,
+			float x30, float x31, float x32,
+			float r0, float g0, float b0,
+			float r1, float g1, float b1,
+			float r2, float g2, float b2,
+			float r3, float g3, float b3
+			);
+	void addFace4FromLatLonDegrees(
+			float64 lat0, float64 lon0,
+			float64 lat1, float64 lon1,
+			float64 lat2, float64 lon2,
+			float64 lat3, float64 lon3,
+			float r0, float g0, float b0,
+			float r1, float g1, float b1,
+			float r2, float g2, float b2,
+			float r3, float g3, float b3
+			);
 
 	void addRectangle(
 			const SpatialVector x0,
@@ -114,6 +136,11 @@ public:
 			SpatialIndex *index,
 			float64 lat, float64 lon,
 			float r, float g, float b, float a=-1.
+			);
+
+	void addArcsFromLatLonDegrees(
+			float64 *lat, float64 *lon, int nPoints, bool close,
+			float r, float g, float b, float a=-1., int steps=-1
 			);
 
 	void addConstraint(SpatialVector a, float64 d, float r, float g, float b);
