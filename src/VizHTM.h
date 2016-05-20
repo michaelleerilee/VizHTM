@@ -21,7 +21,8 @@
 //  1M  1048576
 
 //#define NARRAY_ 1048576
-#define NARRAY_ 10000000
+//#define NARRAY_ 600000000
+#define NARRAY_ 200000000
 
 class VizHTM {
 

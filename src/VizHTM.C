@@ -157,7 +157,8 @@ void VizHTM::addFaceIndices3(int i0, int i1, int i2) {  // Generally i2 = i1 + 1
 	faceIndices[nFaceIndices] = i2; nFaceIndices++;
 	faceIndices[nFaceIndices] = SO_END_FACE_INDEX; nFaceIndices++;
 	if(nFaceIndices> NARRAY_){
-		cout << "VizHTM::addFaceIndices3 overflow ERROR" << endl << flush;
+		cout << "VizHTM::addFaceIndices3 overflow ERROR nFaceIndices=" << nFaceIndices << endl << flush;
+		exit(1);
 	}
 }
 
@@ -410,6 +411,18 @@ void VizHTM::addConstraint(SpatialConstraint c, float r, float g, float b) {
 SoSeparator* VizHTM::makeRoot() {
 
 //	if(true){ triaxis(); }// Try the triaxis. Incrementally add color and geometry...
+
+	cout << "makeRoot" << endl
+			<< "nArray                  " << nArray << endl
+			<< "nFaces                  " << nFaces << endl
+			<< "nFaceColors             " << nFaceColors << endl
+			<< "nFaceVertexColorIndices " << nFaceVertexColorIndices << endl
+			<< "nEdgeColors             " << nEdgeColors << endl
+			<< "nEdgeVertexColorIndices " << nEdgeVertexColorIndices << endl
+			<< "nCoordinates            " << nCoordinates << endl
+			<< "nSpheres                " << nSpheres << endl
+			<< "nEdgeIndices            " << nEdgeIndices << endl
+			<< "nFaceIndices            " << nFaceIndices << endl;
 
 	SoSeparator *root = new SoSeparator;
 

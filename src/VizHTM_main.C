@@ -8,6 +8,7 @@
 #include "VizHTM.h"
 
 #include <shapefil.h>
+#include <geompack.h>
 
 #include <unistd.h>
 #include <getopt.h>
@@ -1993,7 +1994,7 @@ void testShapeFiles(VizHTM* viz) {
 
 	if(true) {
 
-//	plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+	plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
 	testTenDegreeGridRGB(viz,0.6,0.6,0.6);
 
 	//	string shapeFile = "data/ne_110m_coastline/ne_110m_coastline.shp"; // okay
@@ -2105,11 +2106,22 @@ void testShapeFiles(VizHTM* viz) {
 		float64 lon0 = -180.0;
 		float64 dlon = 360.0/(w-1);
 
-		int step = 10;
+		// The whole planet
+		int step = 2; // About the max memory...
+		// step = 4; // for speed & fun
+		// step = 100; // for speed & fun
 		int i0 = 0; // w
 		int j0 = 0; // h
 		int i1 = w-step;
 		int j1 = h-step;
+
+//		// Part of North America
+//		step = 1;
+//		i0 = 2000;
+//		j0 = 3000;
+//		int d1 = 2000;
+//		i1 = i0 + d1;
+//		j1 = j0 + d1;
 
 //		// English Channel
 //		int i0 = 5400; // w
@@ -2160,6 +2172,556 @@ void testShapeFiles(VizHTM* viz) {
 		}
 	}
 }
+
+void testDelaunay0(VizHTM *viz) {
+
+	// Input
+	int npt     = 5;
+	int hashSize = 3*npt/2;
+	cout << "Calling prime_c" << flush;
+	int sizht   = prime_c(&hashSize);
+	cout << ". " << sizht << endl << flush;
+	int maxbf   = 1000;
+	int maxfc   = 1000;
+	int maxPt   = 100; // npt <= maxPt
+	float64 vcl[3*maxPt];
+
+	int i,j;
+	i=0;j=0; vcl[j*3 + i] = 1.0;
+	i=1;j=0; vcl[j*3 + i] = 0.5;
+	i=2;j=0; vcl[j*3 + i] = 0.0;
+
+	i=0;j=1; vcl[j*3 + i] = -1.0;
+	i=1;j=1; vcl[j*3 + i] = 1.0;
+	i=2;j=1; vcl[j*3 + i] = 0.0;
+
+	i=0;j=2; vcl[j*3 + i] = 0.0;
+	i=1;j=2; vcl[j*3 + i] = 0.0;
+	i=2;j=2; vcl[j*3 + i] = 1.0;
+
+	i=0;j=3; vcl[j*3 + i] = 0.0;
+	i=1;j=3; vcl[j*3 + i] = 0.0;
+	i=2;j=3; vcl[j*3 + i] = -1.0;
+
+	i=0;j=4; vcl[j*3 + i] = 0.0;
+	i=1;j=4; vcl[j*3 + i] = 1.0;
+	i=2;j=4; vcl[j*3 + i] = 0.0;
+
+	// InOut
+	int vm[npt];
+
+	// Remember Fortran is option base 1.
+	vm[0] = 1;
+	vm[1] = 2;
+	vm[2] = 3;
+	vm[3] = 4;
+	vm[4] = 5;
+
+	// Output
+	int nbf;
+	int nfc;
+	int nface;
+	int ntetra;
+	int bf[3*maxbf];
+	int fc[7*maxfc];
+	int ht[sizht];
+	int ierror;
+
+	cout << "dtris3_c start" << endl << flush;
+	dtris3_c(
+			&npt,
+			&sizht,
+			&maxbf,
+			&maxfc,
+			vcl, //
+			vm,  //
+			&nbf,
+			&nfc,
+			&nface,
+			&ntetra,
+			bf, //
+			fc, //
+			ht,  //
+			&ierror
+			);
+	cout << "ierror " << ierror << endl << flush;
+	cout << "dtris3_c end" << endl << flush;
+
+	int nt; // number of tetrahedra
+	int maxNt = 1000;
+	int tetra[4*maxNt];
+	tetlst_c(
+			&nfc,
+			vm,
+			fc,
+			&nt,
+			tetra
+			);
+
+	viz->triaxis();
+
+	cout << "ntetra,nt: " << ntetra << ", " << nt << endl << flush;
+
+	for(int iTet=0; iTet < nt; iTet++) {
+		cout << "iTet: " << iTet << endl << flush;
+		// vcl[j*3+i]
+		// tetra[iTet*4 + iEdge]
+		int iVerts[4];
+		for(int iVert=0; iVert < 4; iVert++) {
+			int iV = tetra[iTet*4+iVert];
+			iVerts[iVert] = iV - 1; // Fortran is option base 1.
+		}
+		SpatialVector verts[4];
+		for(int iVert=0; iVert<4; iVert++) {
+			verts[iVert]
+				  = SpatialVector(vcl[iVerts[iVert]*3],vcl[iVerts[iVert]*3+1],vcl[iVerts[iVert]*3+2]);
+		}
+		for(int i=0; i < 4; i++) {
+			for(int j=i+1; j < 4; j++ ) {
+				cout << "adding i,j: " << i << ", " << j << " : " << iVerts[i] << ", " << iVerts[j] << endl << flush;
+				if(iTet == 0){
+					viz->addEdge(verts[i],verts[j],0.0,0.5,0.5);
+				} else if( iTet == 1) {
+					viz->addEdge(verts[i],verts[j],0.5,0.5,0.0);
+				} else {
+					viz->addEdge(verts[i],verts[j],0.0,1.0,0.0);
+				}
+
+			}
+		}
+		cout << endl << flush;
+	}
+}
+
+
+
+void testDelaunay1(VizHTM *viz) {
+
+
+	// plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+	testTenDegreeGridRGB(viz,0.6,0.6,0.6);
+
+
+	// Input
+	int npt     = 10;
+	int hashSize = 3*npt/2;
+	cout << "Calling prime_c" << flush;
+	int sizht   = prime_c(&hashSize);
+	cout << ". " << sizht << endl << flush;
+	int maxbf   = 10000;
+	int maxfc   = 10000;
+	int maxPt   = 10000; // npt <= maxPt
+	float64 vcl[3*maxPt];
+
+	int i,j;
+	for(j=0;j<npt;j++) {
+		SpatialVector a = randomVector(); a.normalize();
+		i=0; vcl[j*3 + i] = a.x();
+		i=1; vcl[j*3 + i] = a.y();
+		i=2; vcl[j*3 + i] = a.z();
+	}
+
+	// InOut
+	int vm[npt];
+
+	// Remember Fortran is option base 1.
+	for(int ipt=0; ipt<npt;ipt++) {
+		vm[ipt] = ipt + 1;
+	}
+
+	// Output
+	int nbf;
+	int nfc;
+	int nface;
+	int ntetra;
+	int bf[3*maxbf];
+	int fc[7*maxfc];
+	int ht[sizht];
+	int ierror;
+
+	cout << "dtris3_c start" << endl << flush;
+	dtris3_c(
+			&npt,
+			&sizht,
+			&maxbf,
+			&maxfc,
+			vcl, //
+			vm,  //
+			&nbf,
+			&nfc,
+			&nface,
+			&ntetra,
+			bf, //
+			fc, //
+			ht,  //
+			&ierror
+			);
+	cout << "ierror " << ierror << endl << flush;
+	cout << "nbf    " << nbf    << endl << flush;
+	cout << "nfc    " << nfc    << endl << flush;
+	cout << "dtris3_c end" << endl << flush;
+
+	if(true){
+		cout << " boundary start " << endl << flush;
+		 plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+
+		for(int iFC=0; iFC<nfc; iFC++) {
+			cout << " iFC: " << iFC << flush;
+			int A = fc[7*iFC+0];
+			cout << " A: " << A << flush;
+			int B = fc[7*iFC+1];
+			cout << " B: " << B << flush;
+			int g7 = fc[7*iFC+6];
+			cout << " g7: " << g7 << flush;
+			if(A>0) {
+				int E = fc[7*iFC+4]; // aka boundaryp
+				cout << " E: " << E;
+				if(E<0){
+					SpatialVector verts[4]; // 1..3 the face, 4 the interior vert
+					for(int iV=0; iV<4; iV++) {
+						int icl = vm[fc[iFC*7+iV]-1] - 1; // Fortran Fortran!!!
+						cout << " icl: " << icl << flush;
+						float64 x = vcl[icl*3+0];
+						float64 y = vcl[icl*3+1];
+						float64 z = vcl[icl*3+2];
+						verts[iV] = SpatialVector(x,y,z);
+					}
+					cout << "." << flush;
+					// Cross a couple
+					SpatialVector v01 = verts[1] - verts[0];
+					SpatialVector v02 = verts[2] - verts[0];
+					SpatialVector v01c02 = v01 ^ v02;
+					SpatialVector v012   = (verts[0] + verts[1] + verts[2])*(1.0/3.0);
+					SpatialVector v012to3 = verts[3] - v012;
+					if(v012to3 * v01c02 > 0.0) {
+						v01c02 = v01c02 * -1.0;
+					}
+					SpatialVector vcross = v012 + v01c02;
+					if(v012 * v01c02 > 0.0) {
+						// These triangles are on the surface of the sphere. Final step: check that they're interior.
+						// This is a triangulation of the convex hull of an arbitrary set of points on the sphere.
+						SpatialVector tmp = v012; tmp.normalize();
+						viz->addEdge(tmp,vcross,1.0,1.0,1.0); // draw the normal starting from the centroid
+						viz->addEdge(SpatialVector(0,0,0),tmp,0.5,0.5,0.8); // draw to face centroid
+						for(int i=0; i<3; i++) {
+							for(int j=i+1; j<3; j++) {
+								viz->addArc(verts[i],verts[j],0.9,0.0,0.0); // arc are better reps of the region
+							}
+						}
+					}
+				}
+			}
+			cout << endl << flush;
+		}
+		cout << " boundary done " << endl << flush;
+	}
+
+	if(false) {
+		int nt; // number of tetrahedra
+		int maxNt = 1000;
+		int tetra[4*maxNt];
+		tetlst_c(
+				&nfc,
+				vm,
+				fc,
+				&nt,
+				tetra
+		);
+
+		viz->triaxis();
+
+		cout << "ntetra,nt: " << ntetra << ", " << nt << endl << flush;
+
+		for(int iTet=0; iTet < nt; iTet++) {
+			cout << "iTet: " << iTet << endl << flush;
+			// vcl[j*3+i]
+			// tetra[iTet*4 + iEdge]
+			int iVerts[4];
+			for(int iVert=0; iVert < 4; iVert++) {
+				int iV = tetra[iTet*4+iVert];
+				iVerts[iVert] = iV - 1; // Fortran is option base 1.
+			}
+			SpatialVector verts[4];
+			for(int iVert=0; iVert<4; iVert++) {
+				verts[iVert]
+					  = SpatialVector(vcl[iVerts[iVert]*3],vcl[iVerts[iVert]*3+1],vcl[iVerts[iVert]*3+2]);
+			}
+			for(int i=0; i < 4; i++) {
+				for(int j=i+1; j < 4; j++ ) {
+					cout << "adding i,j: " << i << ", " << j << " : " << iVerts[i] << ", " << iVerts[j] << endl << flush;
+					if(iTet == 0){
+						viz->addEdge(verts[i],verts[j],0.0,0.5,0.5);
+					} else if( iTet == 1) {
+						viz->addEdge(verts[i],verts[j],0.5,0.5,0.0);
+					} else {
+						viz->addEdge(verts[i],verts[j],0.0,1.0,0.0);
+					}
+
+				}
+			}
+			cout << endl << flush;
+		}
+	}
+}
+
+
+void testDelaunay(VizHTM *viz) {
+
+
+	// plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+	testTenDegreeGridRGB(viz,0.6,0.6,0.6);
+
+
+	// Input
+	int npt     = 12;
+	int hashSize = 3*npt/2;
+	cout << "Calling prime_c" << flush;
+	int sizht   = prime_c(&hashSize);
+	cout << ". " << sizht << endl << flush;
+	int maxbf   = 10000;
+	int maxfc   = 10000;
+	int maxPt   = 10000; // npt <= maxPt
+	float64 vcl[3*maxPt];
+
+	{int i,j;
+	j = 0;
+	SpatialVector a;
+	a.setLatLonDegrees(30.0,30.0);
+	i=0; vcl[j*3 + i] = a.x();
+	i=1; vcl[j*3 + i] = a.y();
+	i=2; vcl[j*3 + i] = a.z();}
+
+	{int i,j;
+	j = 1;
+	SpatialVector a;
+	a.setLatLonDegrees(30.0,60.0);
+	i=0; vcl[j*3 + i] = a.x();
+	i=1; vcl[j*3 + i] = a.y();
+	i=2; vcl[j*3 + i] = a.z();}
+
+	{int i,j;
+	j = 2;
+	SpatialVector a;
+	a.setLatLonDegrees(60.0,45.0);
+	i=0; vcl[j*3 + i] = a.x();
+	i=1; vcl[j*3 + i] = a.y();
+	i=2; vcl[j*3 + i] = a.z();}
+
+	{int i,j;
+	j = 3;
+	SpatialVector a;
+	a.setLatLonDegrees(45.0,30.0);
+	i=0; vcl[j*3 + i] = a.x();
+	i=1; vcl[j*3 + i] = a.y();
+	i=2; vcl[j*3 + i] = a.z();}
+
+	{int i,j;
+	j = 4;
+	SpatialVector a;
+	a.setLatLonDegrees(45.0,60.0);
+	i=0; vcl[j*3 + i] = a.x();
+	i=1; vcl[j*3 + i] = a.y();
+	i=2; vcl[j*3 + i] = a.z();}
+
+	{int i,j;
+	j = 5;
+	SpatialVector a;
+	a.setLatLonDegrees(15.0,45);
+	i=0; vcl[j*3 + i] = a.x();
+	i=1; vcl[j*3 + i] = a.y();
+	i=2; vcl[j*3 + i] = a.z();}
+
+	{int i,j;
+	j = 6;
+	SpatialVector a;
+	a.setLatLonDegrees(45.0,37.5);
+	i=0; vcl[j*3 + i] = a.x();
+	i=1; vcl[j*3 + i] = a.y();
+	i=2; vcl[j*3 + i] = a.z();}
+
+	{int i,j;
+	j = 7;
+	SpatialVector a;
+	a.setLatLonDegrees(30.0,37.5);
+	i=0; vcl[j*3 + i] = a.x();
+	i=1; vcl[j*3 + i] = a.y();
+	i=2; vcl[j*3 + i] = a.z();}
+
+	{int i,j;
+	j = 8;
+	SpatialVector a;
+	a.setLatLonDegrees(45.0,52.5);
+	i=0; vcl[j*3 + i] = a.x();
+	i=1; vcl[j*3 + i] = a.y();
+	i=2; vcl[j*3 + i] = a.z();}
+
+	{int i,j;
+	j = 9;
+	SpatialVector a;
+	a.setLatLonDegrees(30.0,52.5);
+	i=0; vcl[j*3 + i] = a.x();
+	i=1; vcl[j*3 + i] = a.y();
+	i=2; vcl[j*3 + i] = a.z();}
+
+	{int i,j;
+	j = 10;
+	SpatialVector a;
+	a.setLatLonDegrees(37.5,33.75);
+	i=0; vcl[j*3 + i] = a.x();
+	i=1; vcl[j*3 + i] = a.y();
+	i=2; vcl[j*3 + i] = a.z();}
+
+	{int i,j;
+	j = 11;
+	SpatialVector a;
+	a.setLatLonDegrees(37.5,56.25);
+	i=0; vcl[j*3 + i] = a.x();
+	i=1; vcl[j*3 + i] = a.y();
+	i=2; vcl[j*3 + i] = a.z();}
+
+	// InOut
+	int vm[npt];
+
+	// Remember Fortran is option base 1.
+	for(int ipt=0; ipt<npt;ipt++) {
+		vm[ipt] = ipt + 1;
+	}
+
+	// Output
+	int nbf;
+	int nfc;
+	int nface;
+	int ntetra;
+	int bf[3*maxbf];
+	int fc[7*maxfc];
+	int ht[sizht];
+	int ierror;
+
+	cout << "dtris3_c start" << endl << flush;
+	dtris3_c(
+			&npt,
+			&sizht,
+			&maxbf,
+			&maxfc,
+			vcl, //
+			vm,  //
+			&nbf,
+			&nfc,
+			&nface,
+			&ntetra,
+			bf, //
+			fc, //
+			ht,  //
+			&ierror
+			);
+	cout << "ierror " << ierror << endl << flush;
+	cout << "nbf    " << nbf    << endl << flush;
+	cout << "nfc    " << nfc    << endl << flush;
+	cout << "dtris3_c end" << endl << flush;
+
+	if(true){
+		cout << " boundary start " << endl << flush;
+		 plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+
+		for(int iFC=0; iFC<nfc; iFC++) {
+			cout << " iFC: " << iFC << flush;
+			int A = fc[7*iFC+0];
+			cout << " A: " << A << flush;
+			int B = fc[7*iFC+1];
+			cout << " B: " << B << flush;
+			int g7 = fc[7*iFC+6];
+			cout << " g7: " << g7 << flush;
+			if(A>0) {
+				int E = fc[7*iFC+4]; // aka boundaryp
+				cout << " E: " << E;
+				if(E<0){
+					SpatialVector verts[4]; // 1..3 the face, 4 the interior vert
+					for(int iV=0; iV<4; iV++) {
+						int icl = vm[fc[iFC*7+iV]-1] - 1; // Fortran Fortran!!!
+						cout << " icl: " << icl << flush;
+						float64 x = vcl[icl*3+0];
+						float64 y = vcl[icl*3+1];
+						float64 z = vcl[icl*3+2];
+						verts[iV] = SpatialVector(x,y,z);
+					}
+					cout << "." << flush;
+					// Cross a couple
+					SpatialVector v01 = verts[1] - verts[0];
+					SpatialVector v02 = verts[2] - verts[0];
+					SpatialVector v01c02 = v01 ^ v02;
+					SpatialVector v012   = (verts[0] + verts[1] + verts[2])*(1.0/3.0);
+					SpatialVector v012to3 = verts[3] - v012;
+					if(v012to3 * v01c02 > 0.0) {
+						v01c02 = v01c02 * -1.0;
+					}
+					SpatialVector vcross = v012 + v01c02;
+					if(v012 * v01c02 > 0.0) {
+						// These triangles are on the surface of the sphere. Final step: check that they're interior.
+						// This is a triangulation of the convex hull of an arbitrary set of points on the sphere.
+						SpatialVector tmp = v012; tmp.normalize();
+						viz->addEdge(tmp,vcross,1.0,1.0,1.0); // draw the normal starting from the centroid
+						viz->addEdge(SpatialVector(0,0,0),tmp,0.5,0.5,0.8); // draw to face centroid
+						for(int i=0; i<3; i++) {
+							for(int j=i+1; j<3; j++) {
+								viz->addArc(verts[i],verts[j],0.9,0.0,0.0); // arc are better reps of the region
+							}
+						}
+					}
+				}
+			}
+			cout << endl << flush;
+		}
+		cout << " boundary done " << endl << flush;
+	}
+
+	if(false) {
+		int nt; // number of tetrahedra
+		int maxNt = 1000;
+		int tetra[4*maxNt];
+		tetlst_c(
+				&nfc,
+				vm,
+				fc,
+				&nt,
+				tetra
+		);
+
+		viz->triaxis();
+
+		cout << "ntetra,nt: " << ntetra << ", " << nt << endl << flush;
+
+		for(int iTet=0; iTet < nt; iTet++) {
+			cout << "iTet: " << iTet << endl << flush;
+			// vcl[j*3+i]
+			// tetra[iTet*4 + iEdge]
+			int iVerts[4];
+			for(int iVert=0; iVert < 4; iVert++) {
+				int iV = tetra[iTet*4+iVert];
+				iVerts[iVert] = iV - 1; // Fortran is option base 1.
+			}
+			SpatialVector verts[4];
+			for(int iVert=0; iVert<4; iVert++) {
+				verts[iVert]
+					  = SpatialVector(vcl[iVerts[iVert]*3],vcl[iVerts[iVert]*3+1],vcl[iVerts[iVert]*3+2]);
+			}
+			for(int i=0; i < 4; i++) {
+				for(int j=i+1; j < 4; j++ ) {
+					cout << "adding i,j: " << i << ", " << j << " : " << iVerts[i] << ", " << iVerts[j] << endl << flush;
+					if(iTet == 0){
+						viz->addEdge(verts[i],verts[j],0.0,0.5,0.5);
+					} else if( iTet == 1) {
+						viz->addEdge(verts[i],verts[j],0.5,0.5,0.0);
+					} else {
+						viz->addEdge(verts[i],verts[j],0.0,1.0,0.0);
+					}
+
+				}
+			}
+			cout << endl << flush;
+		}
+	}
+}
+
 
 
 int main(int argc, char *argv[]) {
@@ -2377,7 +2939,9 @@ int main(int argc, char *argv[]) {
 
 	if(testLevelChunk_flag) testLevelChunk(viz);
 
-	if(true) testShapeFiles(viz);
+	if(false) testShapeFiles(viz);
+
+	if(true) testDelaunay(viz);
 
 	if(false) viz->debug_dump();
 
