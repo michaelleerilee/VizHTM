@@ -2115,13 +2115,15 @@ void testShapeFiles(VizHTM* viz) {
 		int i1 = w-step;
 		int j1 = h-step;
 
-//		// Part of North America
-//		step = 1;
-//		i0 = 2000;
-//		j0 = 3000;
-//		int d1 = 2000;
-//		i1 = i0 + d1;
-//		j1 = j0 + d1;
+		// Part of North America
+		step = 1;
+//		step = 2;
+		i0 = 2000;
+		j0 = 3000;
+		int d1 = 2000;
+//		d1 = 1000;
+		i1 = i0 + d1;
+		j1 = j0 + d1;
 
 //		// English Channel
 //		int i0 = 5400; // w
@@ -2468,7 +2470,7 @@ void testDelaunay1(VizHTM *viz) {
 void testDelaunay(VizHTM *viz) {
 
 
-	// plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+	plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
 	testTenDegreeGridRGB(viz,0.6,0.6,0.6);
 
 
@@ -2621,7 +2623,7 @@ void testDelaunay(VizHTM *viz) {
 
 	if(true){
 		cout << " boundary start " << endl << flush;
-		 plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+//		 plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
 
 		for(int iFC=0; iFC<nfc; iFC++) {
 			cout << " iFC: " << iFC << flush;
@@ -2722,7 +2724,65 @@ void testDelaunay(VizHTM *viz) {
 	}
 }
 
+void testNearestNeighbors(VizHTM *viz) {
+	int level = 5;
+	SpatialIndex index(level,5);
 
+	{
+		string name="N012301";
+
+		testHTMRange(viz,level,name.c_str(),name.c_str());
+		uint64 htmId = index.idByName(name.c_str());
+
+		uint64 neighbors[3];
+		index.NeighborsAcrossEdgesFromHtmId(neighbors,htmId);
+		for(int j=0; j<3; j++) {
+			char tmpName[64];
+			index.nameById(neighbors[j],tmpName);
+			testHTMRange(viz,level,tmpName,tmpName);
+		}
+
+		uint64 neighborsV[9];
+		index.NeighborsAcrossVerticesFromHtmId(neighborsV,htmId);
+		for(int j=0; j<9; j++) {
+			char tmpName[64];
+			index.nameById(neighborsV[j],tmpName);
+			testHTMRange(viz,level,tmpName,tmpName);
+		}
+	}
+
+	{
+		string name="N011301";
+
+		testHTMRange(viz,level,name.c_str(),name.c_str());
+		uint64 htmId = index.idByName(name.c_str());
+
+		uint64 neighbors[3];
+		index.NeighborsAcrossEdgesFromHtmId(neighbors,htmId);
+		for(int j=0; j<3; j++) {
+			char tmpName[64];
+			index.nameById(neighbors[j],tmpName);
+			testHTMRange(viz,level,tmpName,tmpName);
+		}
+
+	}
+
+	{
+		string name="N010301";
+
+		testHTMRange(viz,level,name.c_str(),name.c_str());
+		uint64 htmId = index.idByName(name.c_str());
+
+		uint64 neighborsV[9];
+		index.NeighborsAcrossVerticesFromHtmId(neighborsV,htmId);
+		for(int j=0; j<9; j++) {
+			char tmpName[64];
+			index.nameById(neighborsV[j],tmpName);
+			testHTMRange(viz,level,tmpName,tmpName);
+		}
+	}
+
+}
 
 int main(int argc, char *argv[]) {
 
@@ -2942,6 +3002,8 @@ int main(int argc, char *argv[]) {
 	if(false) testShapeFiles(viz);
 
 	if(true) testDelaunay(viz);
+
+	if(true) testNearestNeighbors(viz);
 
 	if(false) viz->debug_dump();
 
