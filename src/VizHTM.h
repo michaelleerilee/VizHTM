@@ -17,9 +17,9 @@
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSwitch.h>
 
+// TODO eliminate NARRAY_ also consider changing storage method for graphic elements.
 // 64M 67108864
 //  1M  1048576
-
 //#define NARRAY_ 1048576
 //#define NARRAY_ 600000000
 #define NARRAY_ 200000000
@@ -37,7 +37,7 @@ public:
 	void addEdge(
 			const SpatialVector x0,
 			const SpatialVector x1,
-			float r, float g, float b, float a=-1.);
+			float r, float g, float b, float a=-1., float scale=1.0);
 	void addEdgeAndSphere(SpatialVector x0, SpatialVector x1, float r, float g, float b,
 						  SpatialVector s0, float rs, float gs, float bs, float radius);
 
@@ -63,6 +63,14 @@ public:
 			float x00, float x01, float x02,
 			float x10, float x11, float x12,
 			float x20, float x21, float x22,
+			float r0, float g0, float b0,
+			float r1, float g1, float b1,
+			float r2, float g2, float b2);
+
+	void addFace3(
+			SpatialVector x0,
+			SpatialVector x1,
+			SpatialVector x2,
 			float r0, float g0, float b0,
 			float r1, float g1, float b1,
 			float r2, float g2, float b2);
@@ -110,7 +118,7 @@ public:
 
 	void addEdgesFromIndexAndId(
 			const SpatialIndex *index, uint64 htmId,
-			float r, float g, float b, float a=-1.);
+			float r, float g, float b, float a=-1., float scale=1.0);
 	void addEdgesFromIndexAndName(
 			SpatialIndex *index, const char* htmIdName,
 			float r, float g, float b);
@@ -155,11 +163,21 @@ public:
 
 	void addHTMRange(
 			const SpatialIndex *index, HtmRange *range,
-			float r, float g, float b, float a=-1.);
+			float r, float g, float b, float a=-1., float scale=1.0);
 	void addHTMRange(
 			HtmRange *range,
-			float r, float g, float b, float a=-1.
+			float r, float g, float b, float a=-1., float scale=1.0
 			);
+
+	void addCircleFacet(
+			SpatialVector center,
+			float64 halfSubtendedAngleInRadians,
+			float r, float g, float b, float a=-1.);
+
+	void addCircleEdges(
+			SpatialVector center,
+			float64 halfSubtendedAngleInRadians,
+			float r, float g, float b, float a=-1.);
 
 	void debug_dump();
 

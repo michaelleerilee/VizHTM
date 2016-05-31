@@ -109,7 +109,7 @@ void VizHTM::addCoordinate(float x, float y, float z){
 	fCoordinates[nCoordinates][1] = y;
 	fCoordinates[nCoordinates][2] = z;
 	nCoordinates++;
-	if(nCoordinates> NARRAY_){
+	if(nCoordinates> nArray){
 		cout << "VizHTM::addCoordinate overflow ERROR" << endl << flush;
 	}
 }
@@ -121,7 +121,7 @@ void VizHTM::addCoordinate64(float64 x, float64 y, float64 z){
 	fCoordinates[nCoordinates][1] = (float) y;
 	fCoordinates[nCoordinates][2] = (float) z;
 	nCoordinates++;
-	if(nCoordinates> NARRAY_){
+	if(nCoordinates> nArray){
 		cout << "VizHTM::addCoordinate64 overflow ERROR" << endl << flush;
 	}
 }
@@ -146,7 +146,7 @@ void VizHTM::addEdgeIndicesTriangle(int i0, int i1, int i2) {  // Generally i1 =
 	edgeIndices[nEdgeIndices] = i2; nEdgeIndices++;
 	edgeIndices[nEdgeIndices] = i0; nEdgeIndices++;
 	edgeIndices[nEdgeIndices] = SO_END_LINE_INDEX; nEdgeIndices++;
-	if(nEdgeIndices> NARRAY_){
+	if(nEdgeIndices> nArray){
 		cout << "VizHTM::addEdgeIndicesTriangle overflow ERROR" << endl << flush;
 	}
 }
@@ -156,7 +156,7 @@ void VizHTM::addFaceIndices3(int i0, int i1, int i2) {  // Generally i2 = i1 + 1
 	faceIndices[nFaceIndices] = i1; nFaceIndices++;
 	faceIndices[nFaceIndices] = i2; nFaceIndices++;
 	faceIndices[nFaceIndices] = SO_END_FACE_INDEX; nFaceIndices++;
-	if(nFaceIndices> NARRAY_){
+	if(nFaceIndices> nArray){
 		cout << "VizHTM::addFaceIndices3 overflow ERROR nFaceIndices=" << nFaceIndices << endl << flush;
 		exit(1);
 	}
@@ -179,6 +179,24 @@ void VizHTM::addFace3(
 	addCoordinate( x10,  x11,  x12);
 	addCoordinate( x20,  x21,  x22);
 	addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+}
+
+void VizHTM::addFace3(
+		SpatialVector x0,
+		SpatialVector x1,
+		SpatialVector x2,
+		float r0, float g0, float b0,
+		float r1, float g1, float b1,
+		float r2, float g2, float b2
+		) {
+	addFace3(
+			x0.x(), x0.y(), x0.z(),
+			x1.x(), x1.y(), x1.z(),
+			x2.x(), x2.y(), x2.z(),
+			r0, g0, b0,
+			r1, g1, b1,
+			r2, g2, b2
+			);
 }
 
 void VizHTM::addFace4(
@@ -232,7 +250,7 @@ void VizHTM::addFace4FromLatLonDegrees(
 			r2, g2, b2,
 			r3, g3, b3
 			);
-//	delete x0,x1,x2,x3;
+	delete x0,x1,x2,x3;
 }
 
 void VizHTM::triaxis() {
@@ -590,15 +608,15 @@ SpatialVector randomVector() {
 void VizHTM::addEdge(
 		const SpatialVector x0,
 		const SpatialVector x1,
-		float r, float g, float b, float a) {
+		float r, float g, float b, float a, float scale) {
 	int colorBase = nEdgeColors;
 	addEdgeColor(r,g,b,a);
 	addEdgeColor(r,g,b,a);
 	addEdgeVertexColorIndices(colorBase,colorBase+1);
 
 	int coordBase = nCoordinates;
-	addCoordinate(x0);
-	addCoordinate(x1);
+	addCoordinate(x0*scale);
+	addCoordinate(x1*scale);
 	addEdgeIndices(coordBase,coordBase+1);
 }
 
@@ -771,7 +789,7 @@ void VizHTM::addArcAtLatitudeDegrees(float64 lat, float64 lon0, float64 lon1, fl
 
 void VizHTM::addEdgesFromIndexAndId(
 		const SpatialIndex *index, uint64 htmId,
-		float r, float g, float b, float a
+		float r, float g, float b, float a, float scale
 		) {
 	SpatialVector v0, v1, v2;
 	uint64 nodeIndex = index->nodeIndexFromId(htmId);
@@ -779,9 +797,9 @@ void VizHTM::addEdgesFromIndexAndId(
 //	cout << "nodeId: " << nodeIndex << endl << flush;
 	index->nodeVertex(nodeIndex,v0,v1,v2);
 	if(nodeIndex) {
-		addEdge(v0,v1,r,g,b,a);
-		addEdge(v1,v2,r,g,b,a);
-		addEdge(v2,v0,r,g,b,a);
+		addEdge(v0,v1,r,g,b,a,scale);
+		addEdge(v1,v2,r,g,b,a,scale);
+		addEdge(v2,v0,r,g,b,a,scale);
 	}
 }
 
@@ -908,10 +926,11 @@ void VizHTM::addArcsFromLatLonDegrees(
 
 void VizHTM::addHTMRange(
 		const SpatialIndex *index, HtmRange *range,
-		float r, float g, float b, float a) {
+		float r, float g, float b, float a, float scale) {
 	if(!range) return;
 	range->reset();
 	Key lo=0, hi=0;
+	cout << 1100 << flush;
 	int indexp = range->getNext(lo,hi);
 	if(indexp) {
 		int loLevel = levelOfId(lo);
@@ -921,16 +940,20 @@ void VizHTM::addHTMRange(
 			return;
 		}
 		do {
-			for(uint numericId=lo; numericId<=hi; numericId++) {
-				addEdgesFromIndexAndId(index,numericId,r,g,b,a);
+			cout << "1101 levels; id: " << flush;
+			cout << loLevel << ", " << hiLevel << "; "
+					<< lo << ", " << hi << "; " << flush;
+			for(uint64 numericId=lo; numericId<=hi; numericId++) {
+				addEdgesFromIndexAndId(index,numericId,r,g,b,a,scale);
 			}
+			cout << endl << flush;
 		} while (range->getNext(lo,hi));
 	}
 }
 
 void VizHTM::addHTMRange(
 		HtmRange *range,
-		float r, float g, float b, float a) {
+		float r, float g, float b, float a, float scale) {
 	if(!range) return;
 	range->reset();
 	Key lo=0, hi=0;
@@ -948,7 +971,7 @@ void VizHTM::addHTMRange(
 				index.setMaxlevel(levelOfId(lo));
 			}
 			for(uint numericId=lo; numericId<=hi; numericId++) {
-				addEdgesFromIndexAndId(&index,numericId,r,g,b,a);
+				addEdgesFromIndexAndId(&index,numericId,r,g,b,a,scale);
 			}
 		} while (range->getNext(lo,hi));
 	}
@@ -1029,3 +1052,87 @@ void VizHTM::addHTMInterval(htmRange interval) {
 	SpatialIndex index = SpatialIndex(loLevel);
 	addHTMInterval(index,interval);
 }
+
+float64 const PI = atan2(0,-1);
+float64 const twoPI = 2.0*PI;
+
+void VizHTM::addCircleFacet(
+		SpatialVector center,
+		float64 halfSubtendedAngleInRadians,
+		float r, float g, float b, float a) {
+
+	// transparency a is not implemented yet.
+
+	SpatialVector const zhat(0.0,0.0,1.0);
+	// Should check to see if center is along zhat.
+	SpatialVector c1 = center^zhat; c1.normalize();
+	SpatialVector c2 = center^c1;   c2.normalize(); // Now c1^c2 -> center.
+
+	int steps = 20;
+	float64 alpha = halfSubtendedAngleInRadians;
+	float64 theta = 0.0;
+	float64 dTheta = twoPI/steps;
+
+	int iStep = 0;
+
+	SpatialVector x0, x1, x2;
+
+	x0 = center + c1*alpha;
+	x1 = x0;
+
+	for( iStep = 0; iStep < steps; iStep ++) {
+		theta = iStep*dTheta;
+		x2 = center + ( c1 * cos(theta) + c2 * sin(theta) ) * alpha;
+		addFace3(
+				center,x1,x2,
+				r,g,b,
+				r,g,b,
+				r,g,b);
+//				r,g,b*iStep/steps,
+//				r,g,b*iStep/steps,
+//				r,g,b*iStep/steps);
+		x1=x2;
+	}
+	addFace3(
+			center,x1,x0,
+			r,g,b,
+			r,g,b,
+			r,g,b);
+
+}
+
+void VizHTM::addCircleEdges(
+		SpatialVector center,
+		float64 halfSubtendedAngleInRadians,
+		float r, float g, float b, float a) {
+
+	// transparency a is not implemented yet.
+
+	SpatialVector const zhat(0.0,0.0,1.0);
+	// Should check to see if center is along zhat.
+	SpatialVector c1 = center^zhat; c1.normalize();
+	SpatialVector c2 = center^c1;   c2.normalize(); // Now c1^c2 -> center.
+
+	int steps = 20;
+	float64 alpha = halfSubtendedAngleInRadians;
+	float64 theta = 0.0;
+	float64 dTheta = twoPI/steps;
+
+	int iStep = 0;
+
+	SpatialVector x0, x1, x2;
+
+	x0 = center + c1*alpha;
+	x1 = x0;
+
+	for( iStep = 0; iStep < steps; iStep ++) {
+		theta = iStep*dTheta;
+		x2 = center + ( c1 * cos(theta) + c2 * sin(theta) ) * alpha;
+		addEdge(x1,x2,r,g,b);
+		x1=x2;
+	}
+	addEdge(x1,x0,r,g,b);
+
+}
+
+

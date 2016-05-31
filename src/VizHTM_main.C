@@ -34,6 +34,7 @@
 #include <Inventor/Qt/SoQt.h>
 #include <Inventor/Qt/viewers/SoQtExaminerViewer.h>
 
+#include <Inventor/nodes/SoCamera.h>
 #include <Inventor/nodes/SoCoordinate3.h>
 #include <Inventor/nodes/SoIndexedFaceSet.h>
 #include <Inventor/nodes/SoIndexedLineSet.h>
@@ -687,6 +688,150 @@ void intersectTwoRectangles(
 }
 
 
+void intersectTwoRectangles_TRMMAndNMQ_1(
+		VizHTM *const viz,
+		const SpatialIndex  *index,
+		const SpatialVector *u0,
+		const SpatialVector *u1,
+		const SpatialVector *u2,
+		const SpatialVector *u3,
+		const SpatialVector *v0,
+		const SpatialVector *v1,
+		const SpatialVector *v2,
+		const SpatialVector *v3,
+		HtmRange *rangeU,
+		HtmRange *rangeV,
+		HtmRange *rangeIntersection
+		) {
+	int htmIdLevel = index->getLeafLevel();
+
+	SpatialDomain domain1 = SpatialDomain(index);
+	SpatialDomain domain2 = SpatialDomain(index);
+	if(true){
+		RangeConvex rc = RangeConvex(u0,u1,u2,u3);
+		domain1.add(rc);
+	}
+	if(true){
+		RangeConvex rc = RangeConvex(v0,v1,v2,v3);
+		domain2.add(rc);
+	}
+	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
+
+	HtmRange range1;
+	range1.purge();
+	bool overlap1 = domain1.intersect(index,&range1,varlen_individualHTMIds);
+	range1.defrag();
+	range1.reset();
+	rangeU->addRange(&range1);
+	range1.reset();
+
+	Key lo = 0, hi = 0;
+	uint64 indexp = 0;
+
+	range1.reset();
+	indexp = range1.getNext(lo,hi);
+
+	HtmRange range2 = HtmRange();
+	range2.purge();
+	bool overlap2 = domain2.intersect(index,&range2,varlen_individualHTMIds);
+	range2.defrag();
+	range2.reset();
+	rangeV->addRange(&range2);
+	range2.reset();
+
+	range2.reset();
+	indexp = range2.getNext(lo,hi);
+
+	range1.reset(); range2.reset();
+
+	if(range1.nranges()*range2.nranges()==0) return;
+
+	HtmRange *resultRange = range1.HTMRangeAtLevelFromIntersection(&range2,htmIdLevel);
+	if(!resultRange) return;
+
+	rangeIntersection->addRange(resultRange); // Note: resultRange is copied piece by piece here.
+
+	rangeIntersection->defrag();
+
+	HtmRange *range = resultRange;
+
+	if(false) {
+		range->reset();
+		//	cout << "6" << flush;
+		lo=0; hi=0;
+		indexp = range->getNext(lo,hi);
+		SpatialVector x1,x2,x3;
+
+		//	cout << "7" << flush;
+		//		if(indexp) //?
+		//	cout << "lo,hi: " << lo << " " << hi << endl << flush;
+		//	cout << "indexp: " << indexp << endl << flush;
+		if(indexp) //?
+			do {
+				for(uint64 numericId=lo; numericId<=hi;numericId++) {
+					uint64 nodeIndex = index->nodeIndexFromId(numericId);
+					if(nodeIndex!=0){
+						viz->addEdgesFromIndexAndId(index,numericId,0.2,1.0,0.2);
+						if(false){
+							index->nodeVertex(nodeIndex,x1,x2,x3);
+							if(true) {
+								float r=0.; float g=0.; float b=0.;
+								switch(numericId % 4) {
+								case 0:
+									r=1.;
+									break;
+								case 1:
+									g=1.;
+									break;
+								case 2:
+									b=1.;
+									break;
+								default:
+									r=1.; g=1.; b=1.;
+									break;
+								}
+								//					for(int i=0; i<3; i++) viz->addEdgeColor(r,g,b);
+								int colorBase = viz->nFaceColors;
+								for(int i=0; i<3; i++) {
+									viz->addFaceColor(r,g,b);
+								}
+								viz->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
+
+								int indexBase = viz->nCoordinates;
+								viz->addCoordinate64(x1.x(),x1.y(),x1.z());
+								viz->addCoordinate64(x2.x(),x2.y(),x2.z());
+								viz->addCoordinate64(x3.x(),x3.y(),x3.z());
+								viz->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+							}
+							//					printf("id: %llx ix: %llu",numericId,nodeIndex);
+							//					cout << endl << flush;
+
+							if(true){
+								float size = pow(0.5,htmIdLevel+3);
+								float r = 0.4, g = 0.4, b = 0.6;
+								SpatialVector x = 3.*x1+x2+x3; x.normalize(); x *= 1.0+1.0e-6;
+								SpatialVector x_ = x1+x2+x3; x_.normalize();
+								if(false){
+									cout
+									<< " nI: " << nodeIndex
+									<< " x: " << x.x() << " " << x.y() << " " << x.z();
+								}
+								char *str = new char[256];
+								sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
+								viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
+								viz->addEdge(x,x_,0.5,0.5,0.9);
+							}
+						}
+					}
+				}
+			} while (range->getNext(lo,hi));
+	}
+
+	delete resultRange; // Should replace with a local var.
+
+}
+
+
 typedef float (*colorMap) (uint64 id, uint64 loId, uint64 hiId, float lo, float hi );
 
 float linearInterp(uint64 id, uint64 loId, uint64 hiId, float lo, float hi ) {
@@ -1165,9 +1310,11 @@ void testPlotDataSetIntersection0_PlotHtmRangeContains(VizHTM *viz, uint htmIdLe
 	array<vector<SpatialVector>,2> granuleSets;
 	vector<SpatialVector> *granules0, *granules1;
 
+	// Get the data
 	granuleSets = DataIntersectionDriver(viz);
 	granules0 = &(granuleSets[0]);
 	granules1 = &(granuleSets[1]);
+	// Granules now contain sequences of 4-vertex lists corresponding to geometries to be compared.
 
 //	cout << "100" << endl << flush;
 //	vector<SpatialVector> *tmp;
@@ -1184,7 +1331,7 @@ void testPlotDataSetIntersection0_PlotHtmRangeContains(VizHTM *viz, uint htmIdLe
 
 //	cout << "200" << endl << flush;
 
-	bool focus = false;
+	bool focus = false; // Focus means restrict attention to a particular box pair.
 	int iFocus = 0;
 	int jFocus = 0;
 //	SpatialIndex index(3,5);
@@ -1202,6 +1349,7 @@ void testPlotDataSetIntersection0_PlotHtmRangeContains(VizHTM *viz, uint htmIdLe
 			iterU != granules0->end();
 			iterU++, i++) {
 //		cout<< "u" << flush;
+		// Extract a box from the u-list.
 		SpatialVector u0 = *iterU++;
 		SpatialVector u1 = *iterU++;
 		SpatialVector u2 = *iterU++;
@@ -1214,13 +1362,14 @@ void testPlotDataSetIntersection0_PlotHtmRangeContains(VizHTM *viz, uint htmIdLe
 //			cout << "v" << flush;
 //			cout << "<ij= " << i << " " << j << " >" << flush;
 
+			// Extract a box from the v-list.
 			SpatialVector v0 = *iterV++;
 			SpatialVector v1 = *iterV++;
 			SpatialVector v2 = *iterV++;
 			SpatialVector v3 = *iterV;
 
 //			cout << "." << flush;
-			if(!focus){
+			if(!focus){ // The general case.
 				intersectTwoRectangles(
 						viz,
 						&index,
@@ -1230,9 +1379,9 @@ void testPlotDataSetIntersection0_PlotHtmRangeContains(VizHTM *viz, uint htmIdLe
 						rangeV,
 						rangeIntersect
 				);
-			} else {
+			} else { // The special case for debugging, restricted to a particular pair.
 				if((iFocus==i)&&(jFocus==j)){
-					intersectTwoRectangles(
+					intersectTwoRectangles(  // Visualizes the HtmRange-based comparison (on triangles).
 							viz,
 							&index,
 							&u0,&u1,&u2,&u3,
@@ -1241,7 +1390,7 @@ void testPlotDataSetIntersection0_PlotHtmRangeContains(VizHTM *viz, uint htmIdLe
 							rangeV,
 							rangeIntersect
 					);
-					viz->addRectangle(u0,u1,u2,u3,1.0,0.,0.);
+					viz->addRectangle(u0,u1,u2,u3,1.0,0.,0.); // Visualize the raw boxes.
 					viz->addRectangle(v0,v1,v2,v3,0.0,0.,1.);
 				}
 			}
@@ -2081,10 +2230,14 @@ void testShapeFiles(VizHTM* viz) {
 		}
 		if(verbose) cout << endl;
 		SHPClose(hSHP);
+
+		cout << "testShape done" << endl << flush;
 	}
 
 	}
+}
 
+void testTIFF(VizHTM *viz) {
 	// http://www.libtiff.org/libtiff.html
 	string tifFilename = "data/NE1_50M_SR_W/NE1_50M_SR_W.tif";
 	QImage imageIn = QImage(tifFilename.c_str(),"tiff");
@@ -2784,6 +2937,522 @@ void testNearestNeighbors(VizHTM *viz) {
 
 }
 
+// TODO Calculate the triangle-covering of a circle.
+
+struct colorRGBAS {
+	colorRGBAS(
+			float ri = 0,
+			float gi = 0,
+			float bi = 0,
+			float ai = -1, // Not generally implemented.
+			float scalei = 1.0) {
+		r=ri; g=gi; b=bi; a=ai; scale=scalei;
+	}; // Scale is used to scale the unit vector for layering graphics.
+	float r,g,b,a,scale;
+};
+
+colorRGBAS swathGeometryColor        (0.4,0.6,0.0,-1.0,1.008);
+colorRGBAS swathHTMRGeometryColor    (0.8,0.9,0.0,-1.0,1.01);
+
+colorRGBAS nqmColor                  (0.7,0.0,0.0,-1.0,1.006);
+colorRGBAS nqmGridColor              (0.3,0.3,0.9,-1.0,1.007);
+colorRGBAS nqmHTMRGeometryColor      (0.6,0.6,1.0,-1.0,1.009);
+
+colorRGBAS nqm_trmm_intersectionColor(1.0,0.1,0.1,-1.0,1.011);
+
+colorRGBAS nqm_convectiveColor       (1.0,0.8,0.8,-1.0,1.012);
+
+SpatialVector *nqm_trmm_vizCenter = VectorFromLatLonDegrees(33.63,-76.575);
+
+//int           swathLevel = 10; // 7; // Breaks at level==10?
+uint64          swathLevel = 10; // 7; // Breaks at level==10? Crash at level 11.
+//uint64          buildLevel = 11; // default is 5;
+uint64          buildLevel = 5;  // crash at 9?
+
+// When swathLevel is 10, buildLevel <10 we get nqmRange corruption. buildLevel = 9 -> crash?
+// Could the problem be in domain intersect?
+// Maybe reduce the amount of the data and see if problem persists.
+
+// May be a size issue -- if too much lat/lon grid data we get weirdness. Where does this size get introduced?
+
+// Can HtmRange handle thousands of intervals?
+
+// How many queries can the index handle? Or is it domain?
+
+
+SpatialIndex  swathIndex(swathLevel,buildLevel);
+HtmRange      swathRange;
+bool          swath_varlenHTMIDs = false;
+
+HtmRange      convectiveRainRange;
+
+void testSwath(VizHTM *viz) {
+	ios::fmtflags coutInitialState(std::cout.flags());
+
+	std::ifstream lat_ifs( "/Users/mrilee/data/DERECHOS/TRMM/2A23.20091231.69087.7.Latitude",
+			std::ios::binary );
+
+	std::ifstream lon_ifs( "/Users/mrilee/data/DERECHOS/TRMM/2A23.20091231.69087.7.Longitude",
+			std::ios::binary );
+
+	std::ifstream rainType_ifs( "/Users/mrilee/data/DERECHOS/TRMM/2A23.20091231.69087.7.rainType",
+			std::ios::binary );
+
+	float lat = -999; float lon = -999; short int rainType = -999;
+
+	SpatialVector v;
+	float64 const km = 1.0;
+	float64 const RE = 6371.0; // mean radius km
+	float64 gFOVRadians = 5.0 * km / RE; // Could use asin, but the accuracy does not deserve it.
+//	float64 PIo2 = 0.5*atan2(0,-1);
+
+	int iStart = 190000;
+//	int iStart = 0;
+	int iEnd   = 260000;
+
+	// Swath inside the nqm rectangle.
+//	iStart = iEnd - 21000;
+//	iEnd = iEnd - 12000;
+
+	iStart = iEnd - 35000;
+	iEnd = iEnd - 4000;
+
+	swathRange.purge();
+	convectiveRainRange.purge();
+
+	for(int i=0; i< 9247*49; i++) {
+		lat_ifs.read(reinterpret_cast<char*>(&lat),sizeof(float));
+		lon_ifs.read(reinterpret_cast<char*>(&lon),sizeof(float));
+		rainType_ifs.read(reinterpret_cast<char*>(&rainType),sizeof(short int));
+		if(iStart <= i && i < iEnd) {
+
+			v.setLatLonDegrees(lat,lon);
+
+			if(true){
+				SpatialConstraint c(v,cos(0.5*gFOVRadians));
+				RangeConvex rc; rc.add(c);
+				SpatialDomain d; d.add(rc);
+				HtmRange r;
+				r.purge();
+				bool overlap = d.intersect(&swathIndex,&r,swath_varlenHTMIDs);
+				r.reset();
+				Key lo=-1, hi=-1;
+				int indexp = r.getNext(lo,hi);
+				if(indexp) {
+					do {
+						swathRange.addRange(lo,hi);
+					} while(r.getNext(lo,hi));
+				}
+			}
+
+//			viz->addConstraint(c,1.0,1.0,1.0);  // Verified constraint has correct geometry.
+			if(true) {
+				//			viz->addCircleFacet(v,0.5*gFOVRadians,1.0,1.0,1.0);
+				if(100 <= rainType && rainType < 200 ) { // stratiform tags
+					viz->addCircleFacet(v,0.5*gFOVRadians,0.9,0.9,0.0);
+				} else if (200 <= rainType && rainType < 300 ) { // convective
+					viz->addCircleFacet(v,0.5*gFOVRadians,0.0,0.0,0.9);
+
+//					if(false){
+//						SpatialConstraint c(v,cos(0.5*gFOVRadians));
+//						RangeConvex rc; rc.add(c);
+//						SpatialDomain d; d.add(rc);
+//						HtmRange r;
+//						r.purge();
+//						bool overlap = d.intersect(&swathIndex,&r,swath_varlenHTMIDs);
+//						r.reset();
+//						Key lo=-1, hi=-1;
+//						int indexp = r.getNext(lo,hi);
+//						if(indexp) {
+//							do {
+//								convectiveRainRange.addRange(lo,hi);
+//							} while(r.getNext(lo,hi));
+//						}
+//					}
+
+				} else if (300 <= rainType && rainType < 400 ) { // others
+					viz->addCircleFacet(v,0.5*gFOVRadians,0.0,0.5,0.5);
+				}
+			}
+			if(false) { // Geometry
+				viz->addCircleEdges(v,0.5*gFOVRadians,
+						swathGeometryColor.r,
+						swathGeometryColor.g,
+						swathGeometryColor.b
+						);
+			}
+		}
+	}
+
+//	swathDomain.add(swathConvex);
+//	swathRange.purge();
+//	bool overlap = swathDomain.intersect(&swathIndex,&swathRange,swath_varlenHTMIDs);
+//	cout << "overlap: " << overlap << endl << flush;
+	cout << "nranges: " << swathRange.nranges() << endl << flush;
+
+	swathRange.reset();
+//	// Iterate over components of swathRange.
+////	viz->addHTMRange(&swathIndex,&swathRange,0.0,1.0,0.0,-1,1.01);
+	viz->addHTMRange(&swathIndex,&swathRange,
+			swathGeometryColor.r,
+			swathGeometryColor.g,
+			swathGeometryColor.b,
+			swathGeometryColor.a,
+			swathGeometryColor.scale
+			);
+//	cout << " swathGeometryColor.r "<< swathGeometryColor.r << endl << flush;
+//	cout << " swathGeometryColor.g "<< swathGeometryColor.g << endl << flush;
+//	cout << " swathGeometryColor.b "<< swathGeometryColor.b << endl << flush;
+
+	if(false) {
+		convectiveRainRange.reset();
+		viz->addHTMRange(&swathIndex,&convectiveRainRange,
+				nqm_convectiveColor.r,
+				nqm_convectiveColor.g,
+				nqm_convectiveColor.b,
+				nqm_convectiveColor.a,
+				nqm_convectiveColor.scale
+		);
+	}
+
+	lat_ifs.close();
+	lon_ifs.close();
+	rainType_ifs.close();
+
+	std::cout.flags(coutInitialState);
+}
+
+HtmRange nqmRange;
+
+void testNQM(VizHTM *viz) {
+
+	std::cout << " test nqm start " << endl << flush;
+
+	const int nLat = 3501;
+	const int nLon = 7001;
+
+	std::cout << "allocating lat_ " << flush;
+	float lat_[nLat];
+	std::cout << " lon_ " << flush;
+	float lon_[nLon];
+//	std::cout << " preciprate_hsr_ " << flush;
+//	float preciprate_hsr_[nLat*nLon];
+
+	std::cout << "." << endl << flush;
+
+	string baseName("/Users/mrilee/data/DERECHOS/NQM/netCDF/PRECIPRATE_HSR/20091231-132500.netcdf");
+
+	std::cout << " latitude " << endl << flush;
+	std::ifstream lat_ifs( baseName+".Latitude", std::ios::binary );
+	for(int i=0; i< nLat; i++){
+		lat_ifs.read(reinterpret_cast<char*>(&(lat_[i])),sizeof(float));
+	}
+	lat_ifs.close();
+
+	std::cout << " longitude " << endl << flush;
+	std::ifstream lon_ifs( baseName+".Longitude", std::ios::binary );
+	for(int i=0; i< nLon; i++){
+		lon_ifs.read(reinterpret_cast<char*>(&(lon_[i])),sizeof(float));
+	}
+	lon_ifs.close();
+//
+	std::cout << " radar " << endl << flush;
+
+//	SpatialVector v;
+	float64 const km = 1.0;
+	float64 const RE = 6371.0; // mean radius km
+	float64 gFOVRadians = 1.0 * km / RE; // Could use asin, but the accuracy does not deserve it.
+
+	int latStart = 0;
+	int latEnd   = 100;
+
+	int lonStart = 0;
+	int lonEnd   = 100;
+
+	// focus on east coast
+	latStart = 1900; latEnd = 2450;
+	lonStart = 4450; lonEnd = 5550;
+
+	// across us
+//	latStart = 1750; latEnd = 3000;
+//	lonStart = 2500; lonEnd = 5500;
+
+//	latEnd=latStart+100;
+//	lonEnd=lonStart+100;
+
+	latEnd=latStart+40;
+	lonEnd=lonStart+40;
+
+	//	latEnd = 2005;
+	//	lonEnd = 5005;
+
+	int   stepScale = 1;
+	// stepScale = 10;
+	float dLat = 0.005*stepScale; // TODO Note hardwired resolution in degrees.
+	float dLon = 0.005*stepScale;
+
+	int   geomStepScale = 10;
+	// stepScale = 10;
+	float geomDLat = 0.005*geomStepScale;
+	float geomDLon = 0.005*geomStepScale;
+
+	float mn = 1.0e9;
+	float mx = -1.0e9;
+
+	viz->lineWidth = 1.5;
+
+	nqmRange.purge();
+//	SpatialIndex index0(swathLevel,11);
+//	swathIndex.setMaxlevel(swathLevel);
+
+	std::ifstream preciprate_hsr_ifs( baseName+".PrecipitationRate_HSR", std::ios::binary );
+	for(int jLat=0; jLat < nLat; jLat++) {
+		for(int iLon=0; iLon < nLon; iLon++) {
+//			v.setLatLonDegrees(lat_[jLat],lon_[iLon]);
+			float preciprate_hsr;
+			preciprate_hsr_ifs.read(reinterpret_cast<char*>(&preciprate_hsr),sizeof(float));
+
+			// Overlay geometry
+			if(true) {
+				if( (jLat % geomStepScale == 0) && (iLon % geomStepScale == 0)) {
+					if((latStart <= jLat) && (jLat <= latEnd) &&
+							(lonStart <= iLon) && (iLon <= lonEnd)) {
+						if(true) { // geometry
+							if(false){
+								viz->addLatLonBoxEdgesDegrees(
+										lat_[jLat]-geomDLat,lon_[iLon]-geomDLon,
+										lat_[jLat]+geomDLat,lon_[iLon]+geomDLon,
+										nqmGridColor.r,nqmGridColor.g,nqmGridColor.b
+								);
+							}
+//							SpatialVector *v0 = VectorFromLatLonDegrees(lat_[jLat]-geomDLat,lon_[iLon]-geomDLon);
+//							SpatialVector *v1 = VectorFromLatLonDegrees(lat_[jLat]-geomDLat,lon_[iLon]+geomDLon);
+//							SpatialVector *v2 = VectorFromLatLonDegrees(lat_[jLat]+geomDLat,lon_[iLon]+geomDLon);
+//							SpatialVector *v3 = VectorFromLatLonDegrees(lat_[jLat]+geomDLat,lon_[iLon]-geomDLon);
+//							RangeConvex rc(v0,v1,v2,v3);
+							SpatialVector v0, v1, v2, v3;
+							 v0.setLatLonDegrees(lat_[jLat]-geomDLat,lon_[iLon]-geomDLon);
+							 v1.setLatLonDegrees(lat_[jLat]-geomDLat,lon_[iLon]+geomDLon);
+							 v2.setLatLonDegrees(lat_[jLat]+geomDLat,lon_[iLon]+geomDLon);
+							 v3.setLatLonDegrees(lat_[jLat]+geomDLat,lon_[iLon]-geomDLon);
+//							 viz->addRectangle(v0,v1,v2,v3,1.0,0.0,0.0);
+							 RangeConvex rc = RangeConvex(&v0,&v1,&v2,&v3);
+							SpatialDomain d; d.add(rc);
+							HtmRange r;
+							r.purge();
+							cout << jLat << " " << iLon << " : " << lat_[jLat] << ", " << lon_[iLon] << flush;
+//							bool overlap = d.intersect(&index0,&r,swath_varlenHTMIDs);
+							bool overlap = d.intersect(&swathIndex,&r,swath_varlenHTMIDs);
+							Key lo=-1, hi=-1;
+							r.reset();
+							int indexp = r.getNext(lo,hi);
+							if(indexp) {
+								do {
+									nqmRange.addRange(lo,hi);
+									cout << " " << lo << ", " << hi << "; " << flush;
+								} while(r.getNext(lo,hi));
+							}
+							cout << endl << flush;
+						}
+					}
+				}
+			}
+
+
+			if(true){
+				// % mod the stepScale...
+				if( (jLat % stepScale == 0) && (iLon % stepScale == 0)) {
+
+					//			if(preciprate_hsr < mn) mn = preciprate_hsr;
+					//			if(preciprate_hsr > mx) mx = preciprate_hsr;
+					if((latStart <= jLat) && (jLat <= latEnd) &&
+							(lonStart <= iLon) && (iLon <= lonEnd)) {
+						//				cout << jLat << " " << iLon << " " << preciprate_hsr << endl << flush;
+
+
+						if(preciprate_hsr < mn) mn = preciprate_hsr;
+						if(preciprate_hsr > mx) mx = preciprate_hsr;
+						float scale = 150.0;
+						scale = 55;
+						if(false) { // geometry
+							viz->addLatLonBoxEdgesDegrees(
+									lat_[jLat]-dLat,lon_[iLon]-dLon,
+									lat_[jLat]+dLat,lon_[iLon]+dLon,
+									0.0,1.0,0.0
+							);
+						}
+						if((0 < preciprate_hsr) && (preciprate_hsr <= scale)) {
+							if(true) { // data
+								float r = sqrt(sqrt(preciprate_hsr/scale));
+								float g = sqrt(preciprate_hsr/scale);
+								float b = 0.3;
+								viz->addFace4FromLatLonDegrees(
+										lat_[jLat]-dLat,lon_[iLon]-dLon, // fix with dLat, dLon
+										lat_[jLat]+dLat,lon_[iLon]-dLon,
+										lat_[jLat]+dLat,lon_[iLon]+dLon,
+										lat_[jLat]-dLat,lon_[iLon]+dLon,
+										r,g,b,
+										r,g,b,
+										r,g,b,
+										r,g,b
+								);
+							}
+							if(false) { // geometry
+								viz->addLatLonBoxEdgesDegrees(
+										lat_[jLat]-dLat,lon_[iLon]-dLon,
+										lat_[jLat]+dLat,lon_[iLon]+dLon,
+										0.0,1.0,0.0
+								);
+							}
+							//					viz->addCircleFacet(
+							//							v,
+							//							0.5*gFOVRadians,
+							//							preciprate_hsr/scale,
+							//							preciprate_hsr/scale,
+							//							0.1
+							//							);
+						} else { // no signal
+							if(true) {
+								float r = 0.15;
+								float g = 0.15;
+								float b = 0.20;
+								viz->addFace4FromLatLonDegrees(
+										lat_[jLat]-dLat,lon_[iLon]-dLon,
+										lat_[jLat]+dLat,lon_[iLon]-dLon,
+										lat_[jLat]+dLat,lon_[iLon]+dLon,
+										lat_[jLat]-dLat,lon_[iLon]+dLon,
+										r,g,b,
+										r,g,b,
+										r,g,b,
+										r,g,b
+								);
+							}
+						}
+					}
+					//				viz->addCircleFacet(v,0.5*gFOVRadians,1.0,1.0,1.0);
+				}
+			}
+		}
+	}
+	preciprate_hsr_ifs.close();
+
+	cout << 1000 << endl << flush;
+
+	// Dies in the following!
+
+	// Plot the NQM triangles.
+	nqmRange.reset();
+////	viz->addHTMRange(&swathIndex,&nqmRange,1.0,0.5,0.0,-1,1.009);
+	viz->addHTMRange(
+			&swathIndex,
+			&nqmRange,
+			nqmHTMRGeometryColor.r,
+			nqmHTMRGeometryColor.g,
+			nqmHTMRGeometryColor.b,
+			nqmHTMRGeometryColor.a,
+			nqmHTMRGeometryColor.scale);
+
+	cout << 2000 << endl << flush;
+
+	return;
+
+	Key lo=-1, hi=-1;
+	HtmRange red, blue, green;
+	HtmRange *range1, *range2;
+	SpatialIndex *index = &swathIndex;
+//	SpatialIndex index(swathLevel,buildLevel);
+
+//	nqmRange.defrag();
+//	swathRange.defrag();
+
+	// Note in the following we play games with the colors.
+	red.purge(); blue.purge(); green.purge();
+	range1 = &nqmRange;
+	range2 = &swathRange;
+	range1->reset();
+	range2->reset();
+	int indexp = range1->getNext(lo,hi);
+	if(indexp) {
+		do {
+			int ret = range2->contains(lo,hi);
+			if(ret == -1) { // Partial?
+				red.addRange(lo,hi);
+			} else if (ret == 0 ) { // Does not contain
+				green.addRange(lo,hi);
+			} else { // Contains
+				blue.addRange(lo,hi);
+			}
+		} while(range1->getNext(lo,hi));
+
+//		viz->addHTMRange(index,&red,0.7,0.,0.,-1,1.008);
+		viz->addHTMRange(index,&red,1.0,1.0,0.,-1,1.008); // error?
+
+//		viz->addHTMRange(index,&green,0.,0.7,0.,-1,1.008);
+		viz->addHTMRange(index,&green,
+				nqmHTMRGeometryColor.r,
+				nqmHTMRGeometryColor.g,
+				nqmHTMRGeometryColor.b,
+				nqmHTMRGeometryColor.a,
+				nqmHTMRGeometryColor.scale
+				);
+//		viz->addHTMRange(index,&blue,0.,0.,0.7,-1,1.008);
+		viz->addHTMRange(index,&blue, // intersection
+				nqm_trmm_intersectionColor.r,
+				nqm_trmm_intersectionColor.g,
+				nqm_trmm_intersectionColor.b,
+				nqm_trmm_intersectionColor.a,
+				nqm_trmm_intersectionColor.scale
+				);
+	}
+
+//	return;
+
+	red.purge(); blue.purge(); green.purge();
+	range1 = &swathRange;
+	range2 = &nqmRange;
+	range1->reset();
+	range2->reset();
+	indexp = range1->getNext(lo,hi);
+	if(indexp) {
+		do {
+			int ret = range2->contains(lo,hi);
+			if(ret == -1) { // Partial?
+				red.addRange(lo,hi);
+			} else if (ret == 0 ) { // Does not contain
+				green.addRange(lo,hi);
+			} else { // Contains
+				blue.addRange(lo,hi);
+			}
+		} while(range1->getNext(lo,hi));
+		//		viz->addHTMRange(index,&red,0.7,0.,0.,-1,1.008);
+		viz->addHTMRange(index,&red,1.0,1.0,0.,-1,1.008); // error?
+
+//		viz->addHTMRange(index,&green,0.,0.7,0.,-1,1.008);
+		viz->addHTMRange(index,&green,
+				swathHTMRGeometryColor.r,
+				swathHTMRGeometryColor.g,
+				swathHTMRGeometryColor.b,
+				swathHTMRGeometryColor.a,
+				swathHTMRGeometryColor.scale
+				);
+
+		// The following is redundant with the comparison above. Use as a check.
+//		viz->addHTMRange(index,&blue,0.,0.,0.7,-1,1.011);
+//		viz->addHTMRange(index,&blue, // intersection
+//				nqm_trmm_intersectionColor.r,
+//				nqm_trmm_intersectionColor.g,
+//				nqm_trmm_intersectionColor.b,
+//				nqm_trmm_intersectionColor.a,
+//				nqm_trmm_intersectionColor.scale
+//				);
+	}
+
+
+	cout << "mn,mx: " << mn << " " << mx << endl << flush;
+	std::cout << " nqm done " << endl << flush;
+
+}
+
 int main(int argc, char *argv[]) {
 
 	const char* mainName = "VizHTM-main";
@@ -2926,6 +3595,8 @@ int main(int argc, char *argv[]) {
 	if(false) testPlotEdgesFromHTMNameInterval(viz); // Simple subdivision for Kuo. 2016-0317
 
 	if(testPlotDataSetIntersection_flag) testPlotDataSetIntersection(viz);
+	// Claim to fame...
+//	testPlotDataSetIntersectionRangeContains_flag = true;s
 	if(testPlotDataSetIntersectionRangeContains_flag) testPlotDataSetIntersection0_PlotHtmRangeContains(viz,level_); // 7
 	if(testPlotDataSetIntersectionNativeIntersect_flag) testPlotDataSetIntersection0_PlotIntersectTwoRectanglesOutput(viz,level_);
 
@@ -2999,13 +3670,32 @@ int main(int argc, char *argv[]) {
 
 	if(testLevelChunk_flag) testLevelChunk(viz);
 
-	if(false) testShapeFiles(viz);
+	if(true) testShapeFiles(viz);
 
-	if(true) testDelaunay(viz);
+	if(false) testTIFF(viz);
 
-	if(true) testNearestNeighbors(viz);
+	if(false) testDelaunay(viz);
+
+	if(false) testNearestNeighbors(viz);
+
+	if(true) { // Visualization using real data.
+		if(true) testSwath(viz);
+		if(true) testNQM(viz);
+	}
 
 	if(false) viz->debug_dump();
+
+	std::vector<std::shared_ptr<VizHTM>> vizContainer;
+
+	if(false) { // Test vizContainer
+		std::shared_ptr<VizHTM> v0 = std::make_shared<VizHTM>(10000);
+		vizContainer.push_back(v0);
+		v0->triaxis();
+
+		std::shared_ptr<VizHTM> v1 = std::make_shared<VizHTM>(10000);
+		vizContainer.push_back(v1);
+		v1->addSphere(SpatialVector(0.0,0.0,1.1),0.,1.,0.,0.1);
+	}
 
 	/**************** Start Graphics ****************/
 	QWidget *window = SoQt::init(argv[0]);
@@ -3021,10 +3711,38 @@ int main(int argc, char *argv[]) {
 
 	selectionRoot->addChild(root);
 
+	SoSeparator *roots = new SoSeparator;
+	for(std::vector<std::shared_ptr<VizHTM>>::iterator it = vizContainer.begin();
+			it != vizContainer.end();
+			++it ) {
+		roots->addChild((*it)->makeRoot());
+	}
+	selectionRoot->addChild(roots);
+
 	SoQtExaminerViewer *viewer = new SoQtExaminerViewer(window);
+
 	viewer->setSceneGraph(selectionRoot);
 	viewer->setTitle(mainName);
 	viewer->show();
+
+	SoCamera *camera = viewer->getCamera();
+	if(camera) {
+		SoSFVec3f position;
+//		SpatialVector *p = VectorFromLatLonDegrees(33.0,-80.25); // Centers on gridded data
+//		SpatialVector *p = VectorFromLatLonDegrees(33.5,-76.75); // Centers on storm intersection
+//		SpatialVector *p = VectorFromLatLonDegrees(33.63,-76.575); // Centers on storm intersection
+		SpatialVector *p = nqm_trmm_vizCenter;
+		(*p) = (*p) * 1.17;
+		position.setValue(p->x(),p->y(),p->z());
+//		((SoPerspectiveCamera*)camera)->position = position;
+		camera->position = position;
+		camera->pointAt(SbVec3f(0.,0.,0.));
+//		SoSFRotation rotation;
+//		p->normalize();
+//		rotation.setValue(SbVec3f(p->x(),p->y(),p->z()),0.0);
+//		camera->orientation = rotation;
+
+	}
 
 	SoQt::show(window);
 	SoQt::mainLoop();
