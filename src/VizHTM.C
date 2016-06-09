@@ -31,6 +31,7 @@
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoSwitch.h>
 #include <Inventor/nodes/SoTranslation.h>
+#include <Inventor/nodes/SoTransparencyType.h>
 #include <Inventor/sensors/SoTimerSensor.h>
 #include <Inventor/SbBasic.h>
 
@@ -63,6 +64,7 @@ VizHTM::VizHTM(int nArray) : nArray(nArray) {
 	nSpheres                = 0;
 
 	faceColors 	            = new float[nArray][3];
+	faceTransparencies      = new float[nArray];
 	faceVertexColorIndices  = new int[nArray];
 
 	edgeColors 	            = new float[nArray][3];
@@ -97,10 +99,16 @@ void VizHTM::addEdgeColor(float r, float g, float b, float a){
 	nEdgeColors++;
 }
 
-void VizHTM::addFaceColor(float r, float g, float b){
+void VizHTM::addFaceColor(float r, float g, float b,float a){
 	faceColors[nFaceColors][0] = r;
 	faceColors[nFaceColors][1] = g;
 	faceColors[nFaceColors][2] = b;
+	if(a == -1.) {
+		faceTransparencies[nFaceColors] = 0.; // The default case.
+	} else {
+		faceTransparencies[nFaceColors] = a;
+		faceTransparency = true; // If we ever see a transparency, turn it on.
+	}
 	nFaceColors++;
 }
 
@@ -160,6 +168,7 @@ void VizHTM::addFaceIndices3(int i0, int i1, int i2) {  // Generally i2 = i1 + 1
 		cout << "VizHTM::addFaceIndices3 overflow ERROR nFaceIndices=" << nFaceIndices << endl << flush;
 		exit(1);
 	}
+	// Should we have nFaces++ here instead?
 }
 
 void VizHTM::addFace3(
@@ -168,17 +177,20 @@ void VizHTM::addFace3(
 		float x20, float x21, float x22,
 		float r0, float g0, float b0,
 		float r1, float g1, float b1,
-		float r2, float g2, float b2) {
+		float r2, float g2, float b2,
+		float a0, float a1, float a2
+		) {
 	int indexBase = nCoordinates;
 	int colorBase = nFaceVertexColorIndices;
-	addFaceColor(r0,g0,b0);
-	addFaceColor(r1,g1,b1);
-	addFaceColor(r2,g2,b2);
+	addFaceColor(r0,g0,b0,a0);
+	addFaceColor(r1,g1,b1,a1);
+	addFaceColor(r2,g2,b2,a2);
 	addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
 	addCoordinate( x00,  x01,  x02);
 	addCoordinate( x10,  x11,  x12);
 	addCoordinate( x20,  x21,  x22);
 	addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+	nFaces++;
 }
 
 void VizHTM::addFace3(
@@ -187,7 +199,8 @@ void VizHTM::addFace3(
 		SpatialVector x2,
 		float r0, float g0, float b0,
 		float r1, float g1, float b1,
-		float r2, float g2, float b2
+		float r2, float g2, float b2,
+		float a0, float a1, float a2
 		) {
 	addFace3(
 			x0.x(), x0.y(), x0.z(),
@@ -195,7 +208,8 @@ void VizHTM::addFace3(
 			x2.x(), x2.y(), x2.z(),
 			r0, g0, b0,
 			r1, g1, b1,
-			r2, g2, b2
+			r2, g2, b2,
+			a0, a1, a2
 			);
 }
 
@@ -207,7 +221,8 @@ void VizHTM::addFace4(
 		float r0, float g0, float b0,
 		float r1, float g1, float b1,
 		float r2, float g2, float b2,
-		float r3, float g3, float b3
+		float r3, float g3, float b3,
+		float a0, float a1, float a2, float a3
 		) {
 	addFace3(
 			x00,x01,x02,
@@ -215,7 +230,8 @@ void VizHTM::addFace4(
 			x20,x21,x22,
 			r0, g0, b0,
 			r1, g1, b1,
-			r2, g2, b2
+			r2, g2, b2,
+			a0, a1, a2
 	);
 	addFace3(
 			x00,x01,x02,
@@ -223,7 +239,8 @@ void VizHTM::addFace4(
 			x30,x31,x32,
 			r0, g0, b0,
 			r2, g2, b2,
-			r3, g3, b3
+			r3, g3, b3,
+			a0, a2, a3
 			);
 }
 void VizHTM::addFace4FromLatLonDegrees(
@@ -234,7 +251,8 @@ void VizHTM::addFace4FromLatLonDegrees(
 		float r0, float g0, float b0,
 		float r1, float g1, float b1,
 		float r2, float g2, float b2,
-		float r3, float g3, float b3
+		float r3, float g3, float b3,
+		float a0, float a1, float a2, float a3
 		) {
 	SpatialVector *x0 = VectorFromLatLonDegrees(lat0,lon0);
 	SpatialVector *x1 = VectorFromLatLonDegrees(lat1,lon1);
@@ -248,7 +266,8 @@ void VizHTM::addFace4FromLatLonDegrees(
 			r0, g0, b0,
 			r1, g1, b1,
 			r2, g2, b2,
-			r3, g3, b3
+			r3, g3, b3,
+			a0, a1, a2, a3
 			);
 	delete x0,x1,x2,x3;
 }
@@ -434,11 +453,14 @@ SoSeparator* VizHTM::makeRoot() {
 			<< "nArray                  " << nArray << endl
 			<< "nFaces                  " << nFaces << endl
 			<< "nFaceColors             " << nFaceColors << endl
+			<< " faceTransparency       " << faceTransparency << endl
 			<< "nFaceVertexColorIndices " << nFaceVertexColorIndices << endl
 			<< "nEdgeColors             " << nEdgeColors << endl
+			<< " edgeTransparency       " << edgeTransparency << endl
 			<< "nEdgeVertexColorIndices " << nEdgeVertexColorIndices << endl
 			<< "nCoordinates            " << nCoordinates << endl
 			<< "nSpheres                " << nSpheres << endl
+//			<< "nEdges                  " << nEdges << endl
 			<< "nEdgeIndices            " << nEdgeIndices << endl
 			<< "nFaceIndices            " << nFaceIndices << endl;
 
@@ -449,6 +471,13 @@ SoSeparator* VizHTM::makeRoot() {
 		style->lineWidth.setValue(lineWidth);
 		root->addChild(style);
 	}
+
+	// Broken
+//	if(faceTransparency || edgeTransparency) {
+//		SoTransparencyType *transparencyType = new SoTransparencyType;
+//		transparencyType->value = SoTransparencyType::DELAYED_BLEND;
+//		root->addChild(transparencyType);
+//	}
 
 	SoCoordinate3 *coordinates = new SoCoordinate3;
 	coordinates->point.setValues(0,nCoordinates,fCoordinates);
@@ -486,11 +515,19 @@ SoSeparator* VizHTM::makeRoot() {
 
 	SoMaterial *faceMaterials = new SoMaterial;
 	faceMaterials->diffuseColor.setValues(0,nFaceColors,faceColors);
+	if(faceTransparency) {
+		faceMaterials->transparency.setValues(0,nFaceColors,faceTransparencies);
+	}
 	faceNode->addChild(faceMaterials);
 
+//	cout << "1000 " << faceMaterials->transparency.getNum() << endl << flush;
+
 	SoShapeHints* pHints   = new SoShapeHints;
+// Working
 	pHints->faceType       = SoShapeHints::UNKNOWN_FACE_TYPE;
 	pHints->vertexOrdering = SoShapeHints::CLOCKWISE;
+
+// Working? Unknown
 //	pHints->vertexOrdering = SoShapeHints::UNKNOWN_ORDERING;
 //	pHints->vertexOrdering = SoShapeHints::COUNTERCLOCKWISE;
 	faceNode->addChild(pHints);
@@ -609,15 +646,20 @@ void VizHTM::addEdge(
 		const SpatialVector x0,
 		const SpatialVector x1,
 		float r, float g, float b, float a, float scale) {
+	//cout << " addEdge: start, " << flush;
 	int colorBase = nEdgeColors;
 	addEdgeColor(r,g,b,a);
 	addEdgeColor(r,g,b,a);
 	addEdgeVertexColorIndices(colorBase,colorBase+1);
 
 	int coordBase = nCoordinates;
+//	SpatialVector a = x0*scale;
+//	SpatialVector b = x1*scale;
+//	addCoordinate(a); addCoordinate(b);
 	addCoordinate(x0*scale);
 	addCoordinate(x1*scale);
 	addEdgeIndices(coordBase,coordBase+1);
+	//cout << " addEdge: done; " << flush;
 }
 
 void VizHTM::addEdgeProjections(SpatialVector x1) {
@@ -723,11 +765,12 @@ void VizHTM::addRectangle(
 		const SpatialVector x1,
 		const SpatialVector x2,
 		const SpatialVector x3,
-		float r, float g, float b) {
-	addArc(x0,x1,r,g,b);
-	addArc(x1,x2,r,g,b);
-	addArc(x2,x3,r,g,b);
-	addArc(x3,x0,r,g,b);
+		float r, float g, float b, float a
+		) {
+	addArc(x0,x1,r,g,b,a);
+	addArc(x1,x2,r,g,b,a);
+	addArc(x2,x3,r,g,b,a);
+	addArc(x3,x0,r,g,b,a);
 }
 
 void VizHTM::addLatLonBoxEdgesDegrees(
@@ -793,14 +836,16 @@ void VizHTM::addEdgesFromIndexAndId(
 		) {
 	SpatialVector v0, v1, v2;
 	uint64 nodeIndex = index->nodeIndexFromId(htmId);
-//	cout << "htmId:  " << htmId << endl << flush;
-//	cout << "nodeId: " << nodeIndex << endl << flush;
+//	cout << "htmId:  " << htmId << ", "<< flush;
+//	cout << "nodeId: " << nodeIndex << "; " << flush;
 	index->nodeVertex(nodeIndex,v0,v1,v2);
+//	cout << "nodeVertex;" << flush;
 	if(nodeIndex) {
 		addEdge(v0,v1,r,g,b,a,scale);
 		addEdge(v1,v2,r,g,b,a,scale);
 		addEdge(v2,v0,r,g,b,a,scale);
 	}
+//	cout << "addedEdges; " << flush;
 }
 
 void VizHTM::addFaceFromIndexAndId(
@@ -930,7 +975,7 @@ void VizHTM::addHTMRange(
 	if(!range) return;
 	range->reset();
 	Key lo=0, hi=0;
-	cout << 1100 << flush;
+//	cout << 1100 << flush;
 	int indexp = range->getNext(lo,hi);
 	if(indexp) {
 		int loLevel = levelOfId(lo);
@@ -940,15 +985,17 @@ void VizHTM::addHTMRange(
 			return;
 		}
 		do {
-			cout << "1101 levels; id: " << flush;
-			cout << loLevel << ", " << hiLevel << "; "
-					<< lo << ", " << hi << "; " << flush;
+//			cout << "1101 levels; id: " << flush;
+//			cout << loLevel << ", " << hiLevel << "; "
+//					<< lo << ", " << hi << "; " << flush;
 			for(uint64 numericId=lo; numericId<=hi; numericId++) {
 				addEdgesFromIndexAndId(index,numericId,r,g,b,a,scale);
 			}
-			cout << endl << flush;
+//			cout << 110 << endl << flush;
 		} while (range->getNext(lo,hi));
+//		cout << 1103 << flush << endl;
 	}
+//	cout << 1110 << " addedHTMRange:si " << endl;
 }
 
 void VizHTM::addHTMRange(
@@ -1059,7 +1106,7 @@ float64 const twoPI = 2.0*PI;
 void VizHTM::addCircleFacet(
 		SpatialVector center,
 		float64 halfSubtendedAngleInRadians,
-		float r, float g, float b, float a) {
+		float r, float g, float b, float a, float scale) {
 
 	// transparency a is not implemented yet.
 
@@ -1084,21 +1131,28 @@ void VizHTM::addCircleFacet(
 		theta = iStep*dTheta;
 		x2 = center + ( c1 * cos(theta) + c2 * sin(theta) ) * alpha;
 		addFace3(
-				center,x1,x2,
+				center*scale,
+				x1*scale,
+				x2*scale,
 				r,g,b,
 				r,g,b,
-				r,g,b);
+				r,g,b,
+				a,a,a
+				);
 //				r,g,b*iStep/steps,
 //				r,g,b*iStep/steps,
 //				r,g,b*iStep/steps);
 		x1=x2;
 	}
 	addFace3(
-			center,x1,x0,
+			center*scale,
+			x1*scale,
+			x0*scale,
 			r,g,b,
 			r,g,b,
-			r,g,b);
-
+			r,g,b,
+			a,a,a
+			);
 }
 
 void VizHTM::addCircleEdges(

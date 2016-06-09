@@ -33,8 +33,11 @@
 
 #include <Inventor/Qt/SoQt.h>
 #include <Inventor/Qt/viewers/SoQtExaminerViewer.h>
+//#include <Inventor/Qt/viewers/SoQtFlyViewer.h>
 
 #include <Inventor/nodes/SoCamera.h>
+#include <Inventor/nodes/SoOrthographicCamera.h>
+
 #include <Inventor/nodes/SoCoordinate3.h>
 #include <Inventor/nodes/SoIndexedFaceSet.h>
 #include <Inventor/nodes/SoIndexedLineSet.h>
@@ -46,8 +49,17 @@
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoSwitch.h>
 #include <Inventor/nodes/SoTranslation.h>
+#include <Inventor/nodes/SoTransparencyType.h>
 #include <Inventor/sensors/SoTimerSensor.h>
 #include <Inventor/SbBasic.h>
+
+#include <Inventor/nodes/SoDirectionalLight.h>
+#include <Inventor/nodes/SoCube.h>
+#include <Inventor/nodes/SoRotationXYZ.h>
+
+// For offscreen rendering.
+#include "misc.h"
+#include "OffScreenViz.h"
 
 #include "VizHTM_main.h"
 
@@ -2951,36 +2963,335 @@ struct colorRGBAS {
 	float r,g,b,a,scale;
 };
 
-colorRGBAS swathGeometryColor        (0.4,0.6,0.0,-1.0,1.008);
-colorRGBAS swathHTMRGeometryColor    (0.8,0.9,0.0,-1.0,1.01);
+colorRGBAS swathStratiformColor            (0.8,0.8,0.0,0.5,1.0007);
+colorRGBAS swathConvectiveColor            (0.0,0.0,0.8,0.5,1.0007);
+colorRGBAS swathOtherColor                 ();
+colorRGBAS swathConvectiveHTMGeometryColor (1.0,0.8,0.8,-1.0,1.0012);
 
-colorRGBAS nqmColor                  (0.7,0.0,0.0,-1.0,1.006);
-colorRGBAS nqmGridColor              (0.3,0.3,0.9,-1.0,1.007);
-colorRGBAS nqmHTMRGeometryColor      (0.6,0.6,1.0,-1.0,1.009);
+colorRGBAS swathGeometryColor        (0.4,0.6,0.0,-1.0,1.0008);
+colorRGBAS swathHTMRGeometryColor    (0.8,0.9,0.0,-1.0,1.001);
 
-colorRGBAS nqm_trmm_intersectionColor(1.0,0.1,0.1,-1.0,1.011);
+colorRGBAS nmqColor                  (0.7,0.0,0.0,-1.0,1.0005);
+colorRGBAS nmqGridColor              (0.2,0.8,0.2,-1.0,1.0006); // Larger step scale
+colorRGBAS nmqLatLonBoxStepScaleColor(0.3,1.0,0.3,-1.0,1.0007); // Smaller step scale
+colorRGBAS nmqHTMRGeometryColor      (0.6,0.6,1.0,-1.0,1.0009);
 
-colorRGBAS nqm_convectiveColor       (1.0,0.8,0.8,-1.0,1.012);
+colorRGBAS nmq_trmm_intersectionColor        (1.0,0.1,0.1,-1.0,1.00119);
+colorRGBAS nmq_trmm_PartialIntersectionColor (1.0,0.5,0.8,-1.0,1.00111);
+colorRGBAS trmm_nmq_PartialIntersectionColor (1.0,0.5,0.7,-1.0,1.00112);
 
-SpatialVector *nqm_trmm_vizCenter = VectorFromLatLonDegrees(33.63,-76.575);
+bool swathGeometry_viz               = false;
+bool swathStratiform_viz             = false;
+bool swathConvective_viz             = false;
+bool swathOtherRainType_viz          = false;
+bool swathConvectiveHTM_viz          = false;
+bool swathGeometryHTM_viz            = false;
 
-//int           swathLevel = 10; // 7; // Breaks at level==10?
-uint64          swathLevel = 10; // 7; // Breaks at level==10? Crash at level 11.
-//uint64          buildLevel = 11; // default is 5;
-uint64          buildLevel = 5;  // crash at 9?
+int swathIndexStart = 190000;
+int swathIndexEnd   = 260000;
 
-// When swathLevel is 10, buildLevel <10 we get nqmRange corruption. buildLevel = 9 -> crash?
-// Could the problem be in domain intersect?
-// Maybe reduce the amount of the data and see if problem persists.
+bool nmqHTM                          = false; ///< Calculate nmqRange at high resolution;
 
-// May be a size issue -- if too much lat/lon grid data we get weirdness. Where does this size get introduced?
+bool nmqLatLonBox_viz                = false; // At the larger geomStepScale
+bool nmqLatLonBoxStepScale_viz       = false; // At the smaller stepScale
+bool nmqPrecipRateHSR_viz            = false;
+bool nmqPrecipRateHSRGeometry_viz    = false;
+bool nmqNoSignalGeometry_viz         = false;
 
-// Can HtmRange handle thousands of intervals?
+bool nmqHTMRGeometry_viz             = false;
 
-// How many queries can the index handle? Or is it domain?
+bool nmq_trmm_HTMRPartial_viz        = false;
+bool nmq_trmm_HTMRDoesNotContain_viz = false;
+bool nmq_trmm_HTMRContains_viz       = false;
 
+bool trmm_nmq_HTMRPartial_viz        = false;
+bool trmm_nmq_HTMRDoesNotContain_viz = false;
+bool trmm_nmq_HTMRContains_viz       = false;
 
+int nmqLatStart = 1900; int nmqLatEnd = 2450;
+int nmqLonStart = 4450; int nmqLonEnd = 5550;
+
+bool offscreen_viz                   = false;
+bool examiner_viz                    = false;
+
+bool addFiduciaryTriangles           = false;
+
+SpatialVector *nmq_trmm_vizCenter = VectorFromLatLonDegrees(33.63,-76.575);
+float offscreenPerscamPositionScale = 1.1;
+float examinerCameraPositionScale   = 1.17;
+
+//uint64          swathLevel = 6; // Good for testing
+// uint64           swathLevel = 7;
+//uint64           swathLevel = 9;
+uint64           swathLevel = 7;
+//uint64           swathLevel = 11;
+uint64          buildLevel = 5;
+// uint64          buildLevel = 11; // default is 5;
 SpatialIndex  swathIndex(swathLevel,buildLevel);
+
+string baseName = "TrmmNmq";
+
+void initializeFocusOnNMQSquare() {
+	swathIndexStart = swathIndexEnd - 35000;
+	swathIndexEnd   = swathIndexEnd - 4000;
+	offscreenPerscamPositionScale = 1.02;
+	examinerCameraPositionScale   = 1.01;
+}
+
+
+void initializeFocusOnNMQCorner() {
+
+	bool cornerFocus = true; // 34.245,-74.51
+
+	examinerCameraPositionScale   = 1.01;
+	offscreenPerscamPositionScale = 1.25;
+
+	bool narrow = true;
+	string slide = "8a1";
+
+	if( slide == "1") {
+		swathLevel = 9;
+		offscreenPerscamPositionScale = 1.1;
+		nmqHTM = true; // was false...
+	} else if( slide == "2") {
+		swathLevel = 10;
+		offscreenPerscamPositionScale = 1.02;
+	} else if ( slide == "3" ) {
+		swathLevel = 11;
+		offscreenPerscamPositionScale = 1.02;
+		nmqHTM = false;  // Use full NMQ resolution?
+	} else if ( slide == "4" ) {
+		swathLevel = 11;
+		offscreenPerscamPositionScale = 1.02;
+		nmqHTM = true;  // Use full NMQ resolution?
+	} else if ( slide == "4a" ) {
+		swathLevel = 9;
+		offscreenPerscamPositionScale = 1.02;
+		nmqHTM = true;  // Use full NMQ resolution?
+	} else if ( slide == "4b" ) {
+	// Slide 4b Same as 4 with nmq grid
+		swathLevel = 11;
+		offscreenPerscamPositionScale = 1.02;
+		nmqHTM = true;  // Use full NMQ resolution?
+//		nmqLatLonBox_viz = true; // blocks of ten pixels
+		nmqLatLonBoxStepScale_viz = true;
+	} else if ( slide == "4c" ) {
+		narrow = false;
+		// Make even narrower
+		swathIndexStart = swathIndexEnd - 12000;
+		swathIndexEnd   = swathIndexEnd - 8000;
+		nmqLatStart = 2000;
+		nmqLatEnd   = 2150;
+		nmqLonStart = 5250;
+		nmqLonEnd   = 5550;
+//		// While aligning grid.
+//		swathLevel = 7;
+//		offscreenPerscamPositionScale = 1.25;
+//		nmqHTM = false;
+	} else if ( slide == "5" ) {
+		// Slide 5
+		swathLevel = 12;
+		offscreenPerscamPositionScale = 1.02;
+		nmqHTM = true;  // Use full NMQ resolution?
+	} else if ( slide == "6" ) {
+	// Slide 6
+		swathLevel = 8;
+		offscreenPerscamPositionScale = 1.03;
+		nmqHTM = false;  // Use full NMQ resolution?
+	} else if ( slide == "7" ) {
+		swathLevel = 7;
+		offscreenPerscamPositionScale = 1.25;
+		nmqHTM = false;
+		narrow = false;
+		nmq_trmm_HTMRContains_viz        = true;
+		trmm_nmq_HTMRContains_viz        = true;
+		nmq_trmm_HTMRDoesNotContain_viz  = true;
+		trmm_nmq_HTMRDoesNotContain_viz  = true;
+		nmq_trmm_HTMRPartial_viz         = true;
+		trmm_nmq_HTMRPartial_viz         = true;
+	} else if ( slide == "7a" ) {
+		swathLevel = 7;
+		offscreenPerscamPositionScale = 1.25;
+		nmqHTM = false;
+		narrow = false;
+		nmq_trmm_HTMRContains_viz        = false;
+		trmm_nmq_HTMRContains_viz        = false;
+		nmq_trmm_HTMRDoesNotContain_viz  = false;
+		trmm_nmq_HTMRDoesNotContain_viz  = false;
+		nmq_trmm_HTMRPartial_viz         = false;
+		trmm_nmq_HTMRPartial_viz         = false;
+	} else if ( slide == "8" ) {
+		swathLevel = 5;
+		offscreenPerscamPositionScale = 1.25;
+		nmqHTM = false;
+		narrow = false;
+		nmq_trmm_HTMRContains_viz        = true;
+		trmm_nmq_HTMRContains_viz        = true;
+		nmq_trmm_HTMRDoesNotContain_viz  = true;
+		trmm_nmq_HTMRDoesNotContain_viz  = true;
+		nmq_trmm_HTMRPartial_viz         = true;
+		trmm_nmq_HTMRPartial_viz         = true;
+	} else if ( slide == "8a" ) {
+		swathLevel = 5;
+		offscreenPerscamPositionScale = 1.25;
+		examinerCameraPositionScale = offscreenPerscamPositionScale;
+		nmqHTM = false;
+		narrow = false;
+		cornerFocus = false;
+		nmq_trmm_HTMRContains_viz        = true;
+		trmm_nmq_HTMRContains_viz        = true;
+		nmq_trmm_HTMRDoesNotContain_viz  = true;
+		trmm_nmq_HTMRDoesNotContain_viz  = true;
+		nmq_trmm_HTMRPartial_viz         = true;
+		trmm_nmq_HTMRPartial_viz         = true;
+	} else if ( slide == "8a1" ) {
+		swathLevel = 6;
+		offscreenPerscamPositionScale = 1.25;
+		examinerCameraPositionScale = offscreenPerscamPositionScale;
+		nmqHTM = false;
+		narrow = false;
+		cornerFocus = false;
+		nmq_trmm_HTMRContains_viz        = true;
+		trmm_nmq_HTMRContains_viz        = true;
+		nmq_trmm_HTMRDoesNotContain_viz  = true;
+		trmm_nmq_HTMRDoesNotContain_viz  = true;
+		nmq_trmm_HTMRPartial_viz         = true;
+		trmm_nmq_HTMRPartial_viz         = true;
+	} else if ( slide == "8b" ) {
+		swathLevel = 7;
+		offscreenPerscamPositionScale = 1.25;
+		examinerCameraPositionScale = offscreenPerscamPositionScale;
+		nmqHTM = false;
+		narrow = false;
+		cornerFocus = false;
+		nmq_trmm_HTMRContains_viz        = true;
+		trmm_nmq_HTMRContains_viz        = true;
+		nmq_trmm_HTMRDoesNotContain_viz  = true;
+		trmm_nmq_HTMRDoesNotContain_viz  = true;
+		nmq_trmm_HTMRPartial_viz         = true;
+		trmm_nmq_HTMRPartial_viz         = true;
+	} else if ( slide == "8b1" ) {
+		swathLevel = 8;
+		offscreenPerscamPositionScale = 1.25;
+		examinerCameraPositionScale = offscreenPerscamPositionScale;
+		nmqHTM = false;
+		narrow = false;
+		cornerFocus = false;
+		nmq_trmm_HTMRContains_viz        = true;
+		trmm_nmq_HTMRContains_viz        = true;
+		nmq_trmm_HTMRDoesNotContain_viz  = true;
+		trmm_nmq_HTMRDoesNotContain_viz  = true;
+		nmq_trmm_HTMRPartial_viz         = true;
+		trmm_nmq_HTMRPartial_viz         = true;
+	} else if( slide == "8c1" ) {
+		swathLevel = 8;
+		offscreenPerscamPositionScale = 2.5;
+		examinerCameraPositionScale = offscreenPerscamPositionScale;
+		nmqHTM = false;
+		narrow = false;
+		cornerFocus = false;
+		nmq_trmm_HTMRContains_viz        = true;
+		trmm_nmq_HTMRContains_viz        = true;
+		nmq_trmm_HTMRDoesNotContain_viz  = true;
+		trmm_nmq_HTMRDoesNotContain_viz  = true;
+		nmq_trmm_HTMRPartial_viz         = true;
+		trmm_nmq_HTMRPartial_viz         = true;
+
+		addFiduciaryTriangles            = true;
+
+	} else if( slide == "8c" ) {
+		swathLevel = 9;
+		offscreenPerscamPositionScale = 1.25;
+		examinerCameraPositionScale = offscreenPerscamPositionScale;
+		nmqHTM = false;
+		narrow = false;
+		cornerFocus = false;
+		nmq_trmm_HTMRContains_viz        = true;
+		trmm_nmq_HTMRContains_viz        = true;
+		nmq_trmm_HTMRDoesNotContain_viz  = true;
+		trmm_nmq_HTMRDoesNotContain_viz  = true;
+		nmq_trmm_HTMRPartial_viz         = true;
+		trmm_nmq_HTMRPartial_viz         = true;
+	} else if( slide == "8d" ) {
+		swathLevel = 9;
+		offscreenPerscamPositionScale = 1.25;
+		examinerCameraPositionScale = offscreenPerscamPositionScale;
+		nmqHTM = false;
+		narrow = false;
+		cornerFocus = false;
+		nmq_trmm_HTMRContains_viz        = true;
+		trmm_nmq_HTMRContains_viz        = true;
+		nmq_trmm_HTMRDoesNotContain_viz  = true;
+		trmm_nmq_HTMRDoesNotContain_viz  = true;
+		nmq_trmm_HTMRPartial_viz         = true;
+		trmm_nmq_HTMRPartial_viz         = true;
+
+		nmqLatLonBox_viz                 = true;
+
+	} else {
+		cout << "slide " << slide << " not found, exiting. " << endl << flush;
+		exit( 1 );
+	}
+
+	if(narrow){
+		// Narrow to corner
+		swathIndexStart = swathIndexEnd - 15000;
+		swathIndexEnd   = swathIndexEnd - 4500;
+		//	nmqLatStart = 2000;
+		//	nmqLatEnd   = 2350;
+		nmqLonStart = 4800;
+		nmqLonEnd   = 5550;
+	}
+
+	cout << "writing slide " << slide << endl << flush;
+
+	if(cornerFocus) {
+		nmq_trmm_vizCenter = VectorFromLatLonDegrees(34.245,-74.51);
+	}
+
+	baseName +=
+			"-Level="+std::to_string(swathLevel)
+	+"-PositionScale="+std::to_string(offscreenPerscamPositionScale)
+	+"-nmqHtm="+std::to_string(nmqHTM)
+	+"-Slide="+slide;
+
+}
+
+void initializeZoomCornerVisualization() {
+
+	offscreen_viz = false; examiner_viz = !offscreen_viz;
+
+	//	nmqHTMRGeometry_viz = true;
+
+	nmqPrecipRateHSR_viz = true;
+
+	swathStratiform_viz  = true;
+	swathConvective_viz  = true;
+	swathOtherRainType_viz = true;
+
+	nmq_trmm_HTMRContains_viz        = true;
+	trmm_nmq_HTMRContains_viz        = true;
+
+	nmq_trmm_HTMRDoesNotContain_viz  = true;
+	trmm_nmq_HTMRDoesNotContain_viz  = true;
+
+	nmq_trmm_HTMRPartial_viz = true;
+	trmm_nmq_HTMRPartial_viz = true;
+
+	initializeFocusOnNMQCorner();
+	//	initializeFocusOnNMQSquare();
+
+	swathIndex = SpatialIndex(swathLevel,buildLevel);
+
+}
+
+void initialize_nmq_trmm_viz() {
+
+	initializeZoomCornerVisualization();
+
+}
+
+
 HtmRange      swathRange;
 bool          swath_varlenHTMIDs = false;
 
@@ -3006,16 +3317,17 @@ void testSwath(VizHTM *viz) {
 	float64 gFOVRadians = 5.0 * km / RE; // Could use asin, but the accuracy does not deserve it.
 //	float64 PIo2 = 0.5*atan2(0,-1);
 
-	int iStart = 190000;
-//	int iStart = 0;
-	int iEnd   = 260000;
+	int iStart = swathIndexStart;
+	int iEnd   = swathIndexEnd;
 
-	// Swath inside the nqm rectangle.
+	// Swath inside the nmq rectangle.
 //	iStart = iEnd - 21000;
 //	iEnd = iEnd - 12000;
 
-	iStart = iEnd - 35000;
-	iEnd = iEnd - 4000;
+	cout << "TRMM swath: iStart, iEnd: " << iStart << ", " << iEnd << endl << flush;
+
+	// DEBUGGING
+//	iEnd = iStart + 100;
 
 	swathRange.purge();
 	convectiveRainRange.purge();
@@ -3049,32 +3361,49 @@ void testSwath(VizHTM *viz) {
 			if(true) {
 				//			viz->addCircleFacet(v,0.5*gFOVRadians,1.0,1.0,1.0);
 				if(100 <= rainType && rainType < 200 ) { // stratiform tags
-					viz->addCircleFacet(v,0.5*gFOVRadians,0.9,0.9,0.0);
+					//					viz->addCircleFacet(v,0.5*gFOVRadians,0.9,0.9,0.0,0.5);
+					if(swathStratiform_viz){
+						viz->addCircleFacet(v,0.5*gFOVRadians,
+								swathStratiformColor.r,
+								swathStratiformColor.g,
+								swathStratiformColor.b,
+								swathStratiformColor.a,
+								swathStratiformColor.scale
+						);}
 				} else if (200 <= rainType && rainType < 300 ) { // convective
-					viz->addCircleFacet(v,0.5*gFOVRadians,0.0,0.0,0.9);
-
-//					if(false){
-//						SpatialConstraint c(v,cos(0.5*gFOVRadians));
-//						RangeConvex rc; rc.add(c);
-//						SpatialDomain d; d.add(rc);
-//						HtmRange r;
-//						r.purge();
-//						bool overlap = d.intersect(&swathIndex,&r,swath_varlenHTMIDs);
-//						r.reset();
-//						Key lo=-1, hi=-1;
-//						int indexp = r.getNext(lo,hi);
-//						if(indexp) {
-//							do {
-//								convectiveRainRange.addRange(lo,hi);
-//							} while(r.getNext(lo,hi));
-//						}
-//					}
+					//					viz->addCircleFacet(v,0.5*gFOVRadians,0.0,0.0,0.9,0.5);
+					if(swathConvective_viz) {
+						viz->addCircleFacet(v,0.5*gFOVRadians,
+								swathConvectiveColor.r,
+								swathConvectiveColor.g,
+								swathConvectiveColor.b,
+								swathConvectiveColor.a,
+								swathConvectiveColor.scale
+						);}
+					if(true){
+						SpatialConstraint c(v,cos(0.5*gFOVRadians));
+						RangeConvex rc; rc.add(c);
+						SpatialDomain d; d.add(rc);
+						HtmRange r;
+						r.purge();
+						bool overlap = d.intersect(&swathIndex,&r,swath_varlenHTMIDs);
+						r.reset();
+						Key lo=-1, hi=-1;
+						int indexp = r.getNext(lo,hi);
+						if(indexp) {
+							do {
+								convectiveRainRange.addRange(lo,hi);
+							} while(r.getNext(lo,hi));
+						}
+					}
 
 				} else if (300 <= rainType && rainType < 400 ) { // others
-					viz->addCircleFacet(v,0.5*gFOVRadians,0.0,0.5,0.5);
+					if(swathOtherRainType_viz) {
+						viz->addCircleFacet(v,0.5*gFOVRadians,0.0,0.5,0.5,0.5);
+					}
 				}
 			}
-			if(false) { // Geometry
+			if(swathGeometry_viz) { // Geometry
 				viz->addCircleEdges(v,0.5*gFOVRadians,
 						swathGeometryColor.r,
 						swathGeometryColor.g,
@@ -3088,30 +3417,32 @@ void testSwath(VizHTM *viz) {
 //	swathRange.purge();
 //	bool overlap = swathDomain.intersect(&swathIndex,&swathRange,swath_varlenHTMIDs);
 //	cout << "overlap: " << overlap << endl << flush;
-	cout << "nranges: " << swathRange.nranges() << endl << flush;
+//	cout << "nranges: " << swathRange.nranges() << endl << flush;
 
-	swathRange.reset();
-//	// Iterate over components of swathRange.
-////	viz->addHTMRange(&swathIndex,&swathRange,0.0,1.0,0.0,-1,1.01);
-	viz->addHTMRange(&swathIndex,&swathRange,
-			swathGeometryColor.r,
-			swathGeometryColor.g,
-			swathGeometryColor.b,
-			swathGeometryColor.a,
-			swathGeometryColor.scale
-			);
-//	cout << " swathGeometryColor.r "<< swathGeometryColor.r << endl << flush;
-//	cout << " swathGeometryColor.g "<< swathGeometryColor.g << endl << flush;
-//	cout << " swathGeometryColor.b "<< swathGeometryColor.b << endl << flush;
+	if(swathGeometryHTM_viz) {
+		swathRange.reset();
+		//	// Iterate over components of swathRange.
+		////	viz->addHTMRange(&swathIndex,&swathRange,0.0,1.0,0.0,-1,1.01);
+		viz->addHTMRange(&swathIndex,&swathRange,
+				swathHTMRGeometryColor.r,
+				swathHTMRGeometryColor.g,
+				swathHTMRGeometryColor.b,
+				swathHTMRGeometryColor.a,
+				swathHTMRGeometryColor.scale
+		);
+		//	cout << " swathGeometryColor.r "<< swathGeometryColor.r << endl << flush;
+		//	cout << " swathGeometryColor.g "<< swathGeometryColor.g << endl << flush;
+		//	cout << " swathGeometryColor.b "<< swathGeometryColor.b << endl << flush;
+	}
 
-	if(false) {
+	if(swathConvectiveHTM_viz) {
 		convectiveRainRange.reset();
 		viz->addHTMRange(&swathIndex,&convectiveRainRange,
-				nqm_convectiveColor.r,
-				nqm_convectiveColor.g,
-				nqm_convectiveColor.b,
-				nqm_convectiveColor.a,
-				nqm_convectiveColor.scale
+				swathConvectiveHTMGeometryColor.r,
+				swathConvectiveHTMGeometryColor.g,
+				swathConvectiveHTMGeometryColor.b,
+				swathConvectiveHTMGeometryColor.a,
+				swathConvectiveHTMGeometryColor.scale
 		);
 	}
 
@@ -3122,11 +3453,11 @@ void testSwath(VizHTM *viz) {
 	std::cout.flags(coutInitialState);
 }
 
-HtmRange nqmRange;
+HtmRange nmqRangeCoarse, nmqRange;
 
-void testNQM(VizHTM *viz) {
+void testnmq(VizHTM *viz) {
 
-	std::cout << " test nqm start " << endl << flush;
+	std::cout << " test nmq start " << endl << flush;
 
 	const int nLat = 3501;
 	const int nLon = 7001;
@@ -3140,7 +3471,7 @@ void testNQM(VizHTM *viz) {
 
 	std::cout << "." << endl << flush;
 
-	string baseName("/Users/mrilee/data/DERECHOS/NQM/netCDF/PRECIPRATE_HSR/20091231-132500.netcdf");
+	string baseName("/Users/mrilee/data/DERECHOS/nmq/netCDF/PRECIPRATE_HSR/20091231-132500.netcdf");
 
 	std::cout << " latitude " << endl << flush;
 	std::ifstream lat_ifs( baseName+".Latitude", std::ios::binary );
@@ -3154,7 +3485,9 @@ void testNQM(VizHTM *viz) {
 	for(int i=0; i< nLon; i++){
 		lon_ifs.read(reinterpret_cast<char*>(&(lon_[i])),sizeof(float));
 	}
+	cout << "100" << endl << flush;
 	lon_ifs.close();
+	cout << "101" << endl << flush;
 //
 	std::cout << " radar " << endl << flush;
 
@@ -3163,28 +3496,32 @@ void testNQM(VizHTM *viz) {
 	float64 const RE = 6371.0; // mean radius km
 	float64 gFOVRadians = 1.0 * km / RE; // Could use asin, but the accuracy does not deserve it.
 
-	int latStart = 0;
-	int latEnd   = 100;
+	int latStart = nmqLatStart;
+	int latEnd   = nmqLatEnd;
 
-	int lonStart = 0;
-	int lonEnd   = 100;
+	int lonStart = nmqLonStart;
+	int lonEnd   = nmqLonEnd;
 
-	// focus on east coast
-	latStart = 1900; latEnd = 2450;
-	lonStart = 4450; lonEnd = 5550;
-
-	// across us
-//	latStart = 1750; latEnd = 3000;
-//	lonStart = 2500; lonEnd = 5500;
-
-//	latEnd=latStart+100;
-//	lonEnd=lonStart+100;
-
-	latEnd=latStart+40;
-	lonEnd=lonStart+40;
-
-	//	latEnd = 2005;
-	//	lonEnd = 5005;
+//	// focus on east coast
+//	latStart = 1900; latEnd = 2450;
+//	lonStart = 4450; lonEnd = 5550;
+//
+//	// across us
+////	latStart = 1750; latEnd = 3000;
+////	lonStart = 2500; lonEnd = 5500;
+//
+////	latEnd=latStart+100;
+////	lonEnd=lonStart+100;
+//
+//	// Smaller scale for testing failure at high resolution.
+////	latEnd=latStart+40;
+////	lonEnd=lonStart+40;
+//
+////		latEnd=latStart+41;
+////		lonEnd=lonStart+41;
+//
+//	//	latEnd = 2005;
+//	//	lonEnd = 5005;
 
 	int   stepScale = 1;
 	// stepScale = 10;
@@ -3201,9 +3538,12 @@ void testNQM(VizHTM *viz) {
 
 	viz->lineWidth = 1.5;
 
-	nqmRange.purge();
+	nmqRange.purge();
 //	SpatialIndex index0(swathLevel,11);
 //	swathIndex.setMaxlevel(swathLevel);
+
+	uint64 nmqRangeCount = 0;
+	cout << 200 << endl << flush;
 
 	std::ifstream preciprate_hsr_ifs( baseName+".PrecipitationRate_HSR", std::ios::binary );
 	for(int jLat=0; jLat < nLat; jLat++) {
@@ -3218,11 +3558,11 @@ void testNQM(VizHTM *viz) {
 					if((latStart <= jLat) && (jLat <= latEnd) &&
 							(lonStart <= iLon) && (iLon <= lonEnd)) {
 						if(true) { // geometry
-							if(false){
+							if(nmqLatLonBox_viz){
 								viz->addLatLonBoxEdgesDegrees(
 										lat_[jLat]-geomDLat,lon_[iLon]-geomDLon,
 										lat_[jLat]+geomDLat,lon_[iLon]+geomDLon,
-										nqmGridColor.r,nqmGridColor.g,nqmGridColor.b
+										nmqGridColor.r,nmqGridColor.g,nmqGridColor.b
 								);
 							}
 //							SpatialVector *v0 = VectorFromLatLonDegrees(lat_[jLat]-geomDLat,lon_[iLon]-geomDLon);
@@ -3240,19 +3580,26 @@ void testNQM(VizHTM *viz) {
 							SpatialDomain d; d.add(rc);
 							HtmRange r;
 							r.purge();
-							cout << jLat << " " << iLon << " : " << lat_[jLat] << ", " << lon_[iLon] << flush;
+//							cout << jLat << " " << iLon << " : " << lat_[jLat] << ", " << lon_[iLon] << flush;
 //							bool overlap = d.intersect(&index0,&r,swath_varlenHTMIDs);
 							bool overlap = d.intersect(&swathIndex,&r,swath_varlenHTMIDs);
-							Key lo=-1, hi=-1;
+							Key lo=-999, hi=-999;
 							r.reset();
 							int indexp = r.getNext(lo,hi);
 							if(indexp) {
 								do {
-									nqmRange.addRange(lo,hi);
-									cout << " " << lo << ", " << hi << "; " << flush;
+									nmqRangeCoarse.addRange(lo,hi);
+//									long losCount = nmqRange.my_los->getCount();
+//									long hisCount = nmqRange.my_his->getCount();
+//									cout << "( " << nmqRangeCount << ", "
+//											<< losCount << ", "
+//											<< hisCount << ", "
+//											<< (losCount == hisCount)
+//											<< " )" << endl << flush;
+//									cout << " " << lo << ", " << hi << "; " << flush;
 								} while(r.getNext(lo,hi));
 							}
-							cout << endl << flush;
+//							cout << endl << flush;
 						}
 					}
 				}
@@ -3274,7 +3621,7 @@ void testNQM(VizHTM *viz) {
 						if(preciprate_hsr > mx) mx = preciprate_hsr;
 						float scale = 150.0;
 						scale = 55;
-						if(false) { // geometry
+						if(nmqLatLonBoxStepScale_viz) { // geometry
 							viz->addLatLonBoxEdgesDegrees(
 									lat_[jLat]-dLat,lon_[iLon]-dLon,
 									lat_[jLat]+dLat,lon_[iLon]+dLon,
@@ -3282,7 +3629,7 @@ void testNQM(VizHTM *viz) {
 							);
 						}
 						if((0 < preciprate_hsr) && (preciprate_hsr <= scale)) {
-							if(true) { // data
+							if(nmqPrecipRateHSR_viz) { // data
 								float r = sqrt(sqrt(preciprate_hsr/scale));
 								float g = sqrt(preciprate_hsr/scale);
 								float b = 0.3;
@@ -3297,7 +3644,7 @@ void testNQM(VizHTM *viz) {
 										r,g,b
 								);
 							}
-							if(false) { // geometry
+							if(nmqPrecipRateHSRGeometry_viz) { // geometry
 								viz->addLatLonBoxEdgesDegrees(
 										lat_[jLat]-dLat,lon_[iLon]-dLon,
 										lat_[jLat]+dLat,lon_[iLon]+dLon,
@@ -3312,7 +3659,7 @@ void testNQM(VizHTM *viz) {
 							//							0.1
 							//							);
 						} else { // no signal
-							if(true) {
+							if(nmqNoSignalGeometry_viz) {
 								float r = 0.15;
 								float g = 0.15;
 								float b = 0.20;
@@ -3328,33 +3675,70 @@ void testNQM(VizHTM *viz) {
 								);
 							}
 						}
+
+						if(nmqHTM) {
+							SpatialVector v0, v1, v2, v3;
+							v0.setLatLonDegrees(lat_[jLat]-dLat,lon_[iLon]-dLon);
+							v1.setLatLonDegrees(lat_[jLat]-dLat,lon_[iLon]+dLon);
+							v2.setLatLonDegrees(lat_[jLat]+dLat,lon_[iLon]+dLon);
+							v3.setLatLonDegrees(lat_[jLat]+dLat,lon_[iLon]-dLon);
+							RangeConvex rc = RangeConvex(&v0,&v1,&v2,&v3);
+							SpatialDomain d; d.add(rc);
+							HtmRange r;
+							r.purge();
+							bool overlap = d.intersect(&swathIndex,&r,swath_varlenHTMIDs);
+							Key lo=-999, hi=-999;
+							r.reset();
+							int indexp = r.getNext(lo,hi);
+							if(indexp) {
+								do {
+									nmqRangeCount++;
+									nmqRange.addRange(lo,hi);
+								} while(r.getNext(lo,hi));
+							}
+						}
 					}
-					//				viz->addCircleFacet(v,0.5*gFOVRadians,1.0,1.0,1.0);
 				}
 			}
 		}
 	}
 	preciprate_hsr_ifs.close();
 
-	cout << 1000 << endl << flush;
+//	cout << 1900 << " nmqRangeCount: " << nmqRangeCount << endl << flush;
+//	cout << 1901 << " los-stat:      " << endl << flush;
+//	nmqRange.my_los->stat();
+//	cout << 1902 << " his-stat:      " << endl << flush;
+//	nmqRange.my_his->stat();
+//	cout << 1904 << " los:           " << nmqRange.getLosLength() << endl << flush;
+//	cout << 1905 << " his:           " << nmqRange.getHisLength() << endl << flush;
+//
+////	nmqRange.print(HtmRange::BOTH,cout);
+//	cout << "lows" << endl;
+//	nmqRange.print(HtmRange::LOWS,cout); cout << endl;
+//	cout << "highs" << endl;
+//	nmqRange.print(HtmRange::HIGHS,cout); cout << endl;
+//
+//	cout << 1910 << " nmqRange.nranges(): " << nmqRange.nranges() << endl << flush;
 
 	// Dies in the following!
 
-	// Plot the NQM triangles.
-	nqmRange.reset();
-////	viz->addHTMRange(&swathIndex,&nqmRange,1.0,0.5,0.0,-1,1.009);
-	viz->addHTMRange(
-			&swathIndex,
-			&nqmRange,
-			nqmHTMRGeometryColor.r,
-			nqmHTMRGeometryColor.g,
-			nqmHTMRGeometryColor.b,
-			nqmHTMRGeometryColor.a,
-			nqmHTMRGeometryColor.scale);
+	// Plot the nmq triangles.
+	if(nmqHTMRGeometry_viz){
+		nmqRange.reset();
+		////	viz->addHTMRange(&swathIndex,&nmqRange,1.0,0.5,0.0,-1,1.009);
+		viz->addHTMRange(
+				&swathIndex,
+				&nmqRange,
+				nmqHTMRGeometryColor.r,
+				nmqHTMRGeometryColor.g,
+				nmqHTMRGeometryColor.b,
+				nmqHTMRGeometryColor.a,
+				nmqHTMRGeometryColor.scale);
+	}
 
-	cout << 2000 << endl << flush;
+//	cout << 2000 << endl << flush;
 
-	return;
+//	return;
 
 	Key lo=-1, hi=-1;
 	HtmRange red, blue, green;
@@ -3362,12 +3746,16 @@ void testNQM(VizHTM *viz) {
 	SpatialIndex *index = &swathIndex;
 //	SpatialIndex index(swathLevel,buildLevel);
 
-//	nqmRange.defrag();
+//	nmqRange.defrag();
 //	swathRange.defrag();
 
 	// Note in the following we play games with the colors.
 	red.purge(); blue.purge(); green.purge();
-	range1 = &nqmRange;
+	if(nmqHTM) {
+		range1 = &nmqRange;
+	} else {
+		range1 = &nmqRangeCoarse;
+	}
 	range2 = &swathRange;
 	range1->reset();
 	range2->reset();
@@ -3384,32 +3772,49 @@ void testNQM(VizHTM *viz) {
 			}
 		} while(range1->getNext(lo,hi));
 
-//		viz->addHTMRange(index,&red,0.7,0.,0.,-1,1.008);
-		viz->addHTMRange(index,&red,1.0,1.0,0.,-1,1.008); // error?
+		if(nmq_trmm_HTMRPartial_viz){
+			//		viz->addHTMRange(index,&red,0.7,0.,0.,-1,1.008);
+//			viz->addHTMRange(index,&red,1.0,1.0,0.,-1,1.008); // error?
+			viz->addHTMRange(index,&red,
+					nmq_trmm_PartialIntersectionColor.r,
+					nmq_trmm_PartialIntersectionColor.g,
+					nmq_trmm_PartialIntersectionColor.b,
+					nmq_trmm_PartialIntersectionColor.a,
+					nmq_trmm_PartialIntersectionColor.scale
+					);
+		}
+		if(nmq_trmm_HTMRDoesNotContain_viz){
+			//		viz->addHTMRange(index,&green,0.,0.7,0.,-1,1.008);
+			viz->addHTMRange(index,&green,
+					nmqHTMRGeometryColor.r,
+					nmqHTMRGeometryColor.g,
+					nmqHTMRGeometryColor.b,
+					nmqHTMRGeometryColor.a,
+					nmqHTMRGeometryColor.scale
+			);
+		}
 
-//		viz->addHTMRange(index,&green,0.,0.7,0.,-1,1.008);
-		viz->addHTMRange(index,&green,
-				nqmHTMRGeometryColor.r,
-				nqmHTMRGeometryColor.g,
-				nqmHTMRGeometryColor.b,
-				nqmHTMRGeometryColor.a,
-				nqmHTMRGeometryColor.scale
-				);
-//		viz->addHTMRange(index,&blue,0.,0.,0.7,-1,1.008);
-		viz->addHTMRange(index,&blue, // intersection
-				nqm_trmm_intersectionColor.r,
-				nqm_trmm_intersectionColor.g,
-				nqm_trmm_intersectionColor.b,
-				nqm_trmm_intersectionColor.a,
-				nqm_trmm_intersectionColor.scale
-				);
+		if(nmq_trmm_HTMRContains_viz){
+			//		viz->addHTMRange(index,&blue,0.,0.,0.7,-1,1.008);
+			viz->addHTMRange(index,&blue, // intersection
+					nmq_trmm_intersectionColor.r,
+					nmq_trmm_intersectionColor.g,
+					nmq_trmm_intersectionColor.b,
+					nmq_trmm_intersectionColor.a,
+					nmq_trmm_intersectionColor.scale
+			);
+		}
 	}
 
 //	return;
 
 	red.purge(); blue.purge(); green.purge();
 	range1 = &swathRange;
-	range2 = &nqmRange;
+	if(nmqHTM) {
+		range2 = &nmqRange;
+	} else {
+		range2 = &nmqRangeCoarse;
+	}
 	range1->reset();
 	range2->reset();
 	indexp = range1->getNext(lo,hi);
@@ -3424,34 +3829,198 @@ void testNQM(VizHTM *viz) {
 				blue.addRange(lo,hi);
 			}
 		} while(range1->getNext(lo,hi));
-		//		viz->addHTMRange(index,&red,0.7,0.,0.,-1,1.008);
-		viz->addHTMRange(index,&red,1.0,1.0,0.,-1,1.008); // error?
 
-//		viz->addHTMRange(index,&green,0.,0.7,0.,-1,1.008);
-		viz->addHTMRange(index,&green,
-				swathHTMRGeometryColor.r,
-				swathHTMRGeometryColor.g,
-				swathHTMRGeometryColor.b,
-				swathHTMRGeometryColor.a,
-				swathHTMRGeometryColor.scale
-				);
+		if(trmm_nmq_HTMRPartial_viz){
+			//		viz->addHTMRange(index,&red,0.7,0.,0.,-1,1.008);
+//			viz->addHTMRange(index,&red,1.0,1.0,0.,-1,1.008); // error?
+			viz->addHTMRange(index,&red,
+					trmm_nmq_PartialIntersectionColor.r,
+					trmm_nmq_PartialIntersectionColor.g,
+					trmm_nmq_PartialIntersectionColor.b,
+					trmm_nmq_PartialIntersectionColor.a,
+					trmm_nmq_PartialIntersectionColor.scale
+					);
+		}
 
-		// The following is redundant with the comparison above. Use as a check.
-//		viz->addHTMRange(index,&blue,0.,0.,0.7,-1,1.011);
-//		viz->addHTMRange(index,&blue, // intersection
-//				nqm_trmm_intersectionColor.r,
-//				nqm_trmm_intersectionColor.g,
-//				nqm_trmm_intersectionColor.b,
-//				nqm_trmm_intersectionColor.a,
-//				nqm_trmm_intersectionColor.scale
-//				);
+		if(trmm_nmq_HTMRDoesNotContain_viz){
+			//		viz->addHTMRange(index,&green,0.,0.7,0.,-1,1.008);
+			viz->addHTMRange(index,&green,
+					swathHTMRGeometryColor.r,
+					swathHTMRGeometryColor.g,
+					swathHTMRGeometryColor.b,
+					swathHTMRGeometryColor.a,
+					swathHTMRGeometryColor.scale
+			);
+		}
+
+		if(trmm_nmq_HTMRContains_viz){
+			// The following is redundant with the comparison above. Use as a check.
+			//		viz->addHTMRange(index,&blue,0.,0.,0.7,-1,1.011);
+			viz->addHTMRange(index,&blue, // intersection
+					nmq_trmm_intersectionColor.r,
+					nmq_trmm_intersectionColor.g,
+					nmq_trmm_intersectionColor.b,
+					nmq_trmm_intersectionColor.a,
+					nmq_trmm_intersectionColor.scale
+			);
+		}
 	}
 
 
 	cout << "mn,mx: " << mn << " " << mx << endl << flush;
-	std::cout << " nqm done " << endl << flush;
+	std::cout << " nmq done " << endl << flush;
 
 }
+
+void testTransparency(VizHTM *viz) {
+
+	// On Coin3D on Mac OS X
+	// DELAYED_BLEND crashes on the following
+	// BLEND seems to work. Looks better than ADD.
+	// ADD works.
+	// SORTED_* crashes
+
+	viz->addFace3(
+			0.0,0.0,0.0,
+			0.0,1.0,0.0,
+			1.0,1.0,0.0,
+			1.0,0.0,0.0,
+			1.0,0.0,0.0,
+			1.0,0.0,0.0,
+			0.0,0.0,0.0
+			);
+
+	viz->addFace3(
+			0.0,0.0,0.15,
+			0.0,1.0,0.15,
+			1.0,1.0,0.15,
+			0.0,1.0,0.0,
+			0.0,1.0,0.0,
+			0.0,1.0,0.0,
+			0.5,0.5,0.5
+			);
+
+	viz->addFace3(
+			0.0,0.0,0.3,
+			0.0,1.0,0.3,
+			1.0,1.0,0.3,
+			0.0,0.0,1.0,
+			0.0,0.0,1.0,
+			0.0,0.0,1.0,
+			0.6,0.6,0.6
+			);
+
+
+}
+
+void addFiduciaries(VizHTM *viz) {
+
+	string htmName = "N00";
+	SpatialIndex index = SpatialIndex(levelOfName(htmName.c_str()));
+	viz->addArcFromIndexAndName(
+			&index,
+			htmName.c_str(),
+			1.0,0.0,0.0
+	);
+
+	htmName = "N01";
+	index = SpatialIndex(levelOfName(htmName.c_str()));
+	viz->addArcFromIndexAndName(
+			&index,
+			htmName.c_str(),
+			0.0,1.0,0.0
+	);
+
+	htmName = "N02";
+	index = SpatialIndex(levelOfName(htmName.c_str()));
+	viz->addArcFromIndexAndName(
+			&index,
+			htmName.c_str(),
+			0.0,0.0,1.0
+	);
+
+//	htmName = "N03";
+//	index = SpatialIndex(levelOfName(htmName.c_str()));
+//	viz->addArcFromIndexAndName(
+//			&index,
+//			htmName.c_str(),
+//			1.0,1.0,1.0
+//	);
+
+	htmName = "N10";
+	index = SpatialIndex(levelOfName(htmName.c_str()));
+	viz->addArcFromIndexAndName(
+			&index,
+			htmName.c_str(),
+			1.0,0.0,0.0
+	);
+
+	htmName = "N11";
+	index = SpatialIndex(levelOfName(htmName.c_str()));
+	viz->addArcFromIndexAndName(
+			&index,
+			htmName.c_str(),
+			0.0,1.0,0.0
+	);
+
+	htmName = "N12";
+	index = SpatialIndex(levelOfName(htmName.c_str()));
+	viz->addArcFromIndexAndName(
+			&index,
+			htmName.c_str(),
+			0.0,0.0,1.0
+	);
+
+
+}
+
+
+void loadScene(SoSeparator *root, SoSeparator *content, SbViewportRegion *vpRegion){
+
+    SoDirectionalLight * light = new SoDirectionalLight;
+
+    SbRotation cameraRotation = SbRotation::identity();
+
+    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
+    camera->orientation.setValue(cameraRotation);
+    camera->nearDistance = 0.0001;
+
+    //    SoCamera *camera = viewer->getCamera();
+    //    SoCamera *camera = perscam;
+    SoSFVec3f position;
+    //		SpatialVector *p = VectorFromLatLonDegrees(33.0,-80.25); // Centers on gridded data
+    //		SpatialVector *p = VectorFromLatLonDegrees(33.5,-76.75); // Centers on storm intersection
+    //		SpatialVector *p = VectorFromLatLonDegrees(33.63,-76.575); // Centers on storm intersection
+    SpatialVector p = (*nmq_trmm_vizCenter);
+    p = p * offscreenPerscamPositionScale;
+    //    p = p * 1.05; // Works for perscam
+//    p = p * 1.1; // Works for perscam
+//    p = p * 1.17; // Works for perscam
+//    p = p * 1.25; // Nice top level view
+//    p = p * 1.5; // Nice top level view
+//    cout << "p: " << p << endl << flush;
+    position.setValue(p.x(),p.y(),p.z());
+    camera->position = position;
+//    ((SoPerspectiveCamera*)camera)->position = position;
+    //		((SoOrthographicCamera*)camera)->position = position;
+    camera->pointAt(SbVec3f(0.,0.,0.));
+    //		SoSFRotation rotation;
+    //		p->normalize();
+    //		rotation.setValue(SbVec3f(p->x(),p->y(),p->z()),0.0);
+    //		camera->orientation = rotation;
+    //
+    root->addChild(light);
+    root->addChild(camera); // perscam
+
+//    SoCube * cube = new SoCube;
+//    root->addChild(cube);
+
+    root->addChild(content);
+    // make sure that the cube is visible
+//    perscam->viewAll(root, *vpRegion);
+}
+
+
 
 int main(int argc, char *argv[]) {
 
@@ -3679,9 +4248,13 @@ int main(int argc, char *argv[]) {
 	if(false) testNearestNeighbors(viz);
 
 	if(true) { // Visualization using real data.
+		initialize_nmq_trmm_viz();
 		if(true) testSwath(viz);
-		if(true) testNQM(viz);
+		if(true) testnmq(viz);
+		if(addFiduciaryTriangles) addFiduciaries(viz);
 	}
+
+	if(false) testTransparency(viz);
 
 	if(false) viz->debug_dump();
 
@@ -3698,7 +4271,11 @@ int main(int argc, char *argv[]) {
 	}
 
 	/**************** Start Graphics ****************/
+
+	const int width = 2000, height = 1400;
+
 	QWidget *window = SoQt::init(argv[0]);
+	window->setMinimumSize(width,height);
 	if (window == NULL) exit(1);
 
 	SoSelection *selectionRoot = new SoSelection;
@@ -3711,6 +4288,8 @@ int main(int argc, char *argv[]) {
 
 	selectionRoot->addChild(root);
 
+	cout << 10000 << endl << flush;
+
 	SoSeparator *roots = new SoSeparator;
 	for(std::vector<std::shared_ptr<VizHTM>>::iterator it = vizContainer.begin();
 			it != vizContainer.end();
@@ -3719,36 +4298,64 @@ int main(int argc, char *argv[]) {
 	}
 	selectionRoot->addChild(roots);
 
-	SoQtExaminerViewer *viewer = new SoQtExaminerViewer(window);
+	cout << 10100 << endl << flush;
 
-	viewer->setSceneGraph(selectionRoot);
-	viewer->setTitle(mainName);
-	viewer->show();
+	// Offscreen renderer for viz. TODO selectionRoot
 
-	SoCamera *camera = viewer->getCamera();
-	if(camera) {
-		SoSFVec3f position;
-//		SpatialVector *p = VectorFromLatLonDegrees(33.0,-80.25); // Centers on gridded data
-//		SpatialVector *p = VectorFromLatLonDegrees(33.5,-76.75); // Centers on storm intersection
-//		SpatialVector *p = VectorFromLatLonDegrees(33.63,-76.575); // Centers on storm intersection
-		SpatialVector *p = nqm_trmm_vizCenter;
-		(*p) = (*p) * 1.17;
-		position.setValue(p->x(),p->y(),p->z());
-//		((SoPerspectiveCamera*)camera)->position = position;
-		camera->position = position;
-		camera->pointAt(SbVec3f(0.,0.,0.));
-//		SoSFRotation rotation;
-//		p->normalize();
-//		rotation.setValue(SbVec3f(p->x(),p->y(),p->z()),0.0);
-//		camera->orientation = rotation;
-
+	if(offscreen_viz){
+//		OffScreenViz *offscreen = new OffScreenViz(800,600);
+		OffScreenViz *offscreen = new OffScreenViz(width,height);
+		offscreen->initImageDirectory("tmp/offscreen/"+formattedDateTime()+"/"+baseName+"/",4);
+		offscreen->root = new SoSeparator;
+		loadScene(offscreen->root,selectionRoot,offscreen->vpRegion);
+		offscreen->saveImage(1);
 	}
 
-	SoQt::show(window);
-	SoQt::mainLoop();
+	cout << 10200 << endl << flush;
 
-	delete viewer;
-	//	root->unref();
+	// Examiner viewer
+	if(examiner_viz){
+		SoQtExaminerViewer *viewer = new SoQtExaminerViewer(window);
+
+		//	SoQtFlyViewer *viewer = new SoQtFlyViewer(window); // Still fails with transparency sorted_*
+		// Transparency on examiner viewer is broken on my Mac Pro.
+		//	viewer->setTransparencyType(SoGLRenderAction::DELAYED_ADD); // Crash
+		//	viewer->setTransparencyType(SoGLRenderAction::NONE); // No crash
+		//	viewer->setTransparencyType(SoGLRenderAction::DELAYED_BLEND); // Crash
+		//	viewer->setTransparencyType(SoGLRenderAction::ADD); // Weird
+		//	viewer->setTransparencyType(SoGLRenderAction::BLEND); // Weird. No transparency!
+		//	viewer->setTransparencyType(SoGLRenderAction::SORTED_OBJECT_BLEND);
+		// viewer->setTransparencyType(SoGLRenderAction::BLEND);
+		viewer->setTransparencyType(SoGLRenderAction::NONE);
+
+		viewer->setSceneGraph(selectionRoot);
+		viewer->setTitle(mainName);
+		viewer->show();
+
+		SoCamera *camera = viewer->getCamera();
+		if(camera) {
+			SoSFVec3f position;
+			//		SpatialVector *p = VectorFromLatLonDegrees(33.0,-80.25); // Centers on gridded data
+			//		SpatialVector *p = VectorFromLatLonDegrees(33.5,-76.75); // Centers on storm intersection
+			//		SpatialVector *p = VectorFromLatLonDegrees(33.63,-76.575); // Centers on storm intersection
+			SpatialVector *p = nmq_trmm_vizCenter;
+			(*p) = (*p) * examinerCameraPositionScale;
+			position.setValue(p->x(),p->y(),p->z());
+			//		((SoPerspectiveCamera*)camera)->position = position;
+			camera->position = position;
+			camera->pointAt(SbVec3f(0.,0.,0.));
+			//		SoSFRotation rotation;
+			//		p->normalize();
+			//		rotation.setValue(SbVec3f(p->x(),p->y(),p->z()),0.0);
+			//		camera->orientation = rotation;
+		}
+
+		SoQt::show(window);
+		SoQt::mainLoop();
+
+		delete viewer;
+		//	root->unref();
+	}
 
 	cout << mainName << " done." << endl;
 

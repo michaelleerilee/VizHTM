@@ -42,7 +42,7 @@ public:
 						  SpatialVector s0, float rs, float gs, float bs, float radius);
 
 	void addEdgeColor(float r, float g, float b, float a=-1.);
-	void addFaceColor(float r, float g, float b);
+	void addFaceColor(float r, float g, float b, float a=-1.);
 	void addCoordinate(float x, float y, float z);
 	void addCoordinate64(float64 x, float64 y, float64 z);
 	void addCoordinate(SpatialVector c);
@@ -65,7 +65,9 @@ public:
 			float x20, float x21, float x22,
 			float r0, float g0, float b0,
 			float r1, float g1, float b1,
-			float r2, float g2, float b2);
+			float r2, float g2, float b2,
+			float a0 = -1, float a1 = -1, float a2 = -1
+			);
 
 	void addFace3(
 			SpatialVector x0,
@@ -73,7 +75,9 @@ public:
 			SpatialVector x2,
 			float r0, float g0, float b0,
 			float r1, float g1, float b1,
-			float r2, float g2, float b2);
+			float r2, float g2, float b2,
+			float a0 = -1, float a1 = -1, float a2 = -1
+			);
 
 	void addFace4(
 			float x00, float x01, float x02,
@@ -83,7 +87,8 @@ public:
 			float r0, float g0, float b0,
 			float r1, float g1, float b1,
 			float r2, float g2, float b2,
-			float r3, float g3, float b3
+			float r3, float g3, float b3,
+			float a0 = -1, float a1 = -1, float a2 = -1, float a3 = -1
 			);
 	void addFace4FromLatLonDegrees(
 			float64 lat0, float64 lon0,
@@ -93,7 +98,8 @@ public:
 			float r0, float g0, float b0,
 			float r1, float g1, float b1,
 			float r2, float g2, float b2,
-			float r3, float g3, float b3
+			float r3, float g3, float b3,
+			float a0 = -1, float a1 = -1, float a2 = -1, float a3 = -1
 			);
 
 	void addRectangle(
@@ -101,7 +107,8 @@ public:
 			const SpatialVector x1,
 			const SpatialVector x2,
 			const SpatialVector x3,
-			float r, float g, float b);
+			float r, float g, float b, float a = -1
+			);
 
 	void addLatLonBoxEdgesDegrees(
 			float64 lat0, float64 lon0,
@@ -172,7 +179,7 @@ public:
 	void addCircleFacet(
 			SpatialVector center,
 			float64 halfSubtendedAngleInRadians,
-			float r, float g, float b, float a=-1.);
+			float r, float g, float b, float a=-1., float scale=1);
 
 	void addCircleEdges(
 			SpatialVector center,
@@ -192,6 +199,8 @@ public:
 	int 	nFaces;
 	int   	nFaceColors;
 	float 	(*faceColors)[3]; // [nArray][3]
+	float   (*faceTransparencies);
+	bool    faceTransparency = false;
 	int		nFaceVertexColorIndices;
 	int		*faceVertexColorIndices;
 
