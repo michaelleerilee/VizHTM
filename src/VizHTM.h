@@ -9,6 +9,7 @@
 #define VIZHTM_H_
 
 #include "HtmRange.h"
+#include "HstmRange.h"
 #include "SpatialIndex.h"
 #include "SpatialVector.h"
 #include "SpatialConstraint.h"
@@ -16,6 +17,8 @@
 
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSwitch.h>
+
+#include <shapefil.h>
 
 // TODO eliminate NARRAY_ also consider changing storage method for graphic elements.
 // 64M 67108864
@@ -176,6 +179,11 @@ public:
 			float r, float g, float b, float a=-1., float scale=1.0
 			);
 
+	void addHstmRange(
+			HstmRange *range,
+			float r, float g, float b, float a=-1., float scale=1.0
+			);
+
 	void addCircleFacet(
 			SpatialVector center,
 			float64 halfSubtendedAngleInRadians,
@@ -185,6 +193,10 @@ public:
 			SpatialVector center,
 			float64 halfSubtendedAngleInRadians,
 			float r, float g, float b, float a=-1.);
+
+	void addShapeFile(
+			string shapeFile, float r, float g, float b, bool verbose = false,
+			int nStart = -1, int nEnd = -1);
 
 	void debug_dump();
 

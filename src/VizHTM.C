@@ -1024,6 +1024,47 @@ void VizHTM::addHTMRange(
 	}
 }
 
+
+void VizHTM::addHstmRange(
+		HstmRange *range,
+		float r, float g, float b, float a, float scale
+) {
+
+	int indexLevel = 5, level;
+	EmbeddedLevelNameEncoding leftJustified;
+	SpatialIndex *index = new SpatialIndex(indexLevel);
+
+	KeyPair kp; int indexp;
+	range->reset();
+	while((indexp = range->getNext(kp)) > 0) {
+		leftJustified.setId(kp.lo);
+		level = leftJustified.getLevel();
+		string loName = leftJustified.getName();
+		uint64 termId = leftJustified.idFromTerminatorAndLevel_NoDepthBit(kp.hi,level);
+		leftJustified.setId(termId);
+		string hiName = leftJustified.getName();
+//		cout << 100 << " lo,hi name: " << loName << " " << hiName << endl << flush;
+//		cout << 101 << " level:      " << level << endl << flush;
+//		cout << 102 << " kp:         " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
+		if( level != indexLevel ) {
+			delete index;
+			indexLevel = level;
+			index = new SpatialIndex(indexLevel);
+		}
+		uint64 id0 = index->idByName(loName.c_str());
+		uint64 id1 = index->idByName(hiName.c_str());
+		for(uint64 id=id0; id<=id1; id++) {
+			addArcFromIndexAndId(
+					index,
+					id,
+					0.0,1.0,0.0
+			);
+		}
+	}
+	delete index;
+}
+
+
 void VizHTM::addHTMInterval(SpatialIndex index, htmRange interval) {
 	size_t htmIdLevel = index.getMaxlevel();
 	Key lo = interval.lo;
@@ -1189,4 +1230,97 @@ void VizHTM::addCircleEdges(
 
 }
 
+void VizHTM::addShapeFile(
+		string shapeFile,
+		float r, float g, float b,
+		bool verbose,
+		int nStart, int nEnd) {
 
+	SHPHandle hSHP = SHPOpen(shapeFile.c_str(),"rb");
+
+	if(hSHP>0) {
+		cout << "file: " << shapeFile << " found." << endl << flush;
+
+		int nShapeType, nEntities;
+		double adfMinBound[4], adfMaxBound[4];
+		SHPGetInfo(hSHP, &nEntities, &nShapeType, adfMinBound, adfMaxBound );
+
+		cout << "nEntities: " << nEntities << ", nShapeType: " << nShapeType << endl << flush;
+
+		/* Debugging using string shapeFile = "data/ne_50m_coastline/ne_50m_coastline.shp";
+		   Asia and Africa
+			int nStart = 1387;
+			int nEnd   = 1388;
+		*/
+
+		if( nStart == -1 ) {
+			nStart = 0;
+		}
+		if( nEnd == -1 ) {
+			nEnd = nEntities;
+		}
+		if( nStart < 0 || nStart > nEntities || nEnd < 0 || nEnd < nStart || nEnd > nEntities ) {
+			cout << "loadShapeFile::ERROR::nStart..nEnd" << endl << flush;
+			cout << "   nStart..nEnd " << nStart << ".." << nEnd << endl << flush;
+			cout << "   nEntities    " << nEntities << endl << flush;
+		}
+
+		for(int i=nStart; i < nEnd; i++ ) {
+			if(verbose){
+				if(i % 100 == 0) {
+					cout << "on entity " << i << endl << flush;
+				}
+			}
+			SHPObject* psShape = SHPReadObject(hSHP,i);
+			if(verbose){
+				cout << "<psShape>" << endl
+						<< " nSHPType  " << psShape->nSHPType  << " " << endl
+						<< " nVertices " << psShape->nVertices << " " << endl
+						<< " nParts    " << psShape->nParts    << " " << endl;
+				for(int ipart=0; ipart<psShape->nParts; ipart++) {
+					cout << "  part [" << ipart << "] = " << psShape->panPartStart[ipart] << endl;
+				}
+				cout << "</psShape>" << endl;
+			}
+			if(psShape->nSHPType == SHPT_ARC) {
+				double *yA = psShape->padfY;
+				double *xA = psShape->padfX;
+				int nVerts = psShape->nVertices;
+				int jStart = 0;
+				if(psShape->nParts != 0) {
+					for(int j=0; j < psShape->nParts; j++) {
+						jStart = psShape->panPartStart[j];
+						yA = psShape->padfY + psShape->panPartStart[j];
+						xA = psShape->padfX + psShape->panPartStart[j];
+						if(j < psShape->nParts-1) {
+							nVerts = psShape->panPartStart[j+1] - psShape->panPartStart[j];
+						} else {
+							nVerts = psShape->nVertices - psShape->panPartStart[j];
+						}
+						if(verbose) cout << "<addArcParts j,start=[" << j << ", " << jStart << "] nVerts= " << nVerts << " />" << endl;
+						if( true ) {
+//							float r_ = j/(psShape->nParts-1.0);
+							float r_ = r;
+							addArcsFromLatLonDegrees(
+									yA, xA, nVerts,
+									false,
+									r_,g,b,-1.,3
+							);
+						}
+					}
+				} else {
+					if(verbose) cout << "<addArc 0,start=[ 0, " << jStart << "] nVerts= " << nVerts << " />" << endl;
+					if( true ) {
+						addArcsFromLatLonDegrees(
+								yA, xA, nVerts,
+								false,
+								0.,g,b,-1.,3
+						);
+					}
+				}
+			}
+		}
+		if(verbose) cout << endl;
+		SHPClose(hSHP);
+	}
+}

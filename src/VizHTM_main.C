@@ -7,7 +7,6 @@
 
 #include "VizHTM.h"
 
-#include <shapefil.h>
 #include <geompack.h>
 
 #include <unistd.h>
@@ -151,18 +150,21 @@ void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdL
 	domain.add(convex);
 //	domain.setOlevel(htmIdLevel);
 
+	cout << "intersection" << endl << flush;
+
 	HtmRange *range = new HtmRange();
+	HtmRange boundary, interior;
 
 	range->purge();
 	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
-	bool overlap = domain.intersect(index,range,varlen_individualHTMIds);
+	bool overlap = domain.intersect(index,range,varlen_individualHTMIds,&interior,&boundary);
 
 	Key lo = 0; Key hi = 0;
 	SpatialVector v1,v2,v3;
-//	if(false)
-//		cout
-//		<< " overlap: " << overlap
-//		<< " nRanges: " << range->nranges() << flush;
+	if(true)
+		cout
+		<< " overlap: " << overlap
+		<< " nRanges: " << range->nranges() << flush;
 	range->defrag();
 //	if(false)
 //		cout
@@ -263,6 +265,7 @@ void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdL
 }
 
 void testTwoConstraints(VizHTM *viz, int htmIdLevel) {
+	cout << 100 << endl << flush;
 	SpatialVector o = SpatialVector(0.0,0.0,0.0);
 
 	//	SpatialVector a = SpatialVector(1.0,0.0,0.0);
@@ -270,6 +273,8 @@ void testTwoConstraints(VizHTM *viz, int htmIdLevel) {
 	//	SpatialVector a = SpatialVector(1.0,1.0,0.0); a.normalize();
 
 	SpatialVector as = 1.05*a;
+
+	cout << 300 << endl << flush;
 
 	//	float64 d = 0.9999;
 	float64 d = 0.99;
@@ -283,14 +288,22 @@ void testTwoConstraints(VizHTM *viz, int htmIdLevel) {
 	//	SpatialVector a1 = a+randomVector()*0.15; a1.normalize();
 	//	SpatialConstraint sc1 = SpatialConstraint(a1,0.99);
 
+	cout << 400 << endl << flush;
+
 	SpatialVector a1 = -1*a; a1.normalize();
 	SpatialConstraint sc1 = SpatialConstraint(a1,0.995);
 	sc1.invert();
+
+	cout << 600 << endl << flush;
+
 	// SpatialConstraint(randomVector(),0.99);
 	viz->addConstraint(sc1,0.5,1.0,1.0);
+	cout << 700 << endl << flush;
 	convex.add(sc1);
+	cout << 800 << endl << flush;
 
 	testConvexHtmRangeIntersection(viz,convex,htmIdLevel);
+	cout << 999 << endl << flush;
 }
 
 void testAddRectangle(VizHTM *viz, int htmIdLevel) {
@@ -2155,98 +2168,21 @@ void testShapeFiles(VizHTM* viz) {
 
 	if(true) {
 
-	plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
-	testTenDegreeGridRGB(viz,0.6,0.6,0.6);
+		plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+		testTenDegreeGridRGB(viz,0.6,0.6,0.6);
 
-	//	string shapeFile = "data/ne_110m_coastline/ne_110m_coastline.shp"; // okay
-	string shapeFile = "data/ne_50m_coastline/ne_50m_coastline.shp"; // okay
-	// string shapeFile = "data/ne_10m_coastline/ne_10m_coastline.shp"; // Doesn't work yet.
-	float r = 0.5;
-	float g = 0.9;
-	float b = 0.9;
+		//	string shapeFile = "data/ne_110m_coastline/ne_110m_coastline.shp"; // okay
+		string shapeFile = "data/ne_50m_coastline/ne_50m_coastline.shp"; // okay
+		// string shapeFile = "data/ne_10m_coastline/ne_10m_coastline.shp"; // Doesn't work yet.
+		float r = 0.5;
+		float g = 0.9;
+		float b = 0.9;
 
-	SHPHandle hSHP = SHPOpen(shapeFile.c_str(),"rb");
-
-	if(hSHP>0) {
-		cout << "file: " << shapeFile << " found." << endl << flush;
-
-		int nShapeType, nEntities;
-		double adfMinBound[4], adfMaxBound[4];
-		SHPGetInfo(hSHP, &nEntities, &nShapeType, adfMinBound, adfMaxBound );
-
-		cout << "nEntities: " << nEntities << ", nShapeType: " << nShapeType << endl << flush;
-
-		/* Debugging using string shapeFile = "data/ne_50m_coastline/ne_50m_coastline.shp";
-		   Asia and Africa
-			int nStart = 1387;
-			int nEnd   = 1388;
-		*/
-
-		int nStart = 0;
-		int nEnd   = nEntities;
-
-		for(int i=nStart; i < nEnd; i++ ) {
-			if(verbose){
-				if(i % 100 == 0) {
-					cout << "on entity " << i << endl << flush;
-				}
-			}
-			SHPObject* psShape = SHPReadObject(hSHP,i);
-			if(verbose){
-				cout << "<psShape>" << endl
-						<< " nSHPType  " << psShape->nSHPType  << " " << endl
-						<< " nVertices " << psShape->nVertices << " " << endl
-						<< " nParts    " << psShape->nParts    << " " << endl;
-				for(int ipart=0; ipart<psShape->nParts; ipart++) {
-					cout << "  part [" << ipart << "] = " << psShape->panPartStart[ipart] << endl;
-				}
-				cout << "</psShape>" << endl;
-			}
-			if(psShape->nSHPType == SHPT_ARC) {
-				double *yA = psShape->padfY;
-				double *xA = psShape->padfX;
-				int nVerts = psShape->nVertices;
-				int jStart = 0;
-				if(psShape->nParts != 0) {
-					for(int j=0; j < psShape->nParts; j++) {
-						jStart = psShape->panPartStart[j];
-						yA = psShape->padfY + psShape->panPartStart[j];
-						xA = psShape->padfX + psShape->panPartStart[j];
-						if(j < psShape->nParts-1) {
-							nVerts = psShape->panPartStart[j+1] - psShape->panPartStart[j];
-						} else {
-							nVerts = psShape->nVertices - psShape->panPartStart[j];
-						}
-						if(verbose) cout << "<addArcParts j,start=[" << j << ", " << jStart << "] nVerts= " << nVerts << " />" << endl;
-						if( true ) {
-//							float r_ = j/(psShape->nParts-1.0);
-							float r_ = r;
-							viz->addArcsFromLatLonDegrees(
-									yA, xA, nVerts,
-									false,
-									r_,g,b,-1.,3
-							);
-						}
-					}
-				} else {
-					if(verbose) cout << "<addArc 0,start=[ 0, " << jStart << "] nVerts= " << nVerts << " />" << endl;
-					if( true ) {
-						viz->addArcsFromLatLonDegrees(
-								yA, xA, nVerts,
-								false,
-								0.,g,b,-1.,3
-						);
-					}
-				}
-			}
-		}
-		if(verbose) cout << endl;
-		SHPClose(hSHP);
+		viz->addShapeFile(shapeFile,r,g,b);
 
 		cout << "testShape done" << endl << flush;
 	}
 
-	}
 }
 
 void testTIFF(VizHTM *viz) {
@@ -3872,6 +3808,507 @@ void testnmq(VizHTM *viz) {
 
 }
 
+
+void testHstmRange(VizHTM *viz) {
+	examiner_viz = true;
+	offscreen_viz = false;
+
+	viz->lineWidth = 1.5;
+	viz->sphereComplexity = 1.0;
+	//	plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+	plotBlockingSphere(viz,0.2,0.2,0.2,0.99);
+	testTenDegreeGridRGB(viz,0.6,0.6,0.6);
+
+	EmbeddedLevelNameEncoding leftJustified;
+	BitShiftNameEncoding rightJustified;
+	HstmRange hstmRange;
+
+	int indexLevel = 2, level;
+	SpatialIndex *index = new SpatialIndex(indexLevel);
+
+	uint64 id_, id0_, id1_;
+	string name, name0, name1;
+	HtmRange range;
+
+	if(true){
+		name = "N011";
+		leftJustified.setName(name.c_str());
+		id_ = leftJustified.getId();
+		hstmRange.addRange(id_,id_);
+		if(false) {
+			level = leftJustified.getLevel();
+			if( level != indexLevel ) {
+				delete index;
+				indexLevel = level;
+				index = new SpatialIndex(indexLevel);
+			}
+			viz->addArcFromIndexAndName(index,name.c_str(),0.8,0.8,0.0,-1.0);
+		}
+
+		name0 = "N0120";
+		leftJustified.setName(name0.c_str());
+		id0_ = leftJustified.getId();
+		name1 = "N0210";
+		leftJustified.setName(name1.c_str());
+		id1_ = leftJustified.getId();
+		hstmRange.addRange(id0_,id1_);
+		if(false){
+			range.purge();
+			range.addRange(rightJustified.idByName(name0.c_str()),rightJustified.idByName(name1.c_str()));
+			level = leftJustified.getLevel();
+			if( level != indexLevel ) {
+				delete index;
+				indexLevel = level;
+				index = new SpatialIndex(indexLevel);
+			}
+			viz->addHTMRange(index,&range,0.0,0.8,0.8,-1.0);
+		}
+	}
+	if(true) {
+		name = "N01";
+		leftJustified.setName(name.c_str());
+		id_ = leftJustified.getId();
+		hstmRange.addRange(id_,id_);
+		if(false) {
+			level = leftJustified.getLevel();
+			if( level != indexLevel ) {
+				delete index;
+				indexLevel = level;
+				index = new SpatialIndex(indexLevel);
+			}
+			viz->addArcFromIndexAndName(index,name.c_str(),0.5,0.9,0.5,-1.0);
+		}
+	}
+
+	name0 = "S333300";
+	leftJustified.setName(name0.c_str());
+	id0_ = leftJustified.getId();
+	name1 = "N0303333";
+	leftJustified.setName(name1.c_str());
+	id1_ = leftJustified.getId();
+	hstmRange.addRange(id0_,id1_);
+	if(false) {
+		range.purge();
+		range.addRange(rightJustified.idByName(name0.c_str()),rightJustified.idByName(name1.c_str()));
+		level = leftJustified.getLevel();
+		if( level != indexLevel ) {
+			delete index;
+			indexLevel = level;
+			index = new SpatialIndex(indexLevel);
+		}
+		viz->addHTMRange(index,&range,0.0,0.8,0.8,-1.0);
+	}
+
+	viz->addHstmRange(&hstmRange,0.2,1.0,0.2,-1.0);
+}
+
+void testMultiResolution0(VizHTM *viz) {
+	examiner_viz = true;
+	offscreen_viz = false;
+
+	viz->lineWidth = 1.5;
+	viz->sphereComplexity = 1.0;
+	//	plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+	plotBlockingSphere(viz,0.2,0.2,0.2,0.99);
+	testTenDegreeGridRGB(viz,0.6,0.6,0.6);
+
+	testShapeFiles(viz);
+
+	EmbeddedLevelNameEncoding leftJustified;
+	BitShiftNameEncoding rightJustified;
+	HstmRange hstmRange;
+
+	int indexLevel = 4, level;
+	int buildLevel = 8;
+	SpatialIndex *index = new SpatialIndex(indexLevel,buildLevel);
+
+	uint64 id_, id0_, id1_;
+	string name, name0, name1;
+	HtmRange range, interior, boundary;
+	KeyPair kp;
+	int indexp, k;
+
+	SpatialVector *v0 = VectorFromLatLonDegrees(10.0,0.0);
+	SpatialVector *v1 = VectorFromLatLonDegrees(70.0,0.0);
+	SpatialVector *v2 = VectorFromLatLonDegrees(70.0,80.0);
+	SpatialVector *v3 = VectorFromLatLonDegrees(10.0,80.0);
+
+	viz->addRectangle(*v0,*v1,*v2,*v3,1.0,0.,0.);
+//	viz->addArcAtLatitudeDegrees(10.0,0.,80.0,1.0,0.,0.);
+//	viz->addArcAtLatitudeDegrees(70.0,0.,80.0,1.0,0.,0.);
+
+	RangeConvex *rc = new RangeConvex(v0,v1,v2,v3);
+	SpatialDomain domain = SpatialDomain(index);
+	domain.add(*rc);
+
+	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
+
+	range.purge(); interior.purge(); boundary.purge();
+	bool overlap = domain.intersect(index,&range,varlen_individualHTMIds,&interior,&boundary);
+
+//	while((indexp = range.getNext(kp)) >= 0) {
+//		hstmRange.addRange(kp.lo,kp.hi);
+//	}
+//	viz->addHstmRange(&hstmRange,0.2,1.0,0.2,-1.0);
+
+//	viz->addHTMRange(&interior,0.0,1.0,0.0);
+//	viz->addHTMRange(&boundary,1.0,0.0,0.0);
+
+////	BitShiftNameEncoding right;
+//	cout << 1000 << endl << flush;
+	hstmRange.purge();
+//	interior.reset();
+//	k = 0;
+//	while((indexp = interior.getNext(kp)) > 0) {
+//		Key l = rightJustified.leftJustifiedId(kp.lo);
+//		Key h = rightJustified.leftJustifiedId(kp.hi);
+////		cout << 200 << " lh " << hex << l << " " << h << dec << endl << flush;
+////		cout << 201 << " kp " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
+//		hstmRange.addRange(l,h);
+//		k++;
+////		if(k>0)break;
+//	}
+
+//	viz->addHstmRange(&hstmRange,0.0,1.0,1.0);
+//	return;
+//	cout << 2000 << endl << flush;
+
+//	for( indexLevel = 6; indexLevel >= 5; indexLevel-- ) {
+	//	for( indexLevel = 3; indexLevel >= 2; indexLevel-- ) {
+	for( indexLevel = 8; indexLevel >= 2; indexLevel-- ) {
+//	for( indexLevel = 5; indexLevel <= 6; indexLevel++ ) {
+		cout << "Constructing level - indexLevel: " << indexLevel << endl << flush;
+		range.purge(); interior.purge(); boundary.purge();
+		delete index;
+		index = new SpatialIndex(indexLevel,buildLevel);
+		domain = SpatialDomain(index);
+		domain.add(*rc);
+		overlap = domain.intersect(index,&range,varlen_individualHTMIds,&interior,&boundary);
+
+		interior.reset();
+		k = 0;
+		while((indexp = interior.getNext(kp)) > 0) {
+			Key l = rightJustified.leftJustifiedId(kp.lo);
+			Key h = rightJustified.leftJustifiedId(kp.hi);
+//#define hexOut(a,b,c) cout << a << " 0x" << hex << setfill('0') << setw(16) << b << ".." << c << dec << endl << flush;
+//			hexOut("lh  ",l,h);
+//#undef hexOut
+			hstmRange.addRange(l,h);
+			k++;
+			if(false) if( hstmRange.range->my_los->getLength() != hstmRange.range->my_his->getLength() ) {
+				cout << "addRange error at iteration " << k << endl << flush;
+				cout << "nranges "
+						<< hstmRange.range->my_los->getLength() << " "
+						<< hstmRange.range->my_his->getLength() << endl << flush;
+				cout << " lh " << hex << l << " " << h << dec << endl << flush;
+				cout << " lh1 " << hex << leftJustified.maskOffLevelBit(l) << " "
+						<< leftJustified.maskOffLevelBit(h)  << dec << endl << flush;
+				cout << " kp " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
+				cout << " lhl " << leftJustified.nameById(l) << " "
+					           << leftJustified.nameById(h) << endl << flush;
+				cout << " lhr " << rightJustified.nameById(kp.lo) << " "
+						        << rightJustified.nameById(kp.hi) << endl << flush;
+				int kount = 0;
+				hstmRange.reset();
+				while( (indexp = hstmRange.getNext(kp)) > 0 ) {
+					cout << kount << " kp 0x" << hex << kp.lo << ", 0x" << kp.hi << ",  " << dec
+							<< endl << flush;
+					kount++;
+				}
+				cout << "lows" << endl << flush;
+				hstmRange.range->print( HtmRangeMultiLevel_NameSpace::HtmRangeMultiLevel::LOWS,cout,true);
+				cout << "highs" << endl << flush;
+				hstmRange.range->print( HtmRangeMultiLevel_NameSpace::HtmRangeMultiLevel::HIGHS,cout,true);
+				cout << " exiting " << endl << flush;
+				exit(1);
+			}
+			//		if(k>0)break;
+		}
+		cout << "nranges "
+				<< hstmRange.range->my_los->getLength() << " "
+				<< hstmRange.range->my_his->getLength() << endl << flush;
+		if(false) {
+			hstmRange.reset();
+			k = 0;
+			cout << "Printing hstmRange" << endl << flush;
+			while( (indexp = hstmRange.getNext(kp)) > 0 ) {
+				cout << k << " kp 0x" << hex << kp.lo << ", 0x" << kp.hi << ",  " << dec
+						<< endl << flush;
+				k++;
+			}
+		}
+	}
+
+	cout << "constructing hstm visualization" << endl << flush;
+//	viz->addHstmRange(&hstmRange,0.0,1.0,1.0);
+//	viz->addHTMRange(&interior,0.0,1.0,0.0);
+//	viz->addHTMRange(&boundary,1.0,0.0,0.0);
+//	return;
+
+	range.purge(); interior.purge(); boundary.purge();
+	indexLevel = 8;
+	delete index;
+	index = new SpatialIndex(indexLevel,buildLevel);
+	domain = SpatialDomain(index);
+	domain.add(*rc);
+	overlap = domain.intersect(index,&range,varlen_individualHTMIds,&interior,&boundary);
+
+	boundary.reset();
+	k = 0;
+	while((indexp = boundary.getNext(kp)) > 0) {
+		Key l = rightJustified.leftJustifiedId(kp.lo);
+		Key h = rightJustified.leftJustifiedId(kp.hi);
+//		cout << 200 << " lh " << hex << l << " " << h << dec << endl << flush;
+//		cout << 201 << " kp " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
+		hstmRange.addRange(l,h);
+		k++;
+//		if(k>0)break;
+	}
+
+	viz->addHstmRange(&hstmRange,0.0,1.0,1.0);
+
+}
+
+void testMultiResolution(VizHTM *viz) {
+	examiner_viz = true;
+	offscreen_viz = false;
+
+	viz->lineWidth = 1.5;
+	viz->sphereComplexity = 1.0;
+	//	plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+	plotBlockingSphere(viz,0.2,0.2,0.2,0.99);
+	testTenDegreeGridRGB(viz,0.6,0.6,0.6);
+
+	testShapeFiles(viz);
+
+	EmbeddedLevelNameEncoding leftJustified;
+	BitShiftNameEncoding rightJustified;
+	HstmRange hstmRange;
+
+	int indexLevel = 4, level;
+	int buildLevel = 8;
+	SpatialIndex *index = new SpatialIndex(indexLevel,buildLevel);
+
+	uint64 id_, id0_, id1_;
+	string name, name0, name1;
+	HtmRange range, interior, boundary;
+	KeyPair kp;
+	int indexp, k;
+
+	SpatialVector *v0 = VectorFromLatLonDegrees(10.0,0.0);
+	SpatialVector *v1 = VectorFromLatLonDegrees(70.0,0.0);
+	SpatialVector *v2 = VectorFromLatLonDegrees(70.0,80.0);
+	SpatialVector *v3 = VectorFromLatLonDegrees(10.0,80.0);
+
+	viz->addRectangle(*v0,*v1,*v2,*v3,1.0,0.,0.);
+	//	viz->addArcAtLatitudeDegrees(10.0,0.,80.0,1.0,0.,0.);
+	//	viz->addArcAtLatitudeDegrees(70.0,0.,80.0,1.0,0.,0.);
+
+	RangeConvex *rc = new RangeConvex(v0,v1,v2,v3);
+	SpatialDomain domain = SpatialDomain(index);
+	domain.add(*rc);
+
+	SpatialVector *v_ = VectorFromLatLonDegrees(10.0,0.0);
+	SpatialVector v = *v_;
+	v = v*(-1);
+	SpatialConstraint sc(v,0.95);
+    sc.invert();
+    SpatialDomain include = SpatialDomain(index);
+	RangeConvex *rc1 = new RangeConvex; rc1->add(sc);
+	include.add(*rc1);
+	HtmRange includeIntersectRange, includeInteriorRange, includeBoundaryRange;
+
+	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
+
+	includeIntersectRange.purge(); includeInteriorRange.purge(); includeBoundaryRange.purge();
+	bool overlapInclude = domain.intersect(
+			index,
+			&includeIntersectRange,varlen_individualHTMIds,
+			&includeInteriorRange, &includeBoundaryRange );
+
+	range.purge(); interior.purge(); boundary.purge();
+	bool overlap = domain.intersect(index,&range,varlen_individualHTMIds,&interior,&boundary);
+
+	//	while((indexp = range.getNext(kp)) >= 0) {
+	//		hstmRange.addRange(kp.lo,kp.hi);
+	//	}
+	//	viz->addHstmRange(&hstmRange,0.2,1.0,0.2,-1.0);
+
+	//	viz->addHTMRange(&interior,0.0,1.0,0.0);
+	//	viz->addHTMRange(&boundary,1.0,0.0,0.0);
+
+	////	BitShiftNameEncoding right;
+	//	cout << 1000 << endl << flush;
+	hstmRange.purge();
+	//	interior.reset();
+	//	k = 0;
+	//	while((indexp = interior.getNext(kp)) > 0) {
+	//		Key l = rightJustified.leftJustifiedId(kp.lo);
+	//		Key h = rightJustified.leftJustifiedId(kp.hi);
+	////		cout << 200 << " lh " << hex << l << " " << h << dec << endl << flush;
+	////		cout << 201 << " kp " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
+	//		hstmRange.addRange(l,h);
+	//		k++;
+	////		if(k>0)break;
+	//	}
+
+	//	viz->addHstmRange(&hstmRange,0.0,1.0,1.0);
+	//	return;
+	//	cout << 2000 << endl << flush;
+
+
+	int totalTrianglesAdded = 0;
+
+//	vector<RangeConvex> geometry;
+//	geometry.push_back(*rc);
+//	geometry.push_back(*rc1);
+
+	//	for( indexLevel = 6; indexLevel >= 5; indexLevel-- ) {
+	//	for( indexLevel = 3; indexLevel >= 2; indexLevel-- ) {
+//	for( indexLevel = 6; indexLevel <= 6; indexLevel++ ) { // Forward -- Try interior subtraction
+	for( indexLevel = 2; indexLevel <= 8; indexLevel++ ) { // Forward -- Try interior subtraction
+		//		for( indexLevel = 2; indexLevel <= 8; indexLevel++ ) { // Forward -- Try interior subtraction
+		//	 for( indexLevel = 8; indexLevel >= 4; indexLevel-- ) {  // Good w/o interior subtraction.
+		//	for( indexLevel = 5; indexLevel <= 6; indexLevel++ ) {
+		cout << "Constructing level - indexLevel: " << indexLevel << endl << flush;
+		range.purge(); interior.purge(); boundary.purge();
+		delete index;
+		index = new SpatialIndex(indexLevel,buildLevel);
+		domain = SpatialDomain(index);
+		domain.add(*rc);
+//		for(vector<RangeConvex>::iterator gIter = geometry.begin(); gIter != geometry.end(); ++gIter) {
+//			domain.add(*gIter);
+//		}
+		overlap = domain.intersect(index,&range,varlen_individualHTMIds,&interior,&boundary);
+
+		if(false) {
+			includeIntersectRange.purge(); includeInteriorRange.purge(); includeBoundaryRange.purge();
+			include = SpatialDomain(index);
+			include.add(*rc1);
+			bool overlapInclude = include.intersect(
+					index,
+					&includeIntersectRange,varlen_individualHTMIds,
+					&includeInteriorRange, &includeBoundaryRange );
+			//
+			HtmRange newRange; newRange.purge(); KeyPair p0, p1;
+			interior.reset();
+			while((indexp = interior.getNext(p0)) > 0) {
+				//			cout << "p0: " << p0.lo << " " << p0.hi << " " << flush;
+				p1 = includeInteriorRange.intersection(p0);
+				//			cout << "p1: " << p1.lo << " " << p1.hi << " " << endl << flush;
+				if(p1.set) {
+					newRange.addRange(p1.lo,p1.hi);
+				}
+			}
+		}
+
+		HtmRange *addRange = &interior;
+//		addRange = &includeInteriorRange;
+//		addRange = &newRange;
+
+		cout << "Adding " << addRange->nranges() << " triangles at level " << indexLevel << endl << flush;
+		totalTrianglesAdded += addRange->nranges() ;
+		addRange->reset();
+		k = 0;
+		while((indexp = addRange->getNext(kp)) > 0) {
+			Key l = rightJustified.leftJustifiedId(kp.lo);
+			Key h = rightJustified.leftJustifiedId(kp.hi);
+			//#define hexOut(a,b,c) cout << a << " 0x" << hex << setfill('0') << setw(16) << b << ".." << c << dec << endl << flush;
+			//			hexOut("lh  ",l,h);
+			//#undef hexOut
+			hstmRange.addRange(l,h);
+			k++;
+			if(false) if( hstmRange.range->my_los->getLength() != hstmRange.range->my_his->getLength() ) {
+				cout << "addRange error at iteration " << k << endl << flush;
+				cout << "nranges "
+						<< hstmRange.range->my_los->getLength() << " "
+						<< hstmRange.range->my_his->getLength() << endl << flush;
+				cout << " lh " << hex << l << " " << h << dec << endl << flush;
+				cout << " lh1 " << hex << leftJustified.maskOffLevelBit(l) << " "
+						<< leftJustified.maskOffLevelBit(h)  << dec << endl << flush;
+				cout << " kp " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
+				cout << " lhl " << leftJustified.nameById(l) << " "
+						<< leftJustified.nameById(h) << endl << flush;
+				cout << " lhr " << rightJustified.nameById(kp.lo) << " "
+						<< rightJustified.nameById(kp.hi) << endl << flush;
+				int kount = 0;
+				hstmRange.reset();
+				while( (indexp = hstmRange.getNext(kp)) > 0 ) {
+					cout << kount << " kp 0x" << hex << kp.lo << ", 0x" << kp.hi << ",  " << dec
+							<< endl << flush;
+					kount++;
+				}
+				cout << "lows" << endl << flush;
+				hstmRange.range->print( HtmRangeMultiLevel_NameSpace::HtmRangeMultiLevel::LOWS,cout,true);
+				cout << "highs" << endl << flush;
+				hstmRange.range->print( HtmRangeMultiLevel_NameSpace::HtmRangeMultiLevel::HIGHS,cout,true);
+				cout << " exiting " << endl << flush;
+				exit(1);
+			}
+			//			// Try to remove interior.
+			// Broken...
+			//			if(indexLevel < 4) {
+			//				SpatialVector a,b,c;
+			//				for( uint64 numericId = kp.lo; numericId <= kp.hi; numericId ++ ) {
+			//					uint64 nodeIndex = index->nodeIndexFromId(numericId);
+			//					index->nodeVertex(nodeIndex,a,b,c);
+			//					RangeConvex r = RangeConvex(&a,&b,&c);
+			//					r.invert();
+			//					geometry.push_back(r);
+			//				}
+		}
+
+
+
+		//		if(k>0)break;
+	}
+	cout << "nranges "
+			<< hstmRange.range->my_los->getLength() << " "
+			<< hstmRange.range->my_his->getLength() << endl << flush;
+	if(false) {
+		hstmRange.reset();
+		k = 0;
+		cout << "Printing hstmRange" << endl << flush;
+		while( (indexp = hstmRange.getNext(kp)) > 0 ) {
+			cout << k << " kp 0x" << hex << kp.lo << ", 0x" << kp.hi << ",  " << dec
+					<< endl << flush;
+			k++;
+		}
+	}
+
+	cout << "Total triangles added: " << totalTrianglesAdded << endl << flush;
+	cout << "HstmRange intervals:   " << hstmRange.range->nranges() << endl << flush;
+
+	cout << "constructing hstm visualization" << endl << flush;
+	//	viz->addHstmRange(&hstmRange,0.0,1.0,1.0);
+	//	viz->addHTMRange(&interior,0.0,1.0,0.0);
+	//	viz->addHTMRange(&boundary,1.0,0.0,0.0);
+	//	return;
+
+	range.purge(); interior.purge(); boundary.purge();
+	indexLevel = 8;
+	delete index;
+	index = new SpatialIndex(indexLevel,buildLevel);
+	domain = SpatialDomain(index);
+	domain.add(*rc);
+	overlap = domain.intersect(index,&range,varlen_individualHTMIds,&interior,&boundary);
+
+	boundary.reset();
+	k = 0;
+	while((indexp = boundary.getNext(kp)) > 0) {
+		Key l = rightJustified.leftJustifiedId(kp.lo);
+		Key h = rightJustified.leftJustifiedId(kp.hi);
+		//		cout << 200 << " lh " << hex << l << " " << h << dec << endl << flush;
+		//		cout << 201 << " kp " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
+		hstmRange.addRange(l,h);
+		k++;
+		//		if(k>0)break;
+	}
+
+	viz->addHstmRange(&hstmRange,0.0,1.0,1.0);
+
+}
+
 void testTransparency(VizHTM *viz) {
 
 	// On Coin3D on Mac OS X
@@ -4235,11 +4672,13 @@ int main(int argc, char *argv[]) {
 			viz,
 			unitVector(xHat+yHat+zHat),
 			0.99);
+
+	// examiner_viz = true;
 	if(false) testTwoConstraints(viz,5);
 
 	if(testLevelChunk_flag) testLevelChunk(viz);
 
-	if(true) testShapeFiles(viz);
+	if(false) testShapeFiles(viz);
 
 	if(false) testTIFF(viz);
 
@@ -4247,11 +4686,16 @@ int main(int argc, char *argv[]) {
 
 	if(false) testNearestNeighbors(viz);
 
-	if(true) { // Visualization using real data.
+	if(false) { // Visualization using real data.
 		initialize_nmq_trmm_viz();
 		if(true) testSwath(viz);
 		if(true) testnmq(viz);
 		if(addFiduciaryTriangles) addFiduciaries(viz);
+	}
+
+	if(true) {
+		if(false) testHstmRange(viz);
+		if(true)  testMultiResolution(viz);
 	}
 
 	if(false) testTransparency(viz);
@@ -4332,22 +4776,24 @@ int main(int argc, char *argv[]) {
 		viewer->setTitle(mainName);
 		viewer->show();
 
-		SoCamera *camera = viewer->getCamera();
-		if(camera) {
-			SoSFVec3f position;
-			//		SpatialVector *p = VectorFromLatLonDegrees(33.0,-80.25); // Centers on gridded data
-			//		SpatialVector *p = VectorFromLatLonDegrees(33.5,-76.75); // Centers on storm intersection
-			//		SpatialVector *p = VectorFromLatLonDegrees(33.63,-76.575); // Centers on storm intersection
-			SpatialVector *p = nmq_trmm_vizCenter;
-			(*p) = (*p) * examinerCameraPositionScale;
-			position.setValue(p->x(),p->y(),p->z());
-			//		((SoPerspectiveCamera*)camera)->position = position;
-			camera->position = position;
-			camera->pointAt(SbVec3f(0.,0.,0.));
-			//		SoSFRotation rotation;
-			//		p->normalize();
-			//		rotation.setValue(SbVec3f(p->x(),p->y(),p->z()),0.0);
-			//		camera->orientation = rotation;
+		if(false) {
+			SoCamera *camera = viewer->getCamera();
+			if(camera) {
+				SoSFVec3f position;
+				//		SpatialVector *p = VectorFromLatLonDegrees(33.0,-80.25); // Centers on gridded data
+				//		SpatialVector *p = VectorFromLatLonDegrees(33.5,-76.75); // Centers on storm intersection
+				//		SpatialVector *p = VectorFromLatLonDegrees(33.63,-76.575); // Centers on storm intersection
+				SpatialVector *p = nmq_trmm_vizCenter;
+				(*p) = (*p) * examinerCameraPositionScale;
+				position.setValue(p->x(),p->y(),p->z());
+				//		((SoPerspectiveCamera*)camera)->position = position;
+				camera->position = position;
+				camera->pointAt(SbVec3f(0.,0.,0.));
+				//		SoSFRotation rotation;
+				//		p->normalize();
+				//		rotation.setValue(SbVec3f(p->x(),p->y(),p->z()),0.0);
+				//		camera->orientation = rotation;
+			}
 		}
 
 		SoQt::show(window);
