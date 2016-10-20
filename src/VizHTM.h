@@ -122,7 +122,7 @@ public:
 	void addArc(
 			const SpatialVector x0,
 			const SpatialVector x1,
-			float r, float g, float b, float a=-1.,
+			float r, float g, float b, float a=-1., float scale=1.,
 			int steps=-1);
 	void addArcAtLatitudeDegrees(float64 lat, float64 lon0, float64 lon1, float r, float g, float b);
 
@@ -147,7 +147,7 @@ public:
 
 	void addArcFromIndexAndId(
 			SpatialIndex *index, uint64 htmId,
-			float r, float g, float b, float a=-1.);
+			float r, float g, float b, float a=-1., float scale=1.0);
 	void addArcFromIndexAndName(
 			SpatialIndex *index, const char* htmIdName,
 			float r, float g, float b, float a=-1.);
@@ -180,6 +180,11 @@ public:
 			);
 
 	void addHstmRange(
+			HstmRange *range,
+			float r, float g, float b, float a=-1., float scale=1.0
+			);
+
+	void addHstmRangeFaces(
 			HstmRange *range,
 			float r, float g, float b, float a=-1., float scale=1.0
 			);

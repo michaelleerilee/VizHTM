@@ -646,6 +646,9 @@ void VizHTM::addEdge(
 		const SpatialVector x0,
 		const SpatialVector x1,
 		float r, float g, float b, float a, float scale) {
+
+	// float scale_ = (scale<0) ? 1.0 : scale;
+
 	//cout << " addEdge: start, " << flush;
 	int colorBase = nEdgeColors;
 	addEdgeColor(r,g,b,a);
@@ -793,23 +796,32 @@ void VizHTM::addLatLonBoxEdgesDegrees(
 void VizHTM::addArc(
 		const SpatialVector x0,
 		const SpatialVector x1,
-		float r, float g, float b, float alpha,
+		float r, float g, float b, float alpha, float scale,
 		int steps) {
-	SpatialVector dx = x1-x0;
+
+	SpatialVector dx = x1 - x0;
 	SpatialVector *last = new SpatialVector(x0);
+
 	if(steps<0) {
 		steps = 20;
 		if(dx.length()>0.5){
 			steps = 180;
 		}
 	}
+
+//	cout << "steps: " << steps << flush;
+
 	for(double i=1; i<steps-1; i++) {
 		double a = i / (steps - 1);
+//		cout << i << ", " << a << "; " << flush;
 		SpatialVector *next = new SpatialVector(x0 + a * dx); next->normalize();
-		addEdge(*last,*next, r, g, b, alpha);
+		addEdge(*last,*next, r, g, b, alpha, scale );
 		last = next;
 	}
-	addEdge(*last,x1,r,g,b,alpha);
+
+//	cout << endl << flush;
+
+	addEdge(*last,x1,r,g,b,alpha, scale);
 }
 
 void VizHTM::addArcAtLatitudeDegrees(float64 lat, float64 lon0, float64 lon1, float r, float g, float b) {
@@ -915,14 +927,14 @@ void VizHTM::addEdgesFromIndexAndLatLonDegrees(
 
 void VizHTM::addArcFromIndexAndId(
 		SpatialIndex *index, uint64 htmId,
-		float r, float g, float b, float a
+		float r, float g, float b, float a, float scale
 		) {
 	SpatialVector v0, v1, v2;
 	uint64 nodeIndex = index->nodeIndexFromId(htmId);
 	index->nodeVertex(nodeIndex,v0,v1,v2);
-	addArc(v0,v1,r,g,b,a);
-	addArc(v1,v2,r,g,b,a);
-	addArc(v2,v0,r,g,b,a);
+	addArc(v0,v1,r,g,b,a,scale);
+	addArc(v1,v2,r,g,b,a,scale);
+	addArc(v2,v0,r,g,b,a,scale);
 }
 
 void VizHTM::addArcFromIndexAndName(
@@ -955,17 +967,18 @@ void VizHTM::addArcsFromLatLonDegrees(
 		float64 *lat, float64 *lon, int nPoints, bool close,
 		float r, float g, float b, float a, int steps
 		) {
+	float scale_ = 1.0;
 	SpatialVector v0, v1, v2;
 	int i = 0;
 	v0.setLatLonDegrees(lat[i],lon[i]);
 	v1 = v0;
 	for(i=1; i < nPoints; i++) {
 		v2.setLatLonDegrees(lat[i],lon[i]);
-		addArc(v1,v2,r,g,b,a,steps);
+		addArc(v1,v2,r,g,b,a,scale_,steps);
 		v1 = v2;
 	}
 	if(close) {
-		addArc(v2,v0,r,g,b,a,steps);
+		addArc(v2,v0,r,g,b,a,scale_,steps);
 	}
 }
 
@@ -1057,13 +1070,55 @@ void VizHTM::addHstmRange(
 			addArcFromIndexAndId(
 					index,
 					id,
-					0.0,1.0,0.0
+					r, g, b,
+					a,
+					scale
 			);
 		}
 	}
 	delete index;
 }
 
+void VizHTM::addHstmRangeFaces(
+		HstmRange *range,
+		float r, float g, float b, float a, float scale
+) {
+
+	int indexLevel = 5, level;
+	EmbeddedLevelNameEncoding leftJustified;
+	SpatialIndex *index = new SpatialIndex(indexLevel);
+
+	KeyPair kp; int indexp;
+	range->reset();
+	while((indexp = range->getNext(kp)) > 0) {
+		leftJustified.setId(kp.lo);
+		level = leftJustified.getLevel();
+		string loName = leftJustified.getName();
+		uint64 termId = leftJustified.idFromTerminatorAndLevel_NoDepthBit(kp.hi,level);
+		leftJustified.setId(termId);
+		string hiName = leftJustified.getName();
+//		cout << 100 << " lo,hi name: " << loName << " " << hiName << endl << flush;
+//		cout << 101 << " level:      " << level << endl << flush;
+//		cout << 102 << " kp:         " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
+		if( level != indexLevel ) {
+			delete index;
+			indexLevel = level;
+			index = new SpatialIndex(indexLevel);
+		}
+		uint64 id0 = index->idByName(loName.c_str());
+		uint64 id1 = index->idByName(hiName.c_str());
+		for(uint64 id=id0; id<=id1; id++) {
+			addFaceFromIndexAndId(
+					index,
+					id,
+					r, g, b,
+					r, g, b,
+					r, g, b
+			);
+		}
+	}
+	delete index;
+}
 
 void VizHTM::addHTMInterval(SpatialIndex index, htmRange interval) {
 	size_t htmIdLevel = index.getMaxlevel();

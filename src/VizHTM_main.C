@@ -306,6 +306,35 @@ void testTwoConstraints(VizHTM *viz, int htmIdLevel) {
 	cout << 999 << endl << flush;
 }
 
+void testAddRectangle0(VizHTM *viz) {
+
+	SpatialVector *v0 = VectorFromLatLonDegrees(5.0,0.0);
+	SpatialVector *v1 = VectorFromLatLonDegrees(85.0,0.0);
+	SpatialVector *v2 = VectorFromLatLonDegrees(85.0,85.0);
+	SpatialVector *v3 = VectorFromLatLonDegrees(5.0,85.0);
+	float r = 0.9;
+	float g = 0.9;
+	float b = 0.1;
+	float a = -1.0;
+
+	// viz->addArc(v1,v2,r,g,b,a,scale_,steps);
+	float64 scale_ = 1.02;
+	int steps = 100;
+	viz->addArc(*v0,*v1,r,g,b,a,scale_,steps);
+	viz->addArc(*v1,*v2,r,g,b,a,scale_,steps);
+	viz->addArc(*v2,*v3,r,g,b,a,scale_,steps);
+	viz->addArc(*v3,*v0,r,g,b,a,scale_,steps);
+
+	r = 0.1;
+	g = 0.9;
+	b = 0.9;
+	a = -1.0;
+
+	viz->addRectangle(*v0,*v1,*v2,*v3,r,g,b);
+	viz->addArcAtLatitudeDegrees(5.0,0.,85.0,1.0,0.,0.);
+	viz->addArcAtLatitudeDegrees(85.0,0.,85.0,1.0,0.,0.);
+}
+
 void testAddRectangle(VizHTM *viz, int htmIdLevel) {
 	int saveLevel = 5;
 
@@ -516,46 +545,49 @@ void intersectTwoRectangles(
 
 	SpatialDomain domain1 = SpatialDomain(index);
 	SpatialDomain domain2 = SpatialDomain(index);
-//	cout << "1" << flush;
+	cout << "1" << flush;
 	if(true){
 		RangeConvex rc = RangeConvex(u0,u1,u2,u3);
 		domain1.add(rc);
 	}
-//	cout << "2" << flush;
+	cout << "2" << flush;
 	if(true){
 		RangeConvex rc = RangeConvex(v0,v1,v2,v3);
 		domain2.add(rc);
 	}
 //		return;
-//	cout << "3" << flush;
+	cout << "3" << flush;
 	bool varlen_individualHTMIds = false; // true for individuals, false for ranges
 
-//	cout << "." << flush;
+	cout << "." << flush;
 //	HtmRange range1 = HtmRange();
 	HtmRange range1;
 	range1.purge();
+	cout << "." << flush;
 	bool overlap1 = domain1.intersect(index,&range1,varlen_individualHTMIds);
-//	cout << "." << flush;
+	cout << "." << flush;
 	range1.defrag();
+	cout << "." << flush;
 	range1.reset();
+	cout << "." << flush;
 	//	if(range1.nranges()==0)return;
 	rangeU->addRange(&range1);
+	cout << "." << flush;
 	range1.reset();
-
-//	cout << "." << flush;
-//	cout << "4" << flush;
-//	cout << " overlap1: " << overlap1 << ";" << flush;
-//	cout << endl << flush;
+	cout << "." << flush;
+	cout << "4" << flush;
+	cout << " overlap1: " << overlap1 << ";" << flush;
+	cout << endl << flush;
 
 	Key lo = 0, hi = 0;
 	uint64 indexp = 0;
 
-//	cout << " range1.ranges(): " << range1.nranges() << endl << flush;
+	cout << " range1.ranges(): " << range1.nranges() << endl << flush;
 	range1.reset();
 	indexp = range1.getNext(lo,hi);
-//	cout << " range1indexp " << indexp << endl << flush;
-//	cout << " range1.lo,hi " << lo << " " << hi << endl << flush;
-//	cout << "        level " << levelOfId(lo) << endl << flush;
+	cout << " range1indexp " << indexp << endl << flush;
+	cout << " range1.lo,hi " << lo << " " << hi << endl << flush;
+	cout << "        level " << levelOfId(lo) << endl << flush;
 
 //	cout << "." << flush;
 	HtmRange range2 = HtmRange();
@@ -574,7 +606,7 @@ void intersectTwoRectangles(
 	range2.reset();
 
 
-//	cout << "5" << flush;
+	cout << "5" << flush;
 
 //	cout << " overlap2: " << overlap2 << ";" << flush;
 //	cout << endl << flush;
@@ -589,15 +621,15 @@ void intersectTwoRectangles(
 	range1.reset(); range2.reset();
 
 	if(range1.nranges()*range2.nranges()==0) return;
-//	cout << "6" << flush;
+	cout << "6" << flush;
 //	HtmRange *resultRange = HTMRangeAtLevelFromIntersection(htmIdLevel,&range1,&range2);
 	HtmRange *resultRange = range1.HTMRangeAtLevelFromIntersection(&range2,htmIdLevel);
 	if(!resultRange) return;
-//	cout << "7" << flush;
+	cout << "7" << flush;
 	rangeIntersection->addRange(resultRange); // Note: resultRange is copied piece by piece here.
-//	cout << "8" << flush;
+	cout << "8" << flush;
 	rangeIntersection->defrag();
-//	cout << "9" << flush;
+	cout << "9" << flush;
 //	cout << "+" << range1.nranges() << "," << range2.nranges() << flush;
 
 	HtmRange *range = resultRange;
@@ -1075,8 +1107,8 @@ vector<SpatialVector> plotCircularTrack(
 //	cout << "t1: " << target1 << endl << flush;
 //	cout << "x0: " << *x0 << endl << flush;
 //	cout << "x1: " << *x1 << endl << flush;
-	viz->addArc(*x0,target,1,1,1,-1.0,200);
-	viz->addArc(target,*x1,1,1,1,-1.0,200);
+	viz->addArc(*x0,target,1,1,1,-1.0,-1.0,200);
+	viz->addArc(target,*x1,1,1,1,-1.0,-1.0,200);
 
 	int steps = (thetaAlongTrackDegrees1-thetaAlongTrackDegrees0)/deltaAlongTrackDegrees;
 	int crossSteps = (phiCrossTrackDegrees1-phiCrossTrackDegrees0)/deltaCrossTrackDegrees;
@@ -1137,16 +1169,22 @@ void testPlotDataSetIntersection(VizHTM *viz) {
 				rangeV,
 				rangeIntersect
 				);
+		viz->addHTMRange(&index,rangeU,1.0,0.0,0.0,0.7);
+		viz->addHTMRange(&index,rangeV,0.0,1.0,0.0,0.7);
+		viz->addHTMRange(&index,rangeIntersect,0.0,0.5,1.0,0.2);
+
+		delete rangeU, rangeV, rangeIntersect;
+		return;
 	}
 
 	const SpatialVector zHat = SpatialVector(0.,0.,1.);
 	for(int i=0; i<10; i++){
-//		cout << "i: " << i << endl << flush;
+		cout << "i: " << i << endl << flush;
 
 		double delta = 10.;
 		double lat = -80. + 160.0*uniformDouble();
 		double lon = 360.0 * uniformDouble();
-//		cout << " udll: " << delta << " " << lat << " " << lon << endl << flush;
+		cout << " udll: " << delta << " " << lat << " " << lon << endl << flush;
 		u0.setLatLonDegrees(lat,lon);
 		u1.setLatLonDegrees(lat+delta,lon);
 		u2.setLatLonDegrees(lat+delta,lon+delta);
@@ -1154,12 +1192,12 @@ void testPlotDataSetIntersection(VizHTM *viz) {
 
 		double dlat = 12.0*(uniformDouble()-0.5);
 		double dlon = 12.0*(uniformDouble()-0.5);
-//		cout << "dlat,dlon: " << dlat << " " << dlon << endl << flush;
+		cout << "dlat,dlon: " << dlat << " " << dlon << endl << flush;
 		double theta = 90.0*uniformDouble();
 //		lat = uniformDouble(-80.,80.);
 //		lon = uniformDouble(10.,350.);
 		lat+=dlat; lon+=dlon;
-//		cout << " vdll: " << delta << " " << lat << " " << lon << endl << flush;
+		cout << " vdll: " << delta << " " << lat << " " << lon << endl << flush;
 		v0.setLatLonDegrees(lat,lon+sin(theta)*delta);
 		v1.setLatLonDegrees(lat+cos(theta)*delta,lon+sin(theta)*delta);
 		v2.setLatLonDegrees(lat+sin(theta)*delta,lon+cos(theta)*delta);
@@ -1169,6 +1207,7 @@ void testPlotDataSetIntersection(VizHTM *viz) {
 //		if(i==2) {
 //		if(false){
 //		if(i==14){
+			cout << "intersect " << endl << flush;
 			intersectTwoRectangles(
 					viz,
 					&index,
@@ -1186,17 +1225,21 @@ void testPlotDataSetIntersection(VizHTM *viz) {
 				float r = 0.0;
 				float g = 0.0;
 				float b = 1.0;
+				cout << "blue" << endl << flush;
 				viz->addRectangle(u0,u1,u2,u3,r,g,b);
 			}
 			if(true){
 				float r = 1.0;
 				float g = 0.0;
 				float b = 0.0;
+				cout << "red" << endl << flush;
 				viz->addRectangle(v0,v1,v2,v3,r,g,b);
 			}
 		}
-//		cout << "+" << endl << flush;
+		cout << "+" << endl << flush;
 	}
+
+	cout << "add ranges" << endl << flush;
 
 	viz->addHTMRange(&index,rangeU,1.0,0.0,0.0,0.7);
 	viz->addHTMRange(&index,rangeV,0.0,1.0,0.0,0.7);
@@ -2122,39 +2165,40 @@ void testGeorgia(VizHTM* viz, int  level, int hullSteps,
 			}
 		}
 		specFile.close();
-//		cout << " latlon count: " << count << endl << flush;
+		cout << " latlon count: " << count << endl << flush;
 		int buildLevel = 5;
 //		cout << 1000 << endl << flush;
 		htmInterface *htm = new htmInterface(level,buildLevel);
-//		cout << 1100 << endl << flush;
+		cout << 1100 << endl << flush;
 //		HTMRangeValueVector htmRangeVector = htm->convexHull(latlon1,hullSteps);
 		HTMRangeValueVector htmRangeVector = htm->convexHull(latlon,hullSteps);
 
 		SpatialVector *xStart = &(htm->polyCorners_[0].c_);
 		SpatialVector *x0 = xStart;
-//		cout << " polyCorners: 0 " << flush;
+		cout << " polyCorners: 0 " << flush;
 		for(int j=1; j<htm->polyCorners_.size();j++){
-//			cout << j << " " << flush;
+			cout << j << " " << flush;
 			SpatialVector *x1 = &(htm->polyCorners_[j].c_);
 //			cout << *x0 << ", " << *x1 << "; " << flush;
 			viz->addEdge((*x0)*1.001,(*x1)*1.001,hullR,hullG,hullB);
 			x0=x1;
 		}
-//		cout << endl << flush;
+		cout << endl << flush;
 		viz->addEdge((*x0)*1.001,(*xStart)*1.001,hullR,hullG,hullB);
 
-//		cout << 1200 << endl << flush;
-//		cout << " htmRangeVector-size: " << htmRangeVector.size() << endl << flush;
-//		cout << " htmRangeVector-j:    ";
+		cout << 1200 << endl << flush;
+		cout << " htmRangeVector-size: " << htmRangeVector.size() << endl << flush;
+		cout << " htmRangeVector-j:    ";
 		for( int j=0; j<htmRangeVector.size(); j++) {
 			htmRange hr = htmRangeVector[j];
-//			cout << " (j=" << j << " " << hr.lo << " " << hr.hi << " ) ";
+			cout << " (j=" << j << " " << hr.lo << " " << hr.hi << " ) ";
 			plotHTMInterval(viz,htm->index(),hr);
 		}
-//		cout << endl << flush;
+		cout << endl << flush;
 	} else {
 		cout << "Couldn't open '" << fileName << "'." << endl << flush;
 	}
+	cout << "Leaving testGeorgia" << endl << flush;
 }
 
 void testAddEdgesFromIndexAndName(VizHTM* viz, const char* htmIdName, int saveLevel=5) {
@@ -2163,26 +2207,19 @@ void testAddEdgesFromIndexAndName(VizHTM* viz, const char* htmIdName, int saveLe
 }
 
 void testShapeFiles(VizHTM* viz) {
-
 	bool verbose = false;
-
 	if(true) {
-
 		plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
 		testTenDegreeGridRGB(viz,0.6,0.6,0.6);
-
 		//	string shapeFile = "data/ne_110m_coastline/ne_110m_coastline.shp"; // okay
 		string shapeFile = "data/ne_50m_coastline/ne_50m_coastline.shp"; // okay
 		// string shapeFile = "data/ne_10m_coastline/ne_10m_coastline.shp"; // Doesn't work yet.
 		float r = 0.5;
 		float g = 0.9;
 		float b = 0.9;
-
 		viz->addShapeFile(shapeFile,r,g,b);
-
 		cout << "testShape done" << endl << flush;
 	}
-
 }
 
 void testTIFF(VizHTM *viz) {
@@ -3268,11 +3305,21 @@ void testSwath(VizHTM *viz) {
 	swathRange.purge();
 	convectiveRainRange.purge();
 
+	bool tapFileFlag = true;
+	ofstream tapFile;
+	if(tapFileFlag) {
+		tapFile.open("/Users/mrilee/Downloads-1/swathTapFile.csv",ios::out|ios::trunc);
+	}
+
 	for(int i=0; i< 9247*49; i++) {
 		lat_ifs.read(reinterpret_cast<char*>(&lat),sizeof(float));
 		lon_ifs.read(reinterpret_cast<char*>(&lon),sizeof(float));
 		rainType_ifs.read(reinterpret_cast<char*>(&rainType),sizeof(short int));
 		if(iStart <= i && i < iEnd) {
+
+			if(tapFileFlag) {
+				tapFile << "( "<< lon << "," << lat << "," << rainType << " ),"<< endl << flush;
+			}
 
 			v.setLatLonDegrees(lat,lon);
 
@@ -3349,6 +3396,11 @@ void testSwath(VizHTM *viz) {
 		}
 	}
 
+	if(tapFileFlag) {
+		tapFile.close();
+	}
+	cout << "TRMM swath: HTM viz" << endl << flush;
+
 //	swathDomain.add(swathConvex);
 //	swathRange.purge();
 //	bool overlap = swathDomain.intersect(&swathIndex,&swathRange,swath_varlenHTMIDs);
@@ -3387,6 +3439,7 @@ void testSwath(VizHTM *viz) {
 	rainType_ifs.close();
 
 	std::cout.flags(coutInitialState);
+	cout << "TRMM swath: done" << endl << flush;
 }
 
 HtmRange nmqRangeCoarse, nmqRange;
@@ -3481,6 +3534,12 @@ void testnmq(VizHTM *viz) {
 	uint64 nmqRangeCount = 0;
 	cout << 200 << endl << flush;
 
+	bool tapFileFlag = true;
+	ofstream tapFile;
+	if(tapFileFlag) {
+		tapFile.open("/Users/mrilee/Downloads-1/nmqTapFile.csv",ios::out|ios::trunc);
+	}
+
 	std::ifstream preciprate_hsr_ifs( baseName+".PrecipitationRate_HSR", std::ios::binary );
 	for(int jLat=0; jLat < nLat; jLat++) {
 		for(int iLon=0; iLon < nLon; iLon++) {
@@ -3552,6 +3611,13 @@ void testnmq(VizHTM *viz) {
 							(lonStart <= iLon) && (iLon <= lonEnd)) {
 						//				cout << jLat << " " << iLon << " " << preciprate_hsr << endl << flush;
 
+						tapFile
+						<< "( "
+						<< lon_[iLon] << ","
+						<< lat_[jLat] << ","
+						<< preciprate_hsr
+						<< " ),"
+						<< endl << flush;
 
 						if(preciprate_hsr < mn) mn = preciprate_hsr;
 						if(preciprate_hsr > mx) mx = preciprate_hsr;
@@ -3639,6 +3705,10 @@ void testnmq(VizHTM *viz) {
 		}
 	}
 	preciprate_hsr_ifs.close();
+
+	if(tapFileFlag) {
+		tapFile.close();
+	}
 
 //	cout << 1900 << " nmqRangeCount: " << nmqRangeCount << endl << flush;
 //	cout << 1901 << " los-stat:      " << endl << flush;
@@ -4305,7 +4375,7 @@ void testMultiResolution(VizHTM *viz) {
 		//		if(k>0)break;
 	}
 
-	viz->addHstmRange(&hstmRange,0.0,1.0,1.0);
+	viz->addHstmRange(&hstmRange,0.0,1.0,1.0,-1.0,1.1);
 
 }
 
@@ -4410,6 +4480,80 @@ void addFiduciaries(VizHTM *viz) {
 
 
 }
+
+
+
+vector< string > csvNames;
+
+void plotCsv(VizHTM *viz) {
+
+	EmbeddedLevelNameEncoding leftJustified;
+	BitShiftNameEncoding      rightJustified;
+	int count = 0;
+	int64 idLast = -1;
+
+	for(vector< string >::iterator csvIter = csvNames.begin();
+			csvIter != csvNames.end();
+			++csvIter) {
+		++count;
+		string fileName = (*csvIter);
+		cout << "plotCsv reading " << fileName << "..." << endl << flush;
+		ifstream csvIn;
+		csvIn.open(fileName);
+		int uniqueHTMs = 0;
+		for(string line; getline(csvIn, line); ) {
+			int64 iHtm;
+			int64 iCell;
+			float64 data;
+			sscanf(line.c_str(),"%llu,%llu,%lf",&iHtm,&iCell,&data);
+//			cout << "... " << iHtm << " " << iCell << " " << data << " "; // << endl << flush;
+			leftJustified.setIdFromSciDBLeftJustifiedFormat(iHtm);
+			rightJustified.setId(leftJustified.rightJustifiedId());
+//			cout << "+ " << endl << flush;
+//			cout << "+ " << leftJustified.getName() << endl << flush;
+//			cout << "- " << rightJustified.getName() << flush;
+			int level = leftJustified.getLevel();
+//			cout << " l= " << level << endl << flush;
+			SpatialIndex index(level,5);
+
+			if(idLast != rightJustified.getId()) {
+				idLast = rightJustified.getId();
+				++uniqueHTMs;
+				HtmRange *range = new HtmRange;
+				range->purge();
+				range->addRange(idLast,idLast);
+				range->reset();
+				double r = 1.0,g = 0.8,b = 0.3,a = 0.0,scale = 1.000;
+				if(count==2) {
+					r = 1.0;
+					g = 0.0;
+					b = 0.3;
+					a = 0.0;
+					scale = 1.0015;
+				} else if(count==3) {
+					r = 0.3;
+					g = 0.0;
+					b = 1.0;
+					a = 0.0;
+					scale = 1.003;
+				}
+
+				viz->addHTMRange(
+						&index,
+						range,
+						r,
+						g,
+						b,
+						a,
+						scale
+				);
+			}
+		}
+		cout << "plotCsv " << fileName << " done added " << uniqueHTMs << " unique HTMs" << endl << flush;
+	}
+	cout << "plotCsv done" << endl << flush;
+}
+
 
 
 void loadScene(SoSeparator *root, SoSeparator *content, SbViewportRegion *vpRegion){
@@ -4520,6 +4664,8 @@ int main(int argc, char *argv[]) {
 			{"saveLevel",  required_argument, 0, 1001},
 			{"htmName",   required_argument, 0, 1002},
 
+			{"csv", required_argument, 0, 1003},
+
 			{"test0",     required_argument,  0, 0},
 			{"test",      required_argument,  0, 't'},
 
@@ -4550,6 +4696,9 @@ int main(int argc, char *argv[]) {
 			break;
 		case 1002:
 			htmNames.push_back(optarg);
+			break;
+		case 1003:
+			csvNames.push_back(optarg);
 			break;
 		case 't':
 			// something
@@ -4588,6 +4737,14 @@ int main(int argc, char *argv[]) {
 	VizHTM *viz = new VizHTM(NARRAY_);
 	cout << "allocated." << endl << flush;
 
+	examiner_viz = true;
+
+	if(csvNames.size() > 0) {
+		plotCsv(viz);
+	}
+
+//	testTenDegreeGrid_flag = true;
+
 	if(testTenDegreeGrid_flag) testTenDegreeGrid(viz);
 	if(false) testTenDegreeGridRGB(viz,0.6,0.6,0.6);
 	if(false) testHTMRange(viz,1,"N0","N0");
@@ -4600,10 +4757,13 @@ int main(int argc, char *argv[]) {
 
 	if(false) testPlotEdgesFromHTMNameInterval(viz); // Simple subdivision for Kuo. 2016-0317
 
+	// testPlotDataSetIntersection_flag = false; // fix intersect null hrBoundary bug.
 	if(testPlotDataSetIntersection_flag) testPlotDataSetIntersection(viz);
 	// Claim to fame...
 //	testPlotDataSetIntersectionRangeContains_flag = true;s
 	if(testPlotDataSetIntersectionRangeContains_flag) testPlotDataSetIntersection0_PlotHtmRangeContains(viz,level_); // 7
+
+//	testPlotDataSetIntersectionNativeIntersect_flag = true;
 	if(testPlotDataSetIntersectionNativeIntersect_flag) testPlotDataSetIntersection0_PlotIntersectTwoRectanglesOutput(viz,level_);
 
 	if(testMultiResolutionHtmRange_flag) testMultiResolutionHtmRange(viz);
@@ -4643,9 +4803,15 @@ int main(int argc, char *argv[]) {
 	}
 
 	if(testLatLonSpiral_flag) testLatLonSpiral(viz);
+
+	// examiner_viz = true;
+	if(false) testAddRectangle0(viz);
+
 	if(testAddRectangle_flag) testAddRectangle(viz,level_);
+
 	if(testTwoRectangle_flag) testTwoRectangle(viz,level_);
 
+	// broken
 	if(false) { // Test Georgia multiple times
 		int s0 = 49; int s1 = 49; int sDelta = 1;
 		for(int s=s0; s<=s1; s+=sDelta){
@@ -4686,6 +4852,11 @@ int main(int argc, char *argv[]) {
 
 	if(false) testNearestNeighbors(viz);
 
+
+	cout << "a8000" << endl << flush;
+
+	// examiner_viz = true;
+	// SwathNMQFlag
 	if(false) { // Visualization using real data.
 		initialize_nmq_trmm_viz();
 		if(true) testSwath(viz);
@@ -4693,7 +4864,18 @@ int main(int argc, char *argv[]) {
 		if(addFiduciaryTriangles) addFiduciaries(viz);
 	}
 
-	if(true) {
+	cout << "a9000" << endl << flush;
+
+	if(false) {
+		swathGeometryHTM_viz = true;
+		examiner_viz = true;
+		testSwath(viz);
+	}
+
+	cout << "a10000" << endl << flush;
+
+	// current test.
+	if(false) {
 		if(false) testHstmRange(viz);
 		if(true)  testMultiResolution(viz);
 	}
