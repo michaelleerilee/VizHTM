@@ -16,6 +16,7 @@
 #include <QtGui/QImage>
 
 #include <iostream>
+#include <sstream>
 #include <iomanip>
 #include <random>
 #include <fstream>
@@ -63,6 +64,8 @@
 #include "VizHTM_main.h"
 
 using namespace std;
+
+float lineWidth = -1;
 
 /**
  *
@@ -1660,6 +1663,32 @@ void printHtmIdInfo(uint64 id){
 	cout << endl << flush;
 }
 
+void testChunks(VizHTM *viz) {
+	cout << "testChunks start" << endl << flush;
+	BitShiftNameEncoding rightJustified;
+	EmbeddedLevelNameEncoding leftJustified;
+	int64 idDelta = 100000000000000000;
+	//              100000000000000000
+	int64 idMax  = 9000000000000000000;
+	int level = 1;
+	SpatialIndex *index = new SpatialIndex(level);
+	HtmRange *r = new HtmRange;
+	for(int64 id = 0; id < idMax; id += idDelta) {
+		leftJustified.setIdFromSciDBLeftJustifiedFormat(id+level);
+		cout << id+level << " zero-lj: " << flush;
+		cout << leftJustified.getName() << endl << flush;
+		rightJustified.setName(leftJustified.getName());
+		r->purge();
+		int64 id_ = rightJustified.getId();
+//		r->addRange(id_,id_);
+//		r->reset();
+//		viz->addHTMRange(r,0.8,0.2,0.5,0.0);
+		viz->addArcFromIndexAndId(index,id_,0.8,0.5,0.5,0.0);
+//		r->reset();
+	}
+	cout << "testChunks done" << endl << flush;
+}
+
 void testLevelChunk(VizHTM *viz) {
 
 	bool referenceGrid = false;
@@ -2206,13 +2235,17 @@ void testAddEdgesFromIndexAndName(VizHTM* viz, const char* htmIdName, int saveLe
 	viz->addEdgesFromIndexAndName(index,htmIdName,0.6,0.6,0.9);
 }
 
+
+string shapeFile = "data/ne_50m_coastline/ne_50m_coastline.shp";
+float shapeFilesBlockingSphereScale = 0.999;
+
 void testShapeFiles(VizHTM* viz) {
 	bool verbose = false;
 	if(true) {
-		plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+		plotBlockingSphere(viz,0.2,0.2,0.2,shapeFilesBlockingSphereScale);
 		testTenDegreeGridRGB(viz,0.6,0.6,0.6);
 		//	string shapeFile = "data/ne_110m_coastline/ne_110m_coastline.shp"; // okay
-		string shapeFile = "data/ne_50m_coastline/ne_50m_coastline.shp"; // okay
+		// string shapeFile = "data/ne_50m_coastline/ne_50m_coastline.shp"; // okay
 		// string shapeFile = "data/ne_10m_coastline/ne_10m_coastline.shp"; // Doesn't work yet.
 		float r = 0.5;
 		float g = 0.9;
@@ -4481,23 +4514,244 @@ void addFiduciaries(VizHTM *viz) {
 
 }
 
+vector< string > cellsFiles;
+vector< string > cellsDataRange;
+vector< string > cellsGridColor;
+float cellsGridRed, cellsGridGreen, cellsGridBlue;
+bool cellsPlotFace = false;
+vector< string > cellsScale;
+vector< string > cellsCentroids;
+
+void plotCells(VizHTM *viz) {
+
+	float dataLo=-1, dataHi=-1;
+	float scale = 1.001;
+
+	vector< string >::iterator cellsDataRangeIter = cellsDataRange.begin();
+	vector< string >::iterator cellsGridColorIter = cellsGridColor.begin();
+	vector< string >::iterator cellsScaleIter     = cellsScale.begin();
+	vector< string >::iterator cellsCentroidsIter = cellsCentroids.begin();
+
+	float64 lon[4],lat[4],data;
+	SpatialVector v[4];
+
+	SpatialVector centroid;
+	float centroidH, centroidRadius;
+	float centroidR, centroidG, centroidB;
+	bool centroidFlag;
+
+	for(    vector< string >::iterator cellsFilesIter = cellsFiles.begin();
+			cellsFilesIter != cellsFiles.end();
+			++cellsFilesIter ) {
+		string fileName = (*cellsFilesIter);
+		cout << "plotCells reading " << fileName << endl << flush;
+		if( cellsDataRangeIter != cellsDataRange.end() ) {
+			if(strcmp((*cellsDataRangeIter).c_str(),"default") != 0) {
+				sscanf((*cellsDataRangeIter).c_str(),"%f,%f",&dataLo,&dataHi);
+//				cout << " color mapping data range: " << dataLo << " " << dataHi << endl << flush;
+				cellsPlotFace = true;
+			} else {
+//				cout << " using default color mapping" << endl << flush;
+				cellsPlotFace = false;
+			}
+		} else {
+			cellsPlotFace = false;
+		}
+		if( cellsGridColorIter != cellsGridColor.end() ) {
+			if(strcmp((*cellsGridColorIter).c_str(),"default") != 0) {
+				sscanf((*cellsGridColorIter).c_str(),"%f,%f,%f",
+						&cellsGridRed,&cellsGridGreen, &cellsGridBlue);
+			} else {
+				cellsGridRed = 0.7; cellsGridGreen = 0.7; cellsGridBlue = 0.7;
+			}
+		} else {
+			cellsGridRed = 0.7; cellsGridGreen = 0.7; cellsGridBlue = 0.7;
+		}
+		if( cellsScaleIter != cellsScale.end() ) {
+			if(strcmp((*cellsScaleIter).c_str(),"default") != 0) {
+				sscanf((*cellsScaleIter).c_str(),"%f",&scale);
+			} else {
+				scale += 0.001;
+			}
+		} else {
+			scale += 0.001;
+		}
+		// H = height; Radius = radius; RGB = color.
+		if( cellsCentroidsIter != cellsCentroids.end() ) {
+			if(strcmp((*cellsCentroidsIter).c_str(),"default") != 0) {
+				sscanf((*cellsCentroidsIter).c_str(),"%f,%f,%f,%f,%f",
+						&centroidH, &centroidRadius,
+						&centroidR, &centroidG, &centroidB);
+				centroidFlag = true;
+			} else {
+				centroidFlag = false;
+			}
+		} else {
+			centroidFlag = false;
+		}
+
+		float r,g,b;
+		ifstream cellsIn;
+		cellsIn.open(fileName);
+		int uniqueHTMs = 0;
+		for(string line; getline(cellsIn, line); ) {
+//			cout << "line: " << line << endl << flush;
+			int64 nPoints;
+			float64 data;
+			char line1[2048];
+			sscanf(line.c_str(),"%llu,%s",&nPoints,&line1);
+			sscanf(line1,"%lf,%s",&data,&line1);
+//			cout << "n: " << nPoints
+//					<< " d: " << data
+//					<< " ( "
+//					<< flush;
+			int ic = 0;
+			for(int ip=0; ip<nPoints; ++ip) {
+				sscanf(line1,"%lf,%lf,%s",&lon[ip],&lat[ip],&line1);
+//				cout << " " << x[ip] << " " << y[ip] << flush;
+				v[ip].setLatLonDegrees(lat[ip],lon[ip]);
+			}
+//			cout << " ) "<< endl << flush;
+			if(cellsPlotFace) {
+				if(nPoints == 4){
+//					cout << "adding point..." << endl << flush;
+					float a[4]; for(int i = 0; i < 4; i++) { a[i] = 0.0; }
+					colorScheme1_rgb(data,dataLo,dataHi,r,g,b);
+					viz->addFace4FromLatLonDegrees(
+							lat[0],lon[0],
+							lat[1],lon[1],
+							lat[2],lon[2],
+							lat[3],lon[3],
+							r,g,b,
+							r,g,b,
+							r,g,b,
+							r,g,b,
+							a[0],a[1],a[2],a[3],
+							scale
+							);
+				} // TODOO add support for other shapes (nPoints != 4).
+			}
+			for(int ip=0; ip < nPoints; ++ip) {
+				v[ip].setLatLonDegrees(lat[ip],lon[ip]);
+			}
+			{
+				float
+				r = cellsGridRed,
+				g = cellsGridGreen,
+				b = cellsGridBlue;
+			viz->addArc(v[0],v[1],r,g,b,0.0,scale,20);
+			viz->addArc(v[1],v[2],r,g,b,0.0,scale,20);
+			viz->addArc(v[2],v[3],r,g,b,0.0,scale,20);
+			viz->addArc(v[3],v[0],r,g,b,0.0,scale,20);
+			}
+			if(centroidFlag) {
+				if(nPoints == 4) {
+					centroid = v[0];
+					for(int ip=1; ip < 4; ++ip ) {
+						centroid = centroid + v[ip];
+					}
+					centroid *= 0.25*centroidH;
+//					cout << "centroid: " << centroid << endl << flush;
+					if(centroidR>0){
+						viz->addSphere(
+								centroid,
+								centroidR, centroidG, centroidB,
+								centroidRadius);
+					} else {
+						colorScheme1_rgb(data,centroidG,centroidB,r,g,b);
+						viz->addSphere(
+								centroid,
+								r, g, b,  // from data...
+								centroidRadius);
+					}
+				}
+			}
+		}
+		if(cellsDataRangeIter != cellsDataRange.end()) {
+			++cellsDataRangeIter;
+		}
+		if(cellsGridColorIter != cellsGridColor.end()) {
+			++cellsGridColorIter;
+		}
+		if(cellsScaleIter != cellsScale.end()) {
+			++cellsScaleIter;
+		}
+		if(cellsCentroidsIter != cellsCentroids.end()) {
+			++cellsCentroidsIter;
+		}
+		cellsIn.close();
+	}
+	cout << "plotCells done" << endl << flush;
+}
+
 
 
 vector< string > csvNames;
+vector< string > csvLevels; // TODO maybe get some class
+vector< string > csvData;
+vector< string > csvGridColor;
 
 void plotCsv(VizHTM *viz) {
+
+	SpatialVector *tmpV = new SpatialVector();
 
 	EmbeddedLevelNameEncoding leftJustified;
 	BitShiftNameEncoding      rightJustified;
 	int count = 0;
-	int64 idLast = -1;
+
+	vector< string >::iterator csvLevelIter = csvLevels.begin();
+	int csvLevel = -1;
+	SpatialIndex csvIndex;
+
+	vector< string >::iterator csvDataIter = csvData.begin();
+	bool csvDataFlag = false;
+	float csvDataLo = -1, csvDataHi = -1;
+
+	vector< string >::iterator csvGridColorIter = csvGridColor.begin();
+	float csvGridRed=0.7, csvGridGreen=0.7, csvGridBlue=0.7;
 
 	for(vector< string >::iterator csvIter = csvNames.begin();
 			csvIter != csvNames.end();
 			++csvIter) {
+		int64 idLast = -1;
 		++count;
 		string fileName = (*csvIter);
 		cout << "plotCsv reading " << fileName << "..." << endl << flush;
+
+		if(csvLevelIter != csvLevels.end()) {
+			cout << "csvLevel string: " << (*csvLevelIter).c_str() << endl;
+			if(strcmp((*csvLevelIter).c_str(),"default") != 0) {
+				sscanf((*csvLevelIter).c_str(),"%d",&csvLevel);
+				csvIndex = SpatialIndex(csvLevel,5);
+				cout << "coercing level to " << csvLevel << endl;
+			} else {
+				cout << "using default level" << endl;
+				csvLevel = -1;
+			}
+		} else {
+			csvLevel = -1;
+		}
+
+		if(csvDataIter != csvData.end()) {
+			if(strcmp((*csvDataIter).c_str(),"default") != 0) {
+				csvDataFlag = true;
+				cout << "data bounds: " << (*csvDataIter).c_str() << endl;
+				sscanf((*csvDataIter).c_str(),"%f,%f",&csvDataLo,&csvDataHi);
+				cout << "data bounds: " << csvDataLo << " " << csvDataHi << endl;
+			}
+		}
+
+		if(csvGridColorIter != csvGridColor.end()) {
+			if(strcmp((*csvGridColorIter).c_str(),"default") != 0) {
+				sscanf((*csvGridColorIter).c_str(),"%f,%f,%f",
+						&csvGridRed, &csvGridGreen, &csvGridBlue);
+			} else {
+				csvGridRed=0.0; csvGridGreen=0.7; csvGridBlue=0.0;
+			}
+		} else {
+			csvGridRed=0.0; csvGridGreen=0.7; csvGridBlue=0.0;
+		}
+
 		ifstream csvIn;
 		csvIn.open(fileName);
 		int uniqueHTMs = 0;
@@ -4513,6 +4767,7 @@ void plotCsv(VizHTM *viz) {
 //			cout << "+ " << leftJustified.getName() << endl << flush;
 //			cout << "- " << rightJustified.getName() << flush;
 			int level = leftJustified.getLevel();
+
 //			cout << " l= " << level << endl << flush;
 			SpatialIndex index(level,5);
 
@@ -4521,37 +4776,149 @@ void plotCsv(VizHTM *viz) {
 				++uniqueHTMs;
 				HtmRange *range = new HtmRange;
 				range->purge();
-				range->addRange(idLast,idLast);
+				if(csvLevel==-1) {
+					range->addRange(idLast,idLast);
+				} else {
+					index.pointByHtmId(*tmpV,idLast);
+					int64 tId = csvIndex.idByPoint(*tmpV);
+					range->addRange(tId,tId);
+				}
 				range->reset();
 				double r = 1.0,g = 0.8,b = 0.3,a = 0.0,scale = 1.000;
 				if(count==2) {
-					r = 1.0;
-					g = 0.0;
-					b = 0.3;
 					a = 0.0;
 					scale = 1.0015;
 				} else if(count==3) {
-					r = 0.3;
-					g = 0.0;
-					b = 1.0;
 					a = 0.0;
 					scale = 1.003;
 				}
+				r = csvGridRed;
+				g = csvGridGreen;
+				b = csvGridBlue;
 
-				viz->addHTMRange(
-						&index,
-						range,
-						r,
-						g,
-						b,
-						a,
-						scale
-				);
+				if(csvLevel==-1) {
+					viz->addHTMRange(
+							&index,
+							range,
+							r,
+							g,
+							b,
+							a,
+							scale
+					);
+				} else {
+					viz->addHTMRange(
+							&csvIndex,
+							range,
+							r,
+							g,
+							b,
+							a,
+							scale
+					);
+				}
+
+				if(csvDataFlag) {
+					Key lo, hi;
+					float r0, g0, b0;
+					float r1, g1, b1;
+					float r2, g2, b2;
+
+					range->reset(); range->getNext(lo,hi);
+					colorScheme1_rgb(data,csvDataLo,csvDataHi,r0,g0,b0);
+					colorScheme1_rgb(data,csvDataLo,csvDataHi,r1,g1,b1);
+					colorScheme1_rgb(data,csvDataLo,csvDataHi,r2,g2,b2);
+					if(csvLevel==-1) {
+						viz->addFaceFromIndexAndId(
+								&index,
+								lo,
+								r0, g0, b0,
+								r1, g1, b1,
+								r2, g2, b2,
+								a, scale
+						);
+					} else {
+						viz->addFaceFromIndexAndId(
+								&csvIndex,
+								lo,
+								r0, g0, b0,
+								r1, g1, b1,
+								r2, g2, b2,
+								a, scale
+						);
+					}
+				}
+
+
 			}
 		}
+		if(csvLevelIter != csvLevels.end()) {
+			++csvLevelIter;
+		}
+		if(csvDataIter != csvData.end()) {
+			++csvDataIter;
+		}
+		if(csvGridColorIter != csvGridColor.end()) {
+			++csvGridColorIter;
+		}
+		csvIn.close();
 		cout << "plotCsv " << fileName << " done added " << uniqueHTMs << " unique HTMs" << endl << flush;
-	}
+	} // csvIter
 	cout << "plotCsv done" << endl << flush;
+
+	delete tmpV;
+}
+
+string lookFromArgs;
+void setLookFrom(SoSeparator *root, SoSeparator *content, SbViewportRegion *vpRegion) {
+
+	float scale,lon,lat;
+
+	sscanf(lookFromArgs.c_str(),"%f,%f,%f",&scale,&lon,&lat);
+
+    SoDirectionalLight * light = new SoDirectionalLight;
+
+    SbRotation cameraRotation = SbRotation::identity();
+
+    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
+    camera->orientation.setValue(cameraRotation);
+    camera->nearDistance = 0.0001;
+
+    //    SoCamera *camera = viewer->getCamera();
+    //    SoCamera *camera = perscam;
+    SoSFVec3f position;
+    //		SpatialVector *p = VectorFromLatLonDegrees(33.0,-80.25); // Centers on gridded data
+    //		SpatialVector *p = VectorFromLatLonDegrees(33.5,-76.75); // Centers on storm intersection
+    //		SpatialVector *p = VectorFromLatLonDegrees(33.63,-76.575); // Centers on storm intersection
+    SpatialVector *p_ = VectorFromLatLonDegrees(lat,lon);
+    SpatialVector p = (*p_);
+    p = p * scale;
+
+    //    p = p * 1.05; // Works for perscam
+//    p = p * 1.1; // Works for perscam
+//    p = p * 1.17; // Works for perscam
+//    p = p * 1.25; // Nice top level view
+//    p = p * 1.5; // Nice top level view
+//    cout << "p: " << p << endl << flush;
+    position.setValue(p.x(),p.y(),p.z());
+    camera->position = position;
+//    ((SoPerspectiveCamera*)camera)->position = position;
+    //		((SoOrthographicCamera*)camera)->position = position;
+    camera->pointAt(SbVec3f(0.,0.,0.));
+    //		SoSFRotation rotation;
+    //		p->normalize();
+    //		rotation.setValue(SbVec3f(p->x(),p->y(),p->z()),0.0);
+    //		camera->orientation = rotation;
+    //
+    root->addChild(light);
+    root->addChild(camera); // perscam
+
+//    SoCube * cube = new SoCube;
+//    root->addChild(cube);
+
+    root->addChild(content);
+    // make sure that the cube is visible
+//    perscam->viewAll(root, *vpRegion);
 }
 
 
@@ -4621,7 +4988,13 @@ int main(int argc, char *argv[]) {
 		testPlotDataSetIntersectionRangeContains_flag=0,
 		testPlotDataSetIntersectionNativeIntersect_flag=0,
 		testTenDegreeGrid_flag=0,
-		testHTMRangeToLevel15_flag=0;
+		testHTMRangeToLevel15_flag=0,
+		testSwathNMQ_flag=0,
+		testShapeFiles_flag=0,
+		testChunks_flag=0,
+		blockingSphere_flag=0,
+		shapeFilesBlockingSphereScale_flag=0,
+		lookFrom_flag=0;
 
 	static int
 		level_     = 0,
@@ -4630,6 +5003,7 @@ int main(int argc, char *argv[]) {
 	vector<string> htmNames; htmNames.clear();
 
 	char *cvalue = NULL;
+	// TODO Make all of this into classified code.
 	static struct option long_options[] =
 	{
 			// { "name", no/required _argument, flag to set, ShortForm
@@ -4651,6 +5025,11 @@ int main(int argc, char *argv[]) {
 			{"testTenDegreeGrid", no_argument, &testTenDegreeGrid_flag, 13},
 			{"testHTMRangeToLevel15", no_argument, &testHTMRangeToLevel15_flag, 14},
 
+			{"testSwathNMQ", no_argument, &testSwathNMQ_flag, 15},
+
+			{"testChunks", no_argument, &testChunks_flag, 16},
+			{"blockingSphere", no_argument, &blockingSphere_flag, 17},
+
 			// These options are not setters.
 			// {"add",     no_argument,       0, 'a'},
 			// {"append",  no_argument,       0, 'b'},
@@ -4664,13 +5043,32 @@ int main(int argc, char *argv[]) {
 			{"saveLevel",  required_argument, 0, 1001},
 			{"htmName",   required_argument, 0, 1002},
 
-			{"csv", required_argument, 0, 1003},
+			{"csv",      required_argument, 0, 1010},
+			{"csvLevel", required_argument, 0, 1011},
+			{"csvData",  required_argument, 0, 1012},
+			{"csvGridColor", required_argument, 0, 1013},
+
+			{"cells", required_argument, 0, 1020},
+			{"cellsDataRange", required_argument, 0, 1021},
+			{"cellsGridColor", required_argument, 0, 1022},
+			{"cellsScale", required_argument, 0, 1023},
+			{"cellsCentroid", required_argument, 0, 1024},
+
+			{"testShapeFiles", required_argument, 0, 1100},
+			{"shapeFilesBlockingSphereScale", required_argument, 0, 1101},
+
+			{"lineWidth", required_argument, 0, 2000},
+
+			{"lookFrom", required_argument, 0, 3000},
 
 			{"test0",     required_argument,  0, 0},
 			{"test",      required_argument,  0, 't'},
 
 			{0, 0, 0, 0}
 	};
+	string tmpStr;
+	size_t nameSize;
+	stringstream ss;
 	while (1) {
 		int option_index = 0;
 		c = getopt_long( argc, argv, "t:",
@@ -4697,9 +5095,102 @@ int main(int argc, char *argv[]) {
 		case 1002:
 			htmNames.push_back(optarg);
 			break;
-		case 1003:
+
+		case 1010:
 			csvNames.push_back(optarg);
 			break;
+		case 1011:
+			nameSize = csvNames.size();
+			if(csvLevels.size() != (nameSize-1)) {
+				while(csvLevels.size() < (nameSize-1)) {
+					csvLevels.push_back("default");
+				}
+			}
+			csvLevels.push_back(optarg);
+			break;
+		case 1012:
+			nameSize = csvNames.size();
+			if(csvLevels.size() != (nameSize-1)) {
+				while(csvData.size() < (nameSize-1)) {
+					csvData.push_back("default");
+				}
+			}
+			csvData.push_back(optarg);
+			break;
+		case 1013:
+			nameSize = csvNames.size();
+			if(csvGridColor.size() != (nameSize-1)) {
+				while(csvGridColor.size() < (nameSize-1)) {
+					csvGridColor.push_back("default");
+				}
+			}
+			csvGridColor.push_back(optarg);
+			break;
+
+		case 1020:
+			cellsFiles.push_back(optarg);
+			break;
+		case 1021:
+			nameSize = cellsFiles.size();
+			if(cellsDataRange.size() < (nameSize-1)) {
+				while(cellsDataRange.size() < (nameSize-1)) {
+					cellsDataRange.push_back("default");
+				}
+			}
+			cellsDataRange.push_back(optarg);
+			break;
+		case 1022:
+			nameSize = cellsFiles.size();
+			if(cellsGridColor.size() < (nameSize-1)) {
+				while(cellsGridColor.size() < (nameSize-1)) {
+					cellsGridColor.push_back("default");
+				}
+			}
+			cellsGridColor.push_back(optarg);
+			break;
+		case 1023:
+			nameSize = cellsFiles.size();
+			if(cellsScale.size() < (nameSize-1)) {
+				while(cellsScale.size() < (nameSize-1)) {
+					cellsScale.push_back("default");
+				}
+			}
+			cellsScale.push_back(optarg);
+			break;
+		case 1024:
+			nameSize = cellsFiles.size();
+			if(cellsCentroids.size() < (nameSize-1)) {
+				while(cellsCentroids.size() < (nameSize-1)) {
+					cellsCentroids.push_back("default");
+				}
+			}
+			cellsCentroids.push_back(optarg);
+			break;
+
+		case 1100:
+			cout << "testShapes: " << optarg << endl << flush;
+			testShapeFiles_flag = true;
+			if(strcmp(optarg,"default")) {
+				shapeFile = optarg;
+			}
+			cout << "testShapes sf: " << shapeFile << endl << flush;
+			break;
+		case 1101:
+			shapeFilesBlockingSphereScale_flag = true;
+			sscanf(optarg,"%f",&shapeFilesBlockingSphereScale);
+			break;
+
+		case 2000:
+			sscanf(optarg,"%f",&lineWidth);
+			break;
+
+		case 3000:
+			lookFrom_flag = 1;
+//			cout << "3000: optarg: " << optarg << endl;
+			ss << optarg;
+			ss >> lookFromArgs;
+			break;
+
 		case 't':
 			// something
 			cout << "--test: " << optarg << endl << flush;
@@ -4739,11 +5230,12 @@ int main(int argc, char *argv[]) {
 
 	examiner_viz = true;
 
-	if(csvNames.size() > 0) {
-		plotCsv(viz);
-	}
+	if(csvNames.size()   > 0) { plotCsv(viz);	}
+	if(cellsFiles.size() > 0) { plotCells(viz); }
 
 //	testTenDegreeGrid_flag = true;
+
+	if(blockingSphere_flag) plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
 
 	if(testTenDegreeGrid_flag) testTenDegreeGrid(viz);
 	if(false) testTenDegreeGridRGB(viz,0.6,0.6,0.6);
@@ -4842,9 +5334,11 @@ int main(int argc, char *argv[]) {
 	// examiner_viz = true;
 	if(false) testTwoConstraints(viz,5);
 
+	if(testChunks_flag) testChunks(viz);
+
 	if(testLevelChunk_flag) testLevelChunk(viz);
 
-	if(false) testShapeFiles(viz);
+	if(testShapeFiles_flag) testShapeFiles(viz);
 
 	if(false) testTIFF(viz);
 
@@ -4853,18 +5347,18 @@ int main(int argc, char *argv[]) {
 	if(false) testNearestNeighbors(viz);
 
 
-	cout << "a8000" << endl << flush;
+//	cout << "a8000" << endl << flush;
 
 	// examiner_viz = true;
 	// SwathNMQFlag
-	if(false) { // Visualization using real data.
+	if(testSwathNMQ_flag) { // Visualization using real data.
 		initialize_nmq_trmm_viz();
 		if(true) testSwath(viz);
 		if(true) testnmq(viz);
 		if(addFiduciaryTriangles) addFiduciaries(viz);
 	}
 
-	cout << "a9000" << endl << flush;
+//	cout << "a9000" << endl << flush;
 
 	if(false) {
 		swathGeometryHTM_viz = true;
@@ -4872,7 +5366,7 @@ int main(int argc, char *argv[]) {
 		testSwath(viz);
 	}
 
-	cout << "a10000" << endl << flush;
+//	cout << "a10000" << endl << flush;
 
 	// current test.
 	if(false) {
@@ -4883,6 +5377,11 @@ int main(int argc, char *argv[]) {
 	if(false) testTransparency(viz);
 
 	if(false) viz->debug_dump();
+
+	// Last chance change...
+	if(lineWidth != -1) {
+		viz->lineWidth = lineWidth;
+	}
 
 	std::vector<std::shared_ptr<VizHTM>> vizContainer;
 
@@ -4914,7 +5413,7 @@ int main(int argc, char *argv[]) {
 
 	selectionRoot->addChild(root);
 
-	cout << 10000 << endl << flush;
+//	cout << 10000 << endl << flush;
 
 	SoSeparator *roots = new SoSeparator;
 	for(std::vector<std::shared_ptr<VizHTM>>::iterator it = vizContainer.begin();
@@ -4924,7 +5423,7 @@ int main(int argc, char *argv[]) {
 	}
 	selectionRoot->addChild(roots);
 
-	cout << 10100 << endl << flush;
+//	cout << 10100 << endl << flush;
 
 	// Offscreen renderer for viz. TODO selectionRoot
 
@@ -4933,7 +5432,11 @@ int main(int argc, char *argv[]) {
 		OffScreenViz *offscreen = new OffScreenViz(width,height);
 		offscreen->initImageDirectory("tmp/offscreen/"+formattedDateTime()+"/"+baseName+"/",4);
 		offscreen->root = new SoSeparator;
-		loadScene(offscreen->root,selectionRoot,offscreen->vpRegion);
+		if(!lookFrom_flag) {
+			loadScene(offscreen->root,selectionRoot,offscreen->vpRegion);
+		} else {
+			setLookFrom(offscreen->root,selectionRoot,offscreen->vpRegion);
+		}
 		offscreen->saveImage(1);
 	}
 
@@ -4957,6 +5460,33 @@ int main(int argc, char *argv[]) {
 		viewer->setSceneGraph(selectionRoot);
 		viewer->setTitle(mainName);
 		viewer->show();
+
+		if(lookFrom_flag) {
+			SoCamera *camera = viewer->getCamera();
+			if(camera) {
+
+				float scale,lon,lat;
+				cout << "lookFrom scanning " << lookFromArgs.c_str() << endl;
+				sscanf(lookFromArgs.c_str(),"%f,%f,%f",&scale,&lon,&lat);
+				cout << "Setting interactive lookFrom: (scale,lon,lat) = "
+						<< scale << ", " << lon << ", " << lat << endl;
+			    SpatialVector *p_ = VectorFromLatLonDegrees(lat,lon);
+			    SpatialVector p = (*p_);
+			    p = p * scale;
+
+				SoSFVec3f position;
+				position.setValue(p.x(),p.y(),p.z());
+				//		((SoPerspectiveCamera*)camera)->position = position;
+				camera->position = position;
+				camera->orientation.setValue(SbRotation::identity());
+				camera->pointAt(SbVec3f(0.,0.,0.));
+
+				//		SoSFRotation rotation;
+				//		p->normalize();
+				//		rotation.setValue(SbVec3f(p->x(),p->y(),p->z()),0.0);
+				//		camera->orientation = rotation;
+			}
+		}
 
 		if(false) {
 			SoCamera *camera = viewer->getCamera();

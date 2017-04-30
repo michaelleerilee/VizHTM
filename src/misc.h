@@ -20,4 +20,6 @@ std::string formattedOutFileName(
 		const std::string extension=".tmp");
 std::string formattedDateTime(std::string format="%Y-%m%d-%H%M%S-%Z");
 
+void colorScheme1_rgb(float data, float lo, float hi, float& r, float& g, float& b);
+
 #endif /* MISC_H_ */

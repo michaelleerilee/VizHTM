@@ -24,8 +24,9 @@
 // 64M 67108864
 //  1M  1048576
 //#define NARRAY_ 1048576
+#define NARRAY_ 1000000000
 //#define NARRAY_ 600000000
-#define NARRAY_ 200000000
+//#define NARRAY_ 200000000
 
 class VizHTM {
 
@@ -79,7 +80,8 @@ public:
 			float r0, float g0, float b0,
 			float r1, float g1, float b1,
 			float r2, float g2, float b2,
-			float a0 = -1, float a1 = -1, float a2 = -1
+			float a0 = -1, float a1 = -1, float a2 = -1,
+			float scale = 1
 			);
 
 	void addFace4(
@@ -102,7 +104,8 @@ public:
 			float r1, float g1, float b1,
 			float r2, float g2, float b2,
 			float r3, float g3, float b3,
-			float a0 = -1, float a1 = -1, float a2 = -1, float a3 = -1
+			float a0 = -1, float a1 = -1, float a2 = -1, float a3 = -1,
+			float scale=1
 			);
 
 	void addRectangle(
@@ -142,11 +145,12 @@ public:
 			const SpatialIndex *index, uint64 htmId,
 			float r0, float g0, float b0,
 			float r1, float g1, float b1,
-			float r2, float g2, float b2
+			float r2, float g2, float b2,
+			float a=-1., float scale=1.
 			);
 
 	void addArcFromIndexAndId(
-			SpatialIndex *index, uint64 htmId,
+			const SpatialIndex *index, uint64 htmId,
 			float r, float g, float b, float a=-1., float scale=1.0);
 	void addArcFromIndexAndName(
 			SpatialIndex *index, const char* htmIdName,
@@ -181,13 +185,21 @@ public:
 
 	void addHstmRange(
 			HstmRange *range,
-			float r, float g, float b, float a=-1., float scale=1.0
-			);
+			float r, float g, float b, float a=-1., float scale=1.0, bool arcFlag = true
+	);
+
+	void addHstmRangeIDs(
+			HstmRange *range,
+			float r, float g, float b, float a, float size, float scale, float dScale,
+			bool arcFlag = true,
+			bool edgeFlag = false
+
+	);
 
 	void addHstmRangeFaces(
 			HstmRange *range,
 			float r, float g, float b, float a=-1., float scale=1.0
-			);
+	);
 
 	void addCircleFacet(
 			SpatialVector center,

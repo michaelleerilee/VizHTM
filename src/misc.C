@@ -9,6 +9,7 @@
 #include "misc.h"
 #include <iomanip>
 #include <sstream>
+#include <algorithm>
 
 #include <ctime>
 
@@ -49,4 +50,14 @@ std::string formattedDateTime(std::string format) {
 	std::tm* timeinfo = std::gmtime(&rawtime);
 	std::strftime(buffer,80,format.c_str(),timeinfo);
 	return std::string(buffer);
+}
+
+void colorScheme1_rgb(float data, float lo, float hi, float& r, float& g, float& b) {
+	double dr = hi-lo;
+	double d0 = (data-lo)/dr;
+	double d0_ = std::max(0.0,d0);
+	double d =   std::min(1.0,d0_);
+	r = 1.0 - d;
+	g = -4.0*(d)*(d-1.0);
+	b = d;
 }
