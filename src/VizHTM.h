@@ -45,6 +45,11 @@ public:
 	void addEdgeAndSphere(SpatialVector x0, SpatialVector x1, float r, float g, float b,
 						  SpatialVector s0, float rs, float gs, float bs, float radius);
 
+	void addEdge2(
+			const SpatialVector x0, float r0, float g0, float b0, float a0, float scale0,
+			const SpatialVector x1, float r1, float g1, float b1, float a1, float scale1
+			);
+
 	void addEdgeColor(float r, float g, float b, float a=-1.);
 	void addFaceColor(float r, float g, float b, float a=-1.);
 	void addCoordinate(float x, float y, float z);
@@ -166,6 +171,13 @@ public:
 			float r, float g, float b, float a=-1., int steps=-1
 			);
 
+	void addCellFromIndexAndId(
+			const SpatialIndex *index, uint64 htmId,
+			float r0, float g0, float b0, float a0, float zScale0,
+			float r1, float g1, float b1, float a1, float zScale1,
+			float hScale
+			);
+
 	void addConstraint(SpatialVector a, float64 d, float r, float g, float b);
 	void addConstraint(SpatialConstraint c, float r, float g, float b);
 
@@ -177,15 +189,24 @@ public:
 
 	void addHTMRange(
 			const SpatialIndex *index, HtmRange *range,
-			float r, float g, float b, float a=-1., float scale=1.0);
+			float r, float g, float b, float a=-1., float scale=1.0,
+			bool arcFlag=true
+			);
 	void addHTMRange(
 			HtmRange *range,
-			float r, float g, float b, float a=-1., float scale=1.0
+			float r, float g, float b, float a=-1., float scale=1.0,
+			bool arcFlag=true
 			);
 
 	void addHstmRange(
 			HstmRange *range,
 			float r, float g, float b, float a=-1., float scale=1.0, bool arcFlag = true
+	);
+	void addCellsFromHstmRange(
+			HstmRange *range,
+			float r0, float g0, float b0, float a0, float scale0,
+			float r1, float g1, float b1, float a1, float scale1,
+			float hScale
 	);
 
 	void addHstmRangeIDs(
@@ -204,12 +225,12 @@ public:
 	void addCircleFacet(
 			SpatialVector center,
 			float64 halfSubtendedAngleInRadians,
-			float r, float g, float b, float a=-1., float scale=1);
+			float r, float g, float b, float a=-1., float scale=1.0);
 
 	void addCircleEdges(
 			SpatialVector center,
 			float64 halfSubtendedAngleInRadians,
-			float r, float g, float b, float a=-1.);
+			float r, float g, float b, float a=-1., float scale=1.0);
 
 	void addShapeFile(
 			string shapeFile, float r, float g, float b, bool verbose = false,

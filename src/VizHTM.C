@@ -673,6 +673,29 @@ void VizHTM::addEdge(
 	//cout << " addEdge: done; " << flush;
 }
 
+void VizHTM::addEdge2(
+		const SpatialVector x0, float r0, float g0, float b0, float a0, float scale0,
+		const SpatialVector x1, float r1, float g1, float b1, float a1, float scale1
+		) {
+
+	// float scale_ = (scale<0) ? 1.0 : scale;
+
+	//cout << " addEdge: start, " << flush;
+	int colorBase = nEdgeColors;
+	addEdgeColor(r0,g0,b0,a0);
+	addEdgeColor(r1,g1,b1,a1);
+	addEdgeVertexColorIndices(colorBase,colorBase+1);
+
+	int coordBase = nCoordinates;
+//	SpatialVector a = x0*scale;
+//	SpatialVector b = x1*scale;
+//	addCoordinate(a); addCoordinate(b);
+	addCoordinate(x0*scale0);
+	addCoordinate(x1*scale1);
+	addEdgeIndices(coordBase,coordBase+1);
+	//cout << " addEdge: done; " << flush;
+}
+
 void VizHTM::addEdgeProjections(SpatialVector x1) {
 	SpatialVector o = SpatialVector(0.,0.,0.);
 	SpatialVector p = SpatialVector(x1.x(),x1.y(),0.);
@@ -951,6 +974,46 @@ void VizHTM::addArcFromIndexAndId(
 	addArc(v2,v0,r,g,b,a,scale);
 }
 
+void VizHTM::addCellFromIndexAndId(
+		const SpatialIndex *index, uint64 htmId,
+		float r0, float g0, float b0, float a0, float zScale0,
+		float r1, float g1, float b1, float a1, float zScale1,
+		float hScale
+		) {
+	SpatialVector v0, v1, v2, vc;
+	uint64 nodeIndex = index->nodeIndexFromId(htmId);
+	index->nodeVertex(nodeIndex,v0,v1,v2);
+
+	vc = v0 + v1 + v2; vc.normalize();
+	v0 = vc * hScale + v0 * ( 1 - hScale ); v0.normalize();
+	v1 = vc * hScale + v1 * ( 1 - hScale ); v1.normalize();
+	v2 = vc * hScale + v2 * ( 1 - hScale ); v2.normalize();
+
+	addArc(v0,v1,r0,g0,b0,a0,zScale0);
+	addArc(v1,v2,r0,g0,b0,a0,zScale0);
+	addArc(v2,v0,r0,g0,b0,a0,zScale0);
+
+	addArc(v0,v1,r1,g1,b1,a1,zScale1);
+	addArc(v1,v2,r1,g1,b1,a1,zScale1);
+	addArc(v2,v0,r1,g1,b1,a1,zScale1);
+
+	addEdge2(
+			v0,r0,g0,b0,a0,zScale0,
+			v0,r1,g1,b1,a1,zScale1
+			);
+
+	addEdge2(
+			v1,r0,g0,b0,a0,zScale0,
+			v1,r1,g1,b1,a1,zScale1
+			);
+
+	addEdge2(
+			v2,r0,g0,b0,a0,zScale0,
+			v2,r1,g1,b1,a1,zScale1
+			);
+
+}
+
 void VizHTM::addArcFromIndexAndName(
 		SpatialIndex *index, const char* htmIdName,
 		float r, float g, float b, float a
@@ -998,11 +1061,12 @@ void VizHTM::addArcsFromLatLonDegrees(
 
 void VizHTM::addHTMRange(
 		const SpatialIndex *index, HtmRange *range,
-		float r, float g, float b, float a, float scale) {
+		float r, float g, float b, float a, float scale,
+		bool arcFlag ) {
 	if(!range) return;
 	range->reset();
 	Key lo=0, hi=0;
-//	cout << 1100 << flush;
+//	cout << 1100 << "; " << flush;
 	int indexp = range->getNext(lo,hi);
 	if(indexp) {
 		int loLevel = levelOfId(lo);
@@ -1016,8 +1080,13 @@ void VizHTM::addHTMRange(
 //			cout << loLevel << ", " << hiLevel << "; "
 //					<< lo << ", " << hi << "; " << flush;
 			for(uint64 numericId=lo; numericId<=hi; numericId++) {
-//				addEdgesFromIndexAndId(index,numericId,r,g,b,a,scale);
-				addArcFromIndexAndId(index,numericId,r,g,b,a,scale);
+				if(arcFlag){
+//					cout << "arc; " << flush;
+					addArcFromIndexAndId(index,numericId,r,g,b,a,scale);
+				}else{
+//					cout << "edge; " << flush;
+					addEdgesFromIndexAndId(index,numericId,r,g,b,a,scale);
+				}
 			}
 //			cout << 110 << endl << flush;
 		} while (range->getNext(lo,hi));
@@ -1028,7 +1097,7 @@ void VizHTM::addHTMRange(
 
 void VizHTM::addHTMRange(
 		HtmRange *range,
-		float r, float g, float b, float a, float scale) {
+		float r, float g, float b, float a, float scale, bool arcFlag) {
 	if(!range) return;
 	range->reset();
 	Key lo=0, hi=0;
@@ -1046,8 +1115,11 @@ void VizHTM::addHTMRange(
 				index.setMaxlevel(levelOfId(lo));
 			}
 			for(uint numericId=lo; numericId<=hi; numericId++) {
-				addEdgesFromIndexAndId(&index,numericId,r,g,b,a,scale);
-//				addArcFromIndexAndId(&index,numericId,r,g,b,a,scale);
+				if(arcFlag) {
+					addArcFromIndexAndId(&index,numericId,r,g,b,a,scale);
+				}else{
+					addEdgesFromIndexAndId(&index,numericId,r,g,b,a,scale);
+				}
 			}
 		} while (range->getNext(lo,hi));
 	}
@@ -1104,6 +1176,64 @@ void VizHTM::addHstmRange(
 	}
 	delete index;
 }
+
+void VizHTM::addCellsFromHstmRange(
+		HstmRange *range,
+		float r0, float g0, float b0, float a0, float scale0,
+		float r1, float g1, float b1, float a1, float scale1,
+		float hScale
+) {
+
+	int indexLevel = 5, level;
+	EmbeddedLevelNameEncoding leftJustified;
+	SpatialIndex *index = new SpatialIndex(indexLevel);
+
+	KeyPair kp; int indexp;
+	range->reset();
+	while((indexp = range->getNext(kp)) > 0) {
+		leftJustified.setId(kp.lo);
+		level = leftJustified.getLevel();
+		string loName = leftJustified.getName();
+		uint64 termId = leftJustified.idFromTerminatorAndLevel_NoDepthBit(kp.hi,level);
+		leftJustified.setId(termId);
+		string hiName = leftJustified.getName();
+//		cout << 100 << " lo,hi name: " << loName << " " << hiName << endl << flush;
+//		cout << 101 << " level:      " << level << endl << flush;
+//		cout << 102 << " kp:         " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
+		if( level != indexLevel ) {
+			delete index;
+			indexLevel = level;
+			index = new SpatialIndex(indexLevel);
+		}
+		uint64 id0 = index->idByName(loName.c_str());
+		uint64 id1 = index->idByName(hiName.c_str());
+		for(uint64 id=id0; id<=id1; id++) {
+//			if(arcFlag) {
+			addCellFromIndexAndId(
+					index,
+					id,
+					r0, g0, b0, a0, scale0,
+					r1, g1, b1, a1, scale1,
+					hScale
+			);
+//			} else {
+//				addEdgesFromIndexAndId(
+//						index,
+//						id,
+//						r, g, b,
+//						a,
+//						scale
+//				);
+//			}
+		}
+	}
+	delete index;
+}
+
+
+
+
+
 
 void VizHTM::addHstmRangeIDs(
 		HstmRange *range,
@@ -1370,7 +1500,7 @@ void VizHTM::addCircleFacet(
 void VizHTM::addCircleEdges(
 		SpatialVector center,
 		float64 halfSubtendedAngleInRadians,
-		float r, float g, float b, float a) {
+		float r, float g, float b, float a, float scale) {
 
 	// transparency a is not implemented yet.
 
@@ -1394,10 +1524,10 @@ void VizHTM::addCircleEdges(
 	for( iStep = 0; iStep < steps; iStep ++) {
 		theta = iStep*dTheta;
 		x2 = center + ( c1 * cos(theta) + c2 * sin(theta) ) * alpha;
-		addEdge(x1,x2,r,g,b);
+		addEdge(x1,x2,r,g,b,a,scale);
 		x1=x2;
 	}
-	addEdge(x1,x0,r,g,b);
+	addEdge(x1,x0,r,g,b,a,scale);
 
 }
 
@@ -1409,7 +1539,8 @@ void VizHTM::addShapeFile(
 
 	SHPHandle hSHP = SHPOpen(shapeFile.c_str(),"rb");
 
-	if(hSHP>0) {
+//	if(hSHP>0) {
+	if(hSHP) {
 		cout << "file: " << shapeFile << " found." << endl << flush;
 
 		int nShapeType, nEntities;

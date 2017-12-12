@@ -61,3 +61,13 @@ void colorScheme1_rgb(float data, float lo, float hi, float& r, float& g, float&
 	g = -4.0*(d)*(d-1.0);
 	b = d;
 }
+
+void colorScheme2_rgb(float data, float lo, float hi, float& r, float& g, float& b) {
+	double dr = hi-lo;
+	double d0 = (data-lo)/dr;
+	double d0_ = std::max(0.0,d0);
+	double d =   std::min(1.0,d0_);
+	r = d;
+	g = -4.0*(d)*(d-1.0);
+	b = 1.0-d;
+}

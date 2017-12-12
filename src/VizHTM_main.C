@@ -220,8 +220,9 @@ void testConvexHtmRangeIntersection(VizHTM * viz, RangeConvex convex, int htmIdL
 //						<< " nI: " << nodeIndex
 //						<< " x: " << x.x() << " " << x.y() << " " << x.z();
 //					}
-					char *str = new char[256];
-					sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
+					char *str = new char[256]; char tmpName[64];
+					index->nameById(numericId,tmpName);
+					sprintf(str,"%s\nid: %llx\nix: %llu\n",tmpName,numericId,nodeIndex);
 					viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
 					viz->addEdge(x,x_,0.1,0.1,0.1);
 				}
@@ -1787,14 +1788,32 @@ void testLevelChunk(VizHTM *viz) {
 }
 
 
-void plotHTMInterval(VizHTM *viz, SpatialIndex index, htmRange interval) {
+void plotHTMInterval(VizHTM *viz, SpatialIndex index, htmRange interval, bool annotate) {
 	size_t htmIdLevel = index.getMaxlevel();
 	Key lo = interval.lo;
 	Key hi = interval.hi;
 	SpatialVector x1,x2,x3;
+
+//	cout << "level of interval: " << levelOfId(lo) << ", maxlevel: " << htmIdLevel << endl << flush;
+
 	KeyPair adjustedRange = HTMRangeAtLevelFromHTMRange(htmIdLevel,lo,hi);
+
+//	cout << 200 << endl << flush;
+
 	lo = adjustedRange.lo;
 	hi = adjustedRange.hi;
+
+	HtmRange range;
+	range.addRange(lo,hi);
+
+//	cout << 210 << endl << flush;
+
+	viz->addHTMRange(
+			&index, &range,
+			0.8, 1.0, 0.7, -1.0, 1.0,
+			true);
+
+//	cout << "plotHTMInterval-100" << endl << flush;
 
 	for(uint64 numericId=lo; numericId<=hi;numericId++) {
 		uint64 nodeIndex = index.nodeIndexFromId(numericId);
@@ -1832,7 +1851,7 @@ void plotHTMInterval(VizHTM *viz, SpatialIndex index, htmRange interval) {
 				//					printf("id: %llx ix: %llu",numericId,nodeIndex);
 				//					cout << endl << flush;
 
-				if(true){
+				if(annotate){
 					float size = pow(0.5,htmIdLevel+3);
 					float r = 0.4, g = 0.4, b = 0.6;
 					SpatialVector x = 3.*x1+x2+x3; x.normalize(); x *= 1.0+1.0e-6;
@@ -1843,7 +1862,9 @@ void plotHTMInterval(VizHTM *viz, SpatialIndex index, htmRange interval) {
 //						<< " x: " << x.x() << " " << x.y() << " " << x.z();
 //					}
 					char *str = new char[256];
-					sprintf(str,"id: %llx\nix: %llu\n",numericId,nodeIndex);
+					char tmpName[64];
+					index.nameById(numericId,tmpName);
+					sprintf(str,"%s\nid: %llx\nix: %llu\n",tmpName,numericId,nodeIndex);
 					viz->addAnnotation((new SpatialVector(x)),str,size,r,g,b);
 					viz->addEdge(x,x_,0.5,0.5,0.9);
 				}
@@ -1852,8 +1873,9 @@ void plotHTMInterval(VizHTM *viz, SpatialIndex index, htmRange interval) {
 	}
 }
 
-void testHTMRange(VizHTM *viz, int htmIdLevel, const char *n0, const char *n1) {
+void testHTMRange(VizHTM *viz, int htmIdLevel, const char *n0, const char *n1, bool annotation) {
 	int buildLevel = 5;
+//	if(buildLevel>htmIdLevel) buildLevel=htmIdLevel;
 	SpatialIndex *index = new SpatialIndex(htmIdLevel,buildLevel);
 	BitShiftNameEncoding name0 = BitShiftNameEncoding(n0);
 	BitShiftNameEncoding name1 = BitShiftNameEncoding(n1);
@@ -1862,7 +1884,12 @@ void testHTMRange(VizHTM *viz, int htmIdLevel, const char *n0, const char *n1) {
 	interval.lo = name0.getId();
 	interval.hi = name1.getId();
 
-	plotHTMInterval(viz,*index,interval);
+	if(false){
+		cout << "n0: " << n0 << ", name0: " << name0.getName() << ", lo: " << interval.lo << endl;
+		cout << "n1: " << n1 << ", name1: " << name1.getName() << ", hi: " << interval.hi << endl;
+	}
+
+	plotHTMInterval(viz,*index,interval,annotation);
 }
 
 void testTwoRectangle(VizHTM *viz, int htmIdLevel) {
@@ -2221,7 +2248,7 @@ void testGeorgia(VizHTM* viz, int  level, int hullSteps,
 		for( int j=0; j<htmRangeVector.size(); j++) {
 			htmRange hr = htmRangeVector[j];
 			cout << " (j=" << j << " " << hr.lo << " " << hr.hi << " ) ";
-			plotHTMInterval(viz,htm->index(),hr);
+			plotHTMInterval(viz,htm->index(),hr,true);
 		}
 		cout << endl << flush;
 	} else {
@@ -4755,24 +4782,115 @@ void plotCsv(VizHTM *viz) {
 		ifstream csvIn;
 		csvIn.open(fileName);
 		int uniqueHTMs = 0;
-		for(string line; getline(csvIn, line); ) {
-			int64 iHtm;
-			int64 iCell;
-			float64 data;
-			sscanf(line.c_str(),"%llu,%llu,%lf",&iHtm,&iCell,&data);
-//			cout << "... " << iHtm << " " << iCell << " " << data << " "; // << endl << flush;
+
+		cout << "fileName: " << fileName << endl << flush;
+
+		int64 iHtm;
+		int64 iCell;
+		int64 id_line;
+		float64 data;
+
+		string nextline;
+		EmbeddedLevelNameEncoding leftJustified_next;
+		BitShiftNameEncoding      rightJustified_next;
+		int64 id_next;
+		bool line_next_flag = false; // next_line not yet read
+		int64 iHtm_next;
+		int64 iCell_next;
+		float64 data_next;
+		string line_next;
+
+		for(string line; ( getline(csvIn, line) ) || line_next_flag; ) {
+			// for(string line; getline(csvIn, line); ) {
+
+			float64 data_max = -9999;
+
+			if( line_next_flag ) { // next_line data already read?
+				iHtm  = iHtm_next;
+				iCell = iCell_next;
+				data  = data_next;
+				line_next = line; // yes, just swap in data and postpone scanning line to below.
+			} else {
+				sscanf(line.c_str(),"%llu,%llu,%lf",&iHtm,&iCell,&data);
+			}
+			if( data > data_max ) { data_max = data; }
 			leftJustified.setIdFromSciDBLeftJustifiedFormat(iHtm);
 			rightJustified.setId(leftJustified.rightJustifiedId());
-//			cout << "+ " << endl << flush;
-//			cout << "+ " << leftJustified.getName() << endl << flush;
-//			cout << "- " << rightJustified.getName() << flush;
+			id_line = rightJustified.getId();
+
+//			if (data > 0) {
+//				cout << "... x" << hex << id_next << " x" << iHtm
+//						<< " " << dec << iHtm << " " << iCell << " " << data
+//						<< " " << data_max
+//						<< endl << flush;
+//			}
+
+			bool get_next_flag  = false;
+			if( csvIn ) { // Is there a next available? If not -- move along.
+				do {
+					get_next_flag = false;
+					if( !line_next_flag ) { // If we didn't swap an old line in, then get a new line.
+						if( getline(csvIn, line_next) ) {
+							line_next_flag = true;
+						} else {
+							line_next_flag = false;
+						}
+					}
+					if ( line_next_flag ) { // If we got a new line, the scan it and compare it with the current line.
+						sscanf(line_next.c_str(),"%llu,%llu,%lf",&iHtm_next,&iCell_next,&data_next);
+
+
+						leftJustified_next.setIdFromSciDBLeftJustifiedFormat(iHtm_next);
+						rightJustified_next.setId(leftJustified_next.rightJustifiedId());
+						id_next = rightJustified_next.getId();
+
+//						if (data_next > 0) {
+//							cout << "n.. x" << hex << id_next << " x" << iHtm_next
+//									<< " " << dec << iHtm_next << " " << iCell_next
+//									<< " " << data_next
+//									<< " " << data_max
+//									<< endl << flush;
+//						}
+
+						if( id_line == id_next ) { // Redundant, okay, take it's stat to aggregate.
+							if( data_next > data_max ) { data_max = data_next; }
+							line_next_flag = false; // A redundant triangle, don't graph, but get data and iterate.
+							get_next_flag = true; // Need to check the next one.
+						}
+					}
+				} while ( get_next_flag );
+			} else {
+				line_next_flag = false;
+			}
+				// At this point next_line is either null or different from line.
+
+
+				//			cout << "... x" << hex << iHtm << " " << dec << iHtm << " " << iCell << " " << data << " "; // << endl << flush;
+				//			cout << "+ " << endl << flush;
+				//			cout << "+ " << leftJustified.getName() << endl << flush;
+				//			cout << "- " << rightJustified.getName() << flush;
+
+			data = data_max;
+
 			int level = leftJustified.getLevel();
 
-//			cout << " l= " << level << endl << flush;
+			//			cout << " l= " << level << endl << flush;
 			SpatialIndex index(level,5);
 
-			if(idLast != rightJustified.getId()) {
-				idLast = rightJustified.getId();
+			//			cout << "right-justified:idLast,nextId: x" << hex << idLast << ", x" << rightJustified.getId() << dec
+			//					<< ", l=" << rightJustified.getLevel()
+			//					<< endl << flush;
+
+			// Currently we just skip over data that has the same right ID.
+			// TODO handle HTM ID collisions better.
+
+
+// TODO make into a function, inject dependency.
+			// Do line
+			if(true) { // superseded by above logic
+				// if(idLast != rightJustified.getId()) {
+				// idLast = rightJustified.getId(); // rightJustified now contains the info from "next", via do-while above
+				idLast = id_line;
 				++uniqueHTMs;
 				HtmRange *range = new HtmRange;
 				range->purge();
@@ -4825,9 +4943,9 @@ void plotCsv(VizHTM *viz) {
 					float r2, g2, b2;
 
 					range->reset(); range->getNext(lo,hi);
-					colorScheme1_rgb(data,csvDataLo,csvDataHi,r0,g0,b0);
-					colorScheme1_rgb(data,csvDataLo,csvDataHi,r1,g1,b1);
-					colorScheme1_rgb(data,csvDataLo,csvDataHi,r2,g2,b2);
+					colorScheme2_rgb(data,csvDataLo,csvDataHi,r0,g0,b0);
+					colorScheme2_rgb(data,csvDataLo,csvDataHi,r1,g1,b1);
+					colorScheme2_rgb(data,csvDataLo,csvDataHi,r2,g2,b2);
 					if(csvLevel==-1) {
 						viz->addFaceFromIndexAndId(
 								&index,
@@ -4851,6 +4969,9 @@ void plotCsv(VizHTM *viz) {
 
 
 			}
+
+
+
 		}
 		if(csvLevelIter != csvLevels.end()) {
 			++csvLevelIter;
@@ -5277,6 +5398,38 @@ int main(int argc, char *argv[]) {
 		testHTMRange(viz,level,"N31","N31");
 	}
 
+	// bug fixing 2017-1212
+	if(false) testNearestNeighbors(viz);
+
+	// bug fixing 2017-1212
+	if(false) {
+		int level = 1;
+		viz->lineWidth = 3;
+
+		if(true){
+			level = 0;
+			testHTMRange(viz,level,"S0","N3",true);
+		}
+
+		if(false){
+			// Identifying the problem.
+			level = 0;
+			testHTMRange(viz,level,"N0","N3",true);
+			testHTMRange(viz,level,"S3","S3",true); // huh? Need to take off IOFFSET+1. Throws other parts of NodeIndex in doubt.
+		}
+
+		level = 0;
+
+//		testHTMRange(viz,level,"N0","N3",false);
+//		testHTMRange(viz,level,"N0","N0",false);
+		//		testHTMRange(viz,level,"N3","N3",false);
+//		testHTMRange(viz,level,"S0","S0",false);
+
+//		testHTMRange(viz,level,"S1","S1",false);
+
+
+	}
+
 	if(false) {
 		int level = 5;
 		testHTMRange(viz,level,"N01","N01");
@@ -5344,7 +5497,7 @@ int main(int argc, char *argv[]) {
 
 	if(false) testDelaunay(viz);
 
-	if(false) testNearestNeighbors(viz);
+
 
 
 //	cout << "a8000" << endl << flush;
@@ -5399,6 +5552,7 @@ int main(int argc, char *argv[]) {
 
 	const int width = 2000, height = 1400;
 
+
 	QWidget *window = SoQt::init(argv[0]);
 	window->setMinimumSize(width,height);
 	if (window == NULL) exit(1);
@@ -5440,7 +5594,7 @@ int main(int argc, char *argv[]) {
 		offscreen->saveImage(1);
 	}
 
-	cout << 10200 << endl << flush;
+//	cout << 10200 << endl << flush;
 
 	// Examiner viewer
 	if(examiner_viz){

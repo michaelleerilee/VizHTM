@@ -13,6 +13,9 @@ void testAnEdge(VizHTM *viz);
 void testConstraint(VizHTM *viz, int htmIdDepth);
 void testConstraintAD(VizHTM *viz, SpatialVector a, float64 d);
 void testConvexHtmRangeIntersection(VizHTM *viz, RangeConvex convex, int htmIdDepth);
+
+void testHTMRange(VizHTM *viz, int htmIdLevel, const char *n0, const char *n1, bool annotation=true);
+
 void testText1(VizHTM *viz,SpatialVector a);
 void testShowEdgeProjections(VizHTM *viz, SpatialVector a, float64 d);
 void testLatLonSpiral(VizHTM *viz);
