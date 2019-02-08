@@ -23,8 +23,8 @@
 // TODO eliminate NARRAY_ also consider changing storage method for graphic elements.
 // 64M 67108864
 //  1M  1048576
-//#define NARRAY_ 1048576
-#define NARRAY_ 1000000000
+#define NARRAY_ 1048576
+// #define NARRAY_ 1000000000
 //#define NARRAY_ 600000000
 //#define NARRAY_ 200000000
 

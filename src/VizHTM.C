@@ -611,7 +611,7 @@ SoSeparator* VizHTM::makeRoot() {
 		root->addChild(texts);
 	}
 
-	root->unrefNoDelete();
+	// root->unrefNoDelete();
 	return root;
 }
 
