@@ -28,6 +28,9 @@
 //#define NARRAY_ 600000000
 //#define NARRAY_ 200000000
 
+typedef std::array<float,3>  Array3f;
+typedef std::vector<Array3f> VectorArray3f;
+
 class VizHTM {
 
 	/**
@@ -36,7 +39,6 @@ class VizHTM {
 
 public:
 	VizHTM(int nArray);
-
 
 	void addEdge(
 			const SpatialVector x0,
@@ -248,7 +250,9 @@ public:
 
 	int 	nFaces;
 	int   	nFaceColors;
-	float 	(*faceColors)[3]; // [nArray][3]
+	// float 	(*faceColors)[3]; // [nArray][3]
+	VectorArray3f faceColors;
+
 	float   (*faceTransparencies);
 	bool    faceTransparency = false;
 	int		nFaceVertexColorIndices;

@@ -63,7 +63,7 @@ VizHTM::VizHTM(int nArray) : nArray(nArray) {
 
 	nSpheres                = 0;
 
-	faceColors 	            = new float[nArray][3];
+	// faceColors 	            = new float[nArray][3];
 	faceTransparencies      = new float[nArray];
 	faceVertexColorIndices  = new int[nArray];
 
@@ -84,6 +84,7 @@ VizHTM::VizHTM(int nArray) : nArray(nArray) {
 	nAnnotations            = 0;
 	annotations             = new annotation[nArray];
 
+
 }
 
 void VizHTM::addEdgeColor(float r, float g, float b, float a){
@@ -100,9 +101,14 @@ void VizHTM::addEdgeColor(float r, float g, float b, float a){
 }
 
 void VizHTM::addFaceColor(float r, float g, float b,float a){
+	/*
 	faceColors[nFaceColors][0] = r;
 	faceColors[nFaceColors][1] = g;
 	faceColors[nFaceColors][2] = b;
+	*/
+	Array3f color; color[0] = r; color[1] = g; color[2] = b;
+	faceColors.push_back(color);
+
 	if(a == -1.) {
 		faceTransparencies[nFaceColors] = 0.; // The default case.
 	} else {
@@ -522,7 +528,8 @@ SoSeparator* VizHTM::makeRoot() {
 	faceNode->addChild(faceMaterialBinding);
 
 	SoMaterial *faceMaterials = new SoMaterial;
-	faceMaterials->diffuseColor.setValues(0,nFaceColors,faceColors);
+	// faceMaterials->diffuseColor.setValues(0,nFaceColors,faceColors);
+	faceMaterials->diffuseColor.setValues(0,nFaceColors,(SbColor*)&faceColors[0]);
 	if(faceTransparency) {
 		faceMaterials->transparency.setValues(0,nFaceColors,faceTransparencies);
 	}
