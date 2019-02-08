@@ -30,6 +30,17 @@
 
 typedef std::array<float,3>  Array3f;
 typedef std::vector<Array3f> VectorArray3f;
+// int, float
+typedef std::vector<int>   Vector_i;
+typedef std::vector<float> Vector_f;
+
+struct annotation {
+	SpatialVector *v;
+	const char *text;
+	float size;
+	float r,g,b;
+};
+typedef std::vector<annotation> Vector_annotation;
 
 class VizHTM {
 
@@ -253,6 +264,16 @@ public:
 	// float 	(*faceColors)[3]; // [nArray][3]
 	VectorArray3f faceColors;
 
+	// colors -> SbColor, coordinates -> SoCoordinate3
+	// VectorArray3f       edgeColors, fCoordinates, sphereColors;
+
+	// xIndices -> SoMFInt32
+	// Vector_i            faceVertexColorIndices, edgeVertexColorIndices, edgeIndices, faceIndices;
+
+	// SoSFFloat
+	// Vector_f            fRadii;
+	// Vector_annotations  annotations;
+
 	float   (*faceTransparencies);
 	bool    faceTransparency = false;
 	int		nFaceVertexColorIndices;
@@ -281,13 +302,6 @@ public:
 
 	float   lineWidth = -1;
 	float   sphereComplexity = -1;
-
-	struct annotation {
-		SpatialVector *v;
-		const char *text;
-		float size;
-		float r,g,b;
-	};
 
 	int        nAnnotations;
 	annotation *annotations;
