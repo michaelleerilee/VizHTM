@@ -32,6 +32,8 @@ public:
 	void init();
 	int initImageDirectory(const std::string basePath="tmp/", const uint fieldWidth=3);
 	QImage getImage();
+	void writeFile(const uint item);
+	void writeFileRGB(const uint item);
 	void saveImage(const uint item);
 
 	std::string base;

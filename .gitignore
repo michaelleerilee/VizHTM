@@ -1,4 +1,5 @@
 /Debug-SoQt-HSTM/
+/.settings
 /.cproject
 /.project
 /.DS_Store
@@ -6,3 +7,5 @@
 /tmp/
 /Debug/
 /testSTARE/
+/VizHTM_main/
+/build/

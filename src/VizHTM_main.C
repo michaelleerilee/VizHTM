@@ -3044,7 +3044,8 @@ bool trmm_nmq_HTMRContains_viz       = false;
 int nmqLatStart = 1900; int nmqLatEnd = 2450;
 int nmqLonStart = 4450; int nmqLonEnd = 5550;
 
-bool offscreen_viz                   = false;
+// bool offscreen_viz                   = false;
+bool offscreen_viz                   = true;
 bool examiner_viz                    = false;
 
 bool addFiduciaryTriangles           = false;

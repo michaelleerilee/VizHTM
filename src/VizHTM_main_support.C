@@ -5047,7 +5047,6 @@ void setLookFrom(SoSeparator *root, SoSeparator *content, SbViewportRegion *vpRe
 }
 
 
-
 void loadScene(SoSeparator *root, SoSeparator *content, SbViewportRegion *vpRegion, SpatialVector *cam_vizCenter){
 
     SoDirectionalLight * light = new SoDirectionalLight;

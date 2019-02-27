@@ -38,6 +38,7 @@
 #include <Inventor/Qt/SoQt.h>
 #include <Inventor/Qt/viewers/SoQtExaminerViewer.h>
 //#include <Inventor/Qt/viewers/SoQtFlyViewer.h>
+// #include <Inventor/Qt/Ui.h>
 
 #include <Inventor/nodes/SoCamera.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
@@ -73,7 +74,8 @@ using namespace std;
 void plotBlockingSphere(VizHTM* viz, float r, float g, float b, float radius);
 // { viz->addSphere(SpatialVector(0.,0.,0.),r,g,b,radius); }
 
-SpatialVector *cam_vizCenter = VectorFromLatLonDegrees(33.63,-76.575);
+// SpatialVector *cam_vizCenter = VectorFromLatLonDegrees(33.63,-76.575);
+// SpatialVector *cam_vizCenter = VectorFromLatLonDegrees(90.0, 0.0);
 // float offscreenPerscamPositionScale = 1.1;
 // float examinerCameraPositionScale   = 1.17;
 
@@ -132,9 +134,8 @@ void setLookFrom(SoSeparator *root, SoSeparator *content, SbViewportRegion *vpRe
 }
 */
 
-
-void loadScene(SoSeparator *root, SoSeparator *content, SbViewportRegion *vpRegion, SpatialVector *cam_vizCEnter);
 /*
+void loadScene(SoSeparator *root, SoSeparator *content, SbViewportRegion *vpRegion, SpatialVector *cam_vizCEnter);
 {
 
     SoDirectionalLight * light = new SoDirectionalLight;
@@ -180,9 +181,90 @@ void loadScene(SoSeparator *root, SoSeparator *content, SbViewportRegion *vpRegi
 //    perscam->viewAll(root, *vpRegion);
 }
 */
+void loadScene(SoSeparator *root, SoSeparator *content, SbViewportRegion *vpRegion, SpatialVector *cam_vizCenter, float offscreenPerscamPositionScale) {
 
+    SoDirectionalLight * light = new SoDirectionalLight;
+
+    SbRotation cameraRotation = SbRotation::identity();
+
+    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
+    camera->orientation.setValue(cameraRotation);
+    camera->nearDistance = 0.0001;
+
+    //    SoCamera *camera = viewer->getCamera();
+    //    SoCamera *camera = perscam;
+    SoSFVec3f position;
+    //		SpatialVector *p = VectorFromLatLonDegrees(33.0,-80.25); // Centers on gridded data
+    //		SpatialVector *p = VectorFromLatLonDegrees(33.5,-76.75); // Centers on storm intersection
+    //		SpatialVector *p = VectorFromLatLonDegrees(33.63,-76.575); // Centers on storm intersection
+    SpatialVector p = (*cam_vizCenter);
+    p = p * offscreenPerscamPositionScale;
+    //    p = p * 1.05; // Works for perscam
+//    p = p * 1.1; // Works for perscam
+//    p = p * 1.17; // Works for perscam
+//    p = p * 1.25; // Nice top level view
+//    p = p * 1.5; // Nice top level view
+//    cout << "p: " << p << endl << flush;
+    position.setValue(p.x(),p.y(),p.z());
+    camera->position = position;
+//    ((SoPerspectiveCamera*)camera)->position = position;
+    //		((SoOrthographicCamera*)camera)->position = position;
+    camera->pointAt(SbVec3f(0.,0.,0.));
+    //		SoSFRotation rotation;
+    //		p->normalize();
+    //		rotation.setValue(SbVec3f(p->x(),p->y(),p->z()),0.0);
+    //		camera->orientation = rotation;
+    //
+    root->addChild(light);
+    root->addChild(camera); // perscam
+
+//    SoCube * cube = new SoCube;
+//    root->addChild(cube);
+
+    root->addChild(content);
+    // make sure that the cube is visible
+//    perscam->viewAll(root, *vpRegion);
+}
+
+void loadTestScene
+	(SoSeparator *root, SbViewportRegion *vpRegion) {
+    // Init Coin
+    // SoDB::init();
+    // The root node
+    // root = new SoSeparator;
+    // root->ref();
+
+	// cout << 100 << endl << flush;
+    // Add the light _before_ you add the camera
+    SoDirectionalLight * light = new SoDirectionalLight;
+    // cout << 110 << endl << flush;
+    root->addChild(light);
+
+    // cout << 200 << endl << flush;
+    vpRegion->setViewportPixels(0, 0, 450, 450);
+
+    // cout << 300 << endl;
+    SoPerspectiveCamera *perscam = new SoPerspectiveCamera();
+    root->addChild(perscam);
+
+    // cout << 400 << endl;
+    SbRotation cameraRotation = SbRotation::identity();
+    cameraRotation *= SbRotation(SbVec3f(0, 1, 0), 0.4f);
+    perscam->orientation = cameraRotation;
+
+    // cout << 500 << endl;
+    SoCube * cube = new SoCube;
+    root->addChild(cube);
+
+    // cout << 600 << endl;
+    // make sure that the cube is visible
+    perscam->viewAll(root, *vpRegion);
+
+}
 
 int main(int argc, char *argv[]) {
+
+	QWidget *window = SoQt::init(argv[0]);
 
 	const char* mainName = "testSTARE";
 
@@ -191,7 +273,7 @@ int main(int argc, char *argv[]) {
 	cout << "allocated." << endl << flush;
 
 	bool
-		examiner_viz           = true,
+		examiner_viz           = false,
 		blockingSphere_flag    = true,
 		testTenDegreeGrid_flag = true,
 		testShapeFiles_flag    = true;
@@ -208,7 +290,8 @@ int main(int argc, char *argv[]) {
 	float
 		lineWidth = -1;
 
-	string baseName = "TrmmNmq";
+	// string baseName = "TrmmNmq";
+	string baseName = "testSTARE";
 
 
 //	testTenDegreeGrid_flag = true;
@@ -227,7 +310,7 @@ int main(int argc, char *argv[]) {
 
 	STARE index;
 	// STARE_Intervals intervals = index.BoundingBoxFromLatLonDegrees(latlonbox,6);
-	STARE_Intervals intervals = index.BoundingBoxFromLatLonDegrees(latlonbox);
+	STARE_Intervals intervals = index.CoverBoundingBoxFromLatLonDegrees(latlonbox);
 	EmbeddedLevelNameEncoding leftJustified;
 	BitShiftNameEncoding      rightJustified;
 
@@ -297,10 +380,9 @@ int main(int argc, char *argv[]) {
 
 	/**************** Start Graphics ****************/
 
-	const int width = 2000, height = 1400;
+	// const int width = 2000, height = 1400;
+	const int width = 800, height = 600;
 
-
-	QWidget *window = SoQt::init(argv[0]);
 	window->setMinimumSize(width,height);
 	if (window == NULL) exit(1);
 
@@ -312,37 +394,63 @@ int main(int argc, char *argv[]) {
 
 	root->addChild(viz->makeRoot());
 
-	selectionRoot->addChild(root);
+	if( true ) {
+		selectionRoot->addChild(root);
+	}
 
 //	cout << 10000 << endl << flush;
 
-	SoSeparator *roots = new SoSeparator;
-	for(std::vector<std::shared_ptr<VizHTM>>::iterator it = vizContainer.begin();
-			it != vizContainer.end();
-			++it ) {
-		roots->addChild((*it)->makeRoot());
+	if( false ){
+		SoSeparator *roots = new SoSeparator;
+		for(std::vector<std::shared_ptr<VizHTM>>::iterator it = vizContainer.begin();
+				it != vizContainer.end();
+				++it ) {
+			roots->addChild((*it)->makeRoot());
+		}
+		selectionRoot->addChild(roots);
 	}
-	selectionRoot->addChild(roots);
 
 //	cout << 10100 << endl << flush;
 
 	// Offscreen renderer for viz. TODO selectionRoot
 
+	SpatialVector *cam_vizCenter = VectorFromLatLonDegrees(90.0, 0.0);
+	float offscreenPerscamPositionScale = 3;
+
 	if(offscreen_viz){
+		cout << "Offscreen rendering and saving to a file." << endl << flush;
+		cout << "width,height: " << width << ", " << height << endl << flush;
 //		OffScreenViz *offscreen = new OffScreenViz(800,600);
 		OffScreenViz *offscreen = new OffScreenViz(width,height);
-		offscreen->initImageDirectory("tmp/offscreen/"+formattedDateTime()+"/"+baseName+"/",4);
+		// offscreen->initImageDirectory("tmp/offscreen/"+formattedDateTime()+"/"+baseName+"/",4);
+		offscreen->initImageDirectory("/home/mrilee/workspace/VizHTM/tmp/offscreen/"+formattedDateTime()+"/"+baseName+"/",4);
 		offscreen->root = new SoSeparator;
-		if(!lookFrom_flag) {
-			loadScene(offscreen->root,selectionRoot,offscreen->vpRegion,cam_vizCenter);
+		offscreen->root->ref();
+		if( true ) {
+			if(!lookFrom_flag) {
+				cout << "Calling loadScene" << endl << flush;
+				loadScene(offscreen->root,selectionRoot,offscreen->vpRegion,cam_vizCenter,offscreenPerscamPositionScale);
+			} else {
+				cout << "Calling setLookFrom" << endl << flush;
+				setLookFrom(offscreen->root,selectionRoot,offscreen->vpRegion);
+			}
 		} else {
-			setLookFrom(offscreen->root,selectionRoot,offscreen->vpRegion);
+			cout << "Loading test scene" << endl << flush;
+			loadTestScene(offscreen->root,offscreen->vpRegion);
+			cout << "Adding test scene to selectionRoot" << endl << flush;
+			selectionRoot->addChild(offscreen->root);
 		}
-		offscreen->saveImage(1);
+		// offscreen->writeFileRGB(1);
+		offscreen->writeFile(1);
+		// offscreen->saveImage(1);
+
 	}
 
 //	cout << 10200 << endl << flush;
 
+	cout << "Checking for examiner visualization" << endl << flush;
+
+	examiner_viz = true;
 	// Examiner viewer
 	if(examiner_viz){
 		SoQtExaminerViewer *viewer = new SoQtExaminerViewer(window);

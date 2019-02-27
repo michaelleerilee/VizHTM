@@ -1,0 +1,34 @@
+viz...allocated.
+file: data/ne_50m_coastline/ne_50m_coastline.shp found.
+nEntities: 1428, nShapeType: 3
+testShape done
+Warning: Ignoring XDG_SESSION_TYPE=wayland on Gnome. Use QT_QPA_PLATFORM=wayland to run on Wayland anyway.
+QSocketNotifier: Can only be used with threads started with QThread
+makeRoot
+nArray                  1048576
+nFaces                  200
+nFaceColors             600
+ faceTransparency       1
+nFaceVertexColorIndices 800
+nEdgeColors             455440
+ edgeTransparency       0
+nEdgeVertexColorIndices 683160
+nCoordinates            456042
+nSpheres                2
+nEdgeIndices            683160
+nFaceIndices            800
+Offscreen rendering and saving to a file.
+width,height: 800, 600
+Loading test scene
+Adding test scene to selectionRoot
+Trying SoOffscreenRenderer writeToFile RGB output
+X Error of failed request:  BadValue (integer parameter out of range for operation)
+  Major opcode of failed request:  150 (GLX)
+  Minor opcode of failed request:  3 (X_GLXCreateContext)
+  Value in failed request:  0x0
+  Serial number of failed request:  25
+  Current serial number in output stream:  28
+  
+  Note: consider gnome-screenshot
+  
+  
