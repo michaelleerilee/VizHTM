@@ -8,8 +8,10 @@
  */
 
 #include "VizHTM.h"
-
 #include "STARE.h"
+
+#include "tests/tests.h"
+
 
 #include <geompack.h>
 
@@ -181,43 +183,45 @@ void loadScene(SoSeparator *root, SoSeparator *content, SbViewportRegion *vpRegi
 //    perscam->viewAll(root, *vpRegion);
 }
 */
-void loadScene(SoSeparator *root, SoSeparator *content, SbViewportRegion *vpRegion, SpatialVector *cam_vizCenter, float offscreenPerscamPositionScale) {
+void loadScene(SoSeparator *root, SoSeparator *content, SbViewportRegion *vpRegion, SpatialVector *cam_vizCenter, float offscreenPerscamPositionScale, SoCamera *inputCamera = NULL ) {
 
     SoDirectionalLight * light = new SoDirectionalLight;
-
-    SbRotation cameraRotation = SbRotation::identity();
-
-    SoPerspectiveCamera *camera = new SoPerspectiveCamera;
-    camera->orientation.setValue(cameraRotation);
-    camera->nearDistance = 0.0001;
-
-    //    SoCamera *camera = viewer->getCamera();
-    //    SoCamera *camera = perscam;
-    SoSFVec3f position;
-    //		SpatialVector *p = VectorFromLatLonDegrees(33.0,-80.25); // Centers on gridded data
-    //		SpatialVector *p = VectorFromLatLonDegrees(33.5,-76.75); // Centers on storm intersection
-    //		SpatialVector *p = VectorFromLatLonDegrees(33.63,-76.575); // Centers on storm intersection
-    SpatialVector p = (*cam_vizCenter);
-    p = p * offscreenPerscamPositionScale;
-    //    p = p * 1.05; // Works for perscam
-//    p = p * 1.1; // Works for perscam
-//    p = p * 1.17; // Works for perscam
-//    p = p * 1.25; // Nice top level view
-//    p = p * 1.5; // Nice top level view
-//    cout << "p: " << p << endl << flush;
-    position.setValue(p.x(),p.y(),p.z());
-    camera->position = position;
-//    ((SoPerspectiveCamera*)camera)->position = position;
-    //		((SoOrthographicCamera*)camera)->position = position;
-    camera->pointAt(SbVec3f(0.,0.,0.));
-    //		SoSFRotation rotation;
-    //		p->normalize();
-    //		rotation.setValue(SbVec3f(p->x(),p->y(),p->z()),0.0);
-    //		camera->orientation = rotation;
-    //
     root->addChild(light);
-    root->addChild(camera); // perscam
 
+    SoPerspectiveCamera *camera;
+    if( !inputCamera ) {
+    	SbRotation cameraRotation = SbRotation::identity();
+    	camera = new SoPerspectiveCamera;
+    	camera->orientation.setValue(cameraRotation);
+    	//    SoCamera *camera = viewer->getCamera();
+    	//    SoCamera *camera = perscam;
+    	SoSFVec3f position;
+    	//		SpatialVector *p = VectorFromLatLonDegrees(33.0,-80.25); // Centers on gridded data
+    	//		SpatialVector *p = VectorFromLatLonDegrees(33.5,-76.75); // Centers on storm intersection
+    	//		SpatialVector *p = VectorFromLatLonDegrees(33.63,-76.575); // Centers on storm intersection
+    	SpatialVector p = (*cam_vizCenter);
+    	p = p * offscreenPerscamPositionScale;
+    	//    p = p * 1.05; // Works for perscam
+    	//    p = p * 1.1; // Works for perscam
+    	//    p = p * 1.17; // Works for perscam
+    	//    p = p * 1.25; // Nice top level view
+    	//    p = p * 1.5; // Nice top level view
+    	//    cout << "p: " << p << endl << flush;
+    	position.setValue(p.x(),p.y(),p.z());
+    	camera->position = position;
+    	//    ((SoPerspectiveCamera*)camera)->position = position;
+    	//		((SoOrthographicCamera*)camera)->position = position;
+    	camera->pointAt(SbVec3f(0.,0.,0.));
+    	//		SoSFRotation rotation;
+    	//		p->normalize();
+    	//		rotation.setValue(SbVec3f(p->x(),p->y(),p->z()),0.0);
+    	//		camera->orientation = rotation;
+    	//
+        camera->nearDistance = 0.0001;
+        root->addChild(camera); // perscam
+    } else {
+        root->addChild(inputCamera); // perscam
+    }
 //    SoCube * cube = new SoCube;
 //    root->addChild(cube);
 
@@ -300,75 +304,19 @@ int main(int argc, char *argv[]) {
 	if(testTenDegreeGrid_flag) testTenDegreeGrid(viz);
 	if(testShapeFiles_flag)    testShapeFiles(viz);
 
-	viz->addLatLonBoxEdgesDegrees(0,0,5,5,0.9,0.9,0.9);
+	bool ok = BoundingBox1(viz);
 
-	LatLonDegrees64ValueVector latlonbox;
-	latlonbox.push_back(LatLonDegrees64(0,0));
-	latlonbox.push_back(LatLonDegrees64(5,0));
-	latlonbox.push_back(LatLonDegrees64(5,5));
-	latlonbox.push_back(LatLonDegrees64(0,5));
-
-	STARE index;
-	// STARE_Intervals intervals = index.BoundingBoxFromLatLonDegrees(latlonbox,6);
-	STARE_Intervals intervals = index.CoverBoundingBoxFromLatLonDegrees(latlonbox);
-	EmbeddedLevelNameEncoding leftJustified;
-	BitShiftNameEncoding      rightJustified;
-
-	/*
-	float
-	color_scale = 1.0/intervals.size(),
-	r0 = 0, g0 = 1, b0 = 0,
-	r1 = 0, g1 = 1, b1 = 0,
-	r2 = 0, g2 = 1, b2 = 0,
-	a0 = 0, a1 = 0, a2 = 0,
-	scale = 1;
-	*/
-
-	float
-		color_scale = 1.0/intervals.size(),
-		r0 = 1, g0 = 0, b0 = 0,
-		r1 = 0, g1 = 1, b1 = 0,
-		r2 = 0, g2 = 0, b2 = 1,
-		a0 = 0, a1 = 0, a2 = 0,
-		scale = 1;
-
-	for( STARE_Intervals::iterator iSid = intervals.begin(); iSid != intervals.end(); ++iSid ) {
-		Triangle tr0 = index.TriangleFromValue(*iSid);
-
-		// leftJustified.setIdFromSciDBLeftJustifiedFormat(*iSid);
-		// rightJustified.setId(leftJustified.rightJustifiedId());
-		// id_line = rightJustified.getId();
-
-		// cout << "centroid: " << tr0.centroid    << endl;
-		// cout << "tr0.0:    " << tr0.vertices[0] << endl;
-		// cout << "tr0.1:    " << tr0.vertices[1] << endl;
-		// cout << "tr0.2:    " << tr0.vertices[2] << endl;
-
-		viz->addFace3(tr0.vertices[0], tr0.vertices[1], tr0.vertices[2], r0, g0, b0, r1, g1, b1, r2, g2, b2, a0, a1, a2, scale);
-
-		/*
-		r0 += color_scale;
-		r1 += color_scale;
-		r2 += color_scale;
-
-		g0 -= color_scale;
-		g1 -= color_scale;
-		g2 -= color_scale;
-
-		b0 += color_scale;
-		b1 += color_scale;
-		b2 += color_scale;
-		*/
-	}
-
-	// Last chance change...
+	// Last chance changes...
 	if(lineWidth != -1) {
 		viz->lineWidth = lineWidth;
 	}
 
-	std::vector<std::shared_ptr<VizHTM>> vizContainer;
+	/**************** Viz Containers! ****************/
 
-	if(false) { // Test vizContainer
+	std::vector<std::shared_ptr<VizHTM>> vizContainer;
+	bool enableVizContainers = false;
+
+	if(enableVizContainers) { // Test vizContainer
 		std::shared_ptr<VizHTM> v0 = std::make_shared<VizHTM>(10000);
 		vizContainer.push_back(v0);
 		v0->triaxis();
@@ -400,7 +348,7 @@ int main(int argc, char *argv[]) {
 
 //	cout << 10000 << endl << flush;
 
-	if( false ){
+	if( enableVizContainers ){
 		SoSeparator *roots = new SoSeparator;
 		for(std::vector<std::shared_ptr<VizHTM>>::iterator it = vizContainer.begin();
 				it != vizContainer.end();
@@ -417,6 +365,7 @@ int main(int argc, char *argv[]) {
 	SpatialVector *cam_vizCenter = VectorFromLatLonDegrees(90.0, 0.0);
 	float offscreenPerscamPositionScale = 3;
 
+	offscreen_viz = false;
 	if(offscreen_viz){
 		cout << "Offscreen rendering and saving to a file." << endl << flush;
 		cout << "width,height: " << width << ", " << height << endl << flush;
@@ -520,6 +469,44 @@ int main(int argc, char *argv[]) {
 
 		SoQt::show(window);
 		SoQt::mainLoop();
+
+		offscreen_viz = true;
+		if(offscreen_viz){
+			cout << "Offscreen rendering and saving to a file." << endl << flush;
+			cout << "width,height: " << width << ", " << height << endl << flush;
+	//		OffScreenViz *offscreen = new OffScreenViz(800,600);
+			OffScreenViz *offscreen = new OffScreenViz(width,height);
+			// offscreen->initImageDirectory("tmp/offscreen/"+formattedDateTime()+"/"+baseName+"/",4);
+			offscreen->initImageDirectory("/home/mrilee/workspace/VizHTM/tmp/offscreen/"+formattedDateTime()+"/"+baseName+"/",4);
+			offscreen->root = new SoSeparator;
+			offscreen->root->ref();
+			SoCamera *camera = viewer->getCamera();
+			SpatialVector *cam_vizCenter = new SpatialVector;
+			SoSFVec3f position = camera->position;
+			float x,y,z;
+			position.getValue().getValue(x,y,z);
+			cam_vizCenter->set(x, y, z);
+
+			if( true ) {
+				if(!lookFrom_flag) {
+					cout << "Calling loadScene" << endl << flush;
+					// loadScene(offscreen->root,selectionRoot,offscreen->vpRegion,cam_vizCenter,offscreenPerscamPositionScale,NULL);
+					loadScene(offscreen->root,selectionRoot,offscreen->vpRegion,cam_vizCenter,offscreenPerscamPositionScale,camera);
+				} else {
+					cout << "Calling setLookFrom" << endl << flush;
+					setLookFrom(offscreen->root,selectionRoot,offscreen->vpRegion);
+				}
+			} else {
+				cout << "Loading test scene" << endl << flush;
+				loadTestScene(offscreen->root,offscreen->vpRegion);
+				cout << "Adding test scene to selectionRoot" << endl << flush;
+				selectionRoot->addChild(offscreen->root);
+			}
+			// offscreen->writeFileRGB(1);
+			offscreen->writeFile(1);
+			// offscreen->saveImage(1);
+
+		}
 
 		delete viewer;
 		//	root->unref();

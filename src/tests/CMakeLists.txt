@@ -39,34 +39,30 @@ message( "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}" )
 message( "CMAKE_C_FLAGS   = ${CMAKE_C_FLAGS}"   )
 
 set (
- VIZ_SUPPORT_SRC
- misc.C
- OffScreenViz.C
- VizHTM.C
- )
-
-# set (
-#  STARE_SrcFiles
-#  ${STARE_SrcFiles}
-#  VarStr.C )
+  TESTS_SRC
+  ${TESTS_SRC}
+  BoundingBox.C
+)
 #  
 # TODO Trouble with VarStr.hpp# TODO Trouble with VarStr.hpp
 # Var.Str.C is a kluge because I don't know how to get CMake to handle the hpp files correctly.
 # INTERFACE May be what works: http://stackoverflow.com/questions/5957134/how-to-setup-cmake-to-generate-header-only-projects
 
+message( "check: CMAKE_SOURCE_DIR = ${CMAKE_SOURCE_DIR}/src" ) 
+
 link_directories( ${GEOMPACK_LIBRARY_DIR} ${STARE_LINK_DIR} )
 
-add_library( VizHTM_LIB SHARED ${VIZ_SUPPORT_SRC} )
-target_include_directories( VizHTM_LIB PUBLIC /usr/include /usr/include/qt5 /usr/include/qt5/QtCore /usr/include/qt5/QtGui /usr/local/Coin3D/include )
+add_library( testSTARE_tests SHARED ${TESTS_SRC} )
+target_include_directories( testSTARE_tests PUBLIC ${CMAKE_SOURCE_DIR}/src /usr/include /usr/include/qt5 /usr/include/qt5/QtCore /usr/include/qt5/QtGui /usr/local/Coin3D/include )
 
-add_subdirectory( tests )
+
 
 # add_executable( testSTARE testSTARE.C VizHTM_main_support.C ${VIZ_SUPPORT_SRC} )
+# add_executable( testSTARE testSTARE.C VizHTM_main_support.C ) 
+# target_link_libraries(testSTARE SoQt::SoQt ${STARE_LINK_LIB} VizHTM_LIB ${GEOMPACK_LIBRARY_LIB} shp gfortran )
 
-add_executable( testSTARE testSTARE.C VizHTM_main_support.C ) 
-target_link_libraries(testSTARE SoQt::SoQt testSTARE_tests ${STARE_LINK_LIB} VizHTM_LIB ${GEOMPACK_LIBRARY_LIB} shp gfortran )
-# target_include_directories( VizHTM_LIB PUBLIC /usr/include /usr/include/qt5 /usr/include/qt5/QtCore /usr/include/qt5/QtGui /usr/local/Coin3D/include )
-target_include_directories( testSTARE PUBLIC ${CMAKE_SOURCE_DIR}/src /usr/include /usr/include/qt5 /usr/include/qt5/QtCore /usr/include/qt5/QtGui /usr/local/Coin3D/include )
+
+
 
 
 
