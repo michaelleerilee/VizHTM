@@ -239,14 +239,12 @@ bool PolePosition1(VizHTM *viz) {
 		SpatialIndex sIndex = index.getIndex(level);
 
 		uint64 np_htmid = index.htmIDFromValue(north_pole_sid, level);
-
-		SpatialVector workspace_v[15];
-		uint64 neighbors_v[9];
-		sIndex.NeighborsAcrossVerticesFromHtmId(neighbors_v, np_htmid, workspace_v);
-
-		SpatialVector workspace_e[9];
+		SpatialVector workspace_ev[18];
 		uint64 neighbors_e[3];
-		sIndex.NeighborsAcrossEdgesFromHtmId(neighbors_e, np_htmid, workspace_e);
+		sIndex.NeighborsAcrossEdgesFromHtmId(neighbors_e, np_htmid, workspace_ev);
+
+		uint64 neighbors_v[9];
+		sIndex.NeighborsAcrossVerticesFromEdges(neighbors_v, neighbors_e, np_htmid, workspace_ev);
 
 		uint64 neighbors_[12];
 		for(int i=0; i<9; ++i) {
@@ -259,11 +257,11 @@ bool PolePosition1(VizHTM *viz) {
 		cout << 90 << endl << flush;
 
 		for(int i=0; i<3; ++i) {
-			cout << i << " v vs. e "
+			cout << i << " v "
 					<< setprecision(17)
 					<< setw(20)
 					<< scientific
-					<< workspace_v[i] << " -- " << workspace_e[i] << endl << flush;
+					<< workspace_ev[i] << endl << flush;
 		}
 
 		cout << endl << flush;
@@ -272,7 +270,7 @@ bool PolePosition1(VizHTM *viz) {
 					<< setprecision(17)
 					<< setw(20)
 					<< scientific
-					<< workspace_v[i] << " -- " << workspace_e[i] << endl << flush;
+					<< workspace_ev[i] << endl << flush;
 		}
 
 		cout << endl << flush;
@@ -281,15 +279,24 @@ bool PolePosition1(VizHTM *viz) {
 				<< setprecision(17)
 				<< setw(20)
 				<< scientific
-				<< workspace_v[9] << " -- " << workspace_e[8] << endl << flush;
+				<< workspace_ev[9+3] << " -- " << workspace_ev[8] << endl << flush;
 
-		viz->addSphere(workspace_v[9],1.0,0.75,0.75,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale);
-		viz->addSphere(workspace_e[8],1.0,0.25,0.25,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale);
+		/*
+		viz->addSphere(workspace_ev[1],0.75,1.0,1.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
+		viz->addSphere(workspace_ev[3],0.25,1.0,1.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
+		 */
+
+		viz->addSphere(workspace_ev[9+3],1.0,0.75,0.75,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
+		viz->addEdge(workspace_ev[9+3],workspace_ev[9+3]*1.025,1.0,0.75,0.75,a,1.0);
+
+
+		viz->addSphere(workspace_ev[8],1.0,0.25,0.25,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
+		viz->addEdge(workspace_ev[8],workspace_ev[8]*1.025,1.0,0.25,0.25,a,1.0);
 
 		if(true) {
-			viz->addEdge(workspace_v[0], workspace_v[1], 0.0, 1.0, 1.0, a, 1.0);
-			viz->addEdge(workspace_v[1], workspace_v[2], 0.0, 1.0, 1.0, a, 1.0);
-			viz->addEdge(workspace_v[2], workspace_v[0], 0.0, 1.0, 1.0, a, 1.0);
+			viz->addEdge(workspace_ev[0], workspace_ev[1], 0.0, 1.0, 1.0, a, 1.0);
+			viz->addEdge(workspace_ev[1], workspace_ev[2], 0.0, 1.0, 1.0, a, 1.0);
+			viz->addEdge(workspace_ev[2], workspace_ev[0], 0.0, 1.0, 1.0, a, 1.0);
 		}
 
 	}
