@@ -45,7 +45,10 @@
 #include <Inventor/nodes/SoCamera.h>
 #include <Inventor/nodes/SoOrthographicCamera.h>
 
+#include <Inventor/nodes/SoBaseColor.h>
 #include <Inventor/nodes/SoCoordinate3.h>
+#include <Inventor/nodes/SoFont.h>
+#include <Inventor/nodes/SoGroup.h>
 #include <Inventor/nodes/SoIndexedFaceSet.h>
 #include <Inventor/nodes/SoIndexedLineSet.h>
 #include <Inventor/nodes/SoMaterial.h>
@@ -55,6 +58,7 @@
 #include <Inventor/nodes/SoShapeHints.h>
 #include <Inventor/nodes/SoSphere.h>
 #include <Inventor/nodes/SoSwitch.h>
+#include <Inventor/nodes/SoText3.h>
 #include <Inventor/nodes/SoTranslation.h>
 #include <Inventor/nodes/SoTransparencyType.h>
 #include <Inventor/sensors/SoTimerSensor.h>
@@ -72,6 +76,31 @@ void testShapeFiles(VizHTM *viz);
 #include "OffScreenViz.h"
 
 using namespace std;
+
+
+SoGroup* testText() {
+
+	  SoGroup *root = new SoGroup;
+	  root->ref();
+
+	  // Choose a font
+	  SoFont *myFont = new SoFont();
+
+	  // The Stroke Font !
+	  myFont->name.setValue("TGS_Complex_Roman");
+	  myFont->size.setValue(0.2f);
+	  root->addChild(myFont);
+	  SoBaseColor *myBaseColor = new SoBaseColor();
+	  myBaseColor->rgb.setValue(SbColor(1.0f, 0.0f, 0.0f));
+	  root->addChild(myBaseColor);
+
+	  // Add Text3D with stroke font.
+	  SoText3 *strokeFontText = new SoText3();
+	  strokeFontText->string = "STROKE FONT !";
+	  root->addChild(strokeFontText);
+
+	  return root;
+}
 
 void plotBlockingSphere(VizHTM* viz, float r, float g, float b, float radius);
 // { viz->addSphere(SpatialVector(0.,0.,0.),r,g,b,radius); }
@@ -278,9 +307,9 @@ int main(int argc, char *argv[]) {
 
 	bool
 		examiner_viz           = false,
-		blockingSphere_flag    = true,
-		testTenDegreeGrid_flag = true,
-		testShapeFiles_flag    = true;
+		blockingSphere_flag    = false,
+		testTenDegreeGrid_flag = false,
+		testShapeFiles_flag    = false;
 
 	int
 		lookFrom_flag = 0;
@@ -297,14 +326,24 @@ int main(int argc, char *argv[]) {
 	// string baseName = "TrmmNmq";
 	string baseName = "testSTARE";
 
-
 //	testTenDegreeGrid_flag = true;
+
+	// Global diagnostics
+	if(true) {
+		blockingSphere_flag    = true;
+		testTenDegreeGrid_flag = true;
+		testShapeFiles_flag    = true;
+	}
 
 	if(blockingSphere_flag)    plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
 	if(testTenDegreeGrid_flag) testTenDegreeGrid(viz);
 	if(testShapeFiles_flag)    testShapeFiles(viz);
 
-	bool ok = BoundingBox1(viz);
+	bool ok = false;
+
+	// ok = BoundingBox1(viz);
+	ok = PolePosition1(viz);
+	// ok = Edges1(viz);
 
 	// Last chance changes...
 	if(lineWidth != -1) {
@@ -336,11 +375,13 @@ int main(int argc, char *argv[]) {
 
 	SoSelection *selectionRoot = new SoSelection;
 	selectionRoot->policy = SoSelection::SINGLE;
+	selectionRoot->ref();
 
 	SoSeparator *root = new SoSeparator;
 	//	root->ref(); // TODO Figure out ->ref();
 
 	root->addChild(viz->makeRoot());
+	// root->addChild(testText());
 
 	if( true ) {
 		selectionRoot->addChild(root);
@@ -365,36 +406,35 @@ int main(int argc, char *argv[]) {
 	SpatialVector *cam_vizCenter = VectorFromLatLonDegrees(90.0, 0.0);
 	float offscreenPerscamPositionScale = 3;
 
-	offscreen_viz = false;
-	if(offscreen_viz){
-		cout << "Offscreen rendering and saving to a file." << endl << flush;
-		cout << "width,height: " << width << ", " << height << endl << flush;
-//		OffScreenViz *offscreen = new OffScreenViz(800,600);
-		OffScreenViz *offscreen = new OffScreenViz(width,height);
-		// offscreen->initImageDirectory("tmp/offscreen/"+formattedDateTime()+"/"+baseName+"/",4);
-		offscreen->initImageDirectory("/home/mrilee/workspace/VizHTM/tmp/offscreen/"+formattedDateTime()+"/"+baseName+"/",4);
-		offscreen->root = new SoSeparator;
-		offscreen->root->ref();
-		if( true ) {
-			if(!lookFrom_flag) {
-				cout << "Calling loadScene" << endl << flush;
-				loadScene(offscreen->root,selectionRoot,offscreen->vpRegion,cam_vizCenter,offscreenPerscamPositionScale);
-			} else {
-				cout << "Calling setLookFrom" << endl << flush;
-				setLookFrom(offscreen->root,selectionRoot,offscreen->vpRegion);
-			}
-		} else {
-			cout << "Loading test scene" << endl << flush;
-			loadTestScene(offscreen->root,offscreen->vpRegion);
-			cout << "Adding test scene to selectionRoot" << endl << flush;
-			selectionRoot->addChild(offscreen->root);
-		}
-		// offscreen->writeFileRGB(1);
-		offscreen->writeFile(1);
-		// offscreen->saveImage(1);
-
-	}
-
+//	offscreen_viz = false;
+//	if(offscreen_viz){
+//		cout << "Offscreen rendering and saving to a file." << endl << flush;
+//		cout << "width,height: " << width << ", " << height << endl << flush;
+////		OffScreenViz *offscreen = new OffScreenViz(800,600);
+//		OffScreenViz *offscreen = new OffScreenViz(width,height);
+//		// offscreen->initImageDirectory("tmp/offscreen/"+formattedDateTime()+"/"+baseName+"/",4);
+//		offscreen->initImageDirectory("/home/mrilee/workspace/VizHTM/tmp/offscreen/"+formattedDateTime()+"/"+baseName+"/",4);
+//		offscreen->root = new SoSeparator;
+//		offscreen->root->ref();
+//		if( true ) {
+//			if(!lookFrom_flag) {
+//				cout << "Calling loadScene" << endl << flush;
+//				loadScene(offscreen->root,selectionRoot,offscreen->vpRegion,cam_vizCenter,offscreenPerscamPositionScale);
+//			} else {
+//				cout << "Calling setLookFrom" << endl << flush;
+//				setLookFrom(offscreen->root,selectionRoot,offscreen->vpRegion);
+//			}
+//		} else {
+//			cout << "Loading test scene" << endl << flush;
+//			loadTestScene(offscreen->root,offscreen->vpRegion);
+//			cout << "Adding test scene to selectionRoot" << endl << flush;
+//			selectionRoot->addChild(offscreen->root);
+//		}
+//		// offscreen->writeFileRGB(1);
+//		offscreen->writeFile(1);
+//		// offscreen->saveImage(1);
+//
+//	}
 //	cout << 10200 << endl << flush;
 
 	cout << "Checking for examiner visualization" << endl << flush;
@@ -408,16 +448,17 @@ int main(int argc, char *argv[]) {
 		// Transparency on examiner viewer is broken on my Mac Pro.
 		//	viewer->setTransparencyType(SoGLRenderAction::DELAYED_ADD); // Crash
 		//	viewer->setTransparencyType(SoGLRenderAction::NONE); // No crash
-		//	viewer->setTransparencyType(SoGLRenderAction::DELAYED_BLEND); // Crash
+		// viewer->setTransparencyType(SoGLRenderAction::DELAYED_BLEND); // Crash
 		//	viewer->setTransparencyType(SoGLRenderAction::ADD); // Weird
 		//	viewer->setTransparencyType(SoGLRenderAction::BLEND); // Weird. No transparency!
-		//	viewer->setTransparencyType(SoGLRenderAction::SORTED_OBJECT_BLEND);
+		// viewer->setTransparencyType(SoGLRenderAction::SORTED_OBJECT_BLEND);
 		// viewer->setTransparencyType(SoGLRenderAction::BLEND);
 		viewer->setTransparencyType(SoGLRenderAction::NONE);
 
 		viewer->setSceneGraph(selectionRoot);
 		viewer->setTitle(mainName);
 		viewer->show();
+		viewer->viewAll();
 
 		if(lookFrom_flag) {
 			SoCamera *camera = viewer->getCamera();

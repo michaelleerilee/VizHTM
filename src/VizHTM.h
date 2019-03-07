@@ -195,6 +195,7 @@ public:
 	void addConstraint(SpatialConstraint c, float r, float g, float b);
 
 	SoSeparator* makeText(SpatialVector *a, const char *text, float size, float r, float g, float b);
+	// SoGroup* makeText(SpatialVector *a, const char *text, float size, float r, float g, float b);
 	void addAnnotation(SpatialVector *a, const char *annotation, float size, float r, float g, float b);
 
 	void addHTMInterval(SpatialIndex index, htmRange interval);

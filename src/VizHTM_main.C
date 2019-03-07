@@ -2933,7 +2933,8 @@ void testNearestNeighbors(VizHTM *viz) {
 		uint64 htmId = index.idByName(name.c_str());
 
 		uint64 neighbors[3];
-		index.NeighborsAcrossEdgesFromHtmId(neighbors,htmId);
+		SpatialVector workspace_e[9];
+		index.NeighborsAcrossEdgesFromHtmId(neighbors,htmId,workspace_e);
 		for(int j=0; j<3; j++) {
 			char tmpName[64];
 			index.nameById(neighbors[j],tmpName);
@@ -2941,7 +2942,8 @@ void testNearestNeighbors(VizHTM *viz) {
 		}
 
 		uint64 neighborsV[9];
-		index.NeighborsAcrossVerticesFromHtmId(neighborsV,htmId);
+		SpatialVector workspace_v[15];
+		index.NeighborsAcrossVerticesFromHtmId(neighborsV,htmId,workspace_v);
 		for(int j=0; j<9; j++) {
 			char tmpName[64];
 			index.nameById(neighborsV[j],tmpName);
@@ -2956,7 +2958,8 @@ void testNearestNeighbors(VizHTM *viz) {
 		uint64 htmId = index.idByName(name.c_str());
 
 		uint64 neighbors[3];
-		index.NeighborsAcrossEdgesFromHtmId(neighbors,htmId);
+		SpatialVector workspace_e[9];
+		index.NeighborsAcrossEdgesFromHtmId(neighbors,htmId,workspace_e);
 		for(int j=0; j<3; j++) {
 			char tmpName[64];
 			index.nameById(neighbors[j],tmpName);
@@ -2972,7 +2975,8 @@ void testNearestNeighbors(VizHTM *viz) {
 		uint64 htmId = index.idByName(name.c_str());
 
 		uint64 neighborsV[9];
-		index.NeighborsAcrossVerticesFromHtmId(neighborsV,htmId);
+		SpatialVector workspace_v[15];
+		index.NeighborsAcrossVerticesFromHtmId(neighborsV,htmId,workspace_v);
 		for(int j=0; j<9; j++) {
 			char tmpName[64];
 			index.nameById(neighborsV[j],tmpName);

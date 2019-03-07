@@ -42,6 +42,8 @@ set (
   TESTS_SRC
   ${TESTS_SRC}
   BoundingBox.C
+  Edges.C
+  PolePosition.C
 )
 #  
 # TODO Trouble with VarStr.hpp# TODO Trouble with VarStr.hpp

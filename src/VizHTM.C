@@ -20,6 +20,7 @@
 #include <Inventor/Qt/SoQt.h>
 #include <Inventor/Qt/viewers/SoQtExaminerViewer.h>
 
+#include <Inventor/nodes/SoBaseColor.h>
 #include <Inventor/nodes/SoCoordinate3.h>
 #include <Inventor/nodes/SoIndexedFaceSet.h>
 #include <Inventor/nodes/SoIndexedLineSet.h>
@@ -403,9 +404,14 @@ void VizHTM::debug_dump() {
 }
 
 void VizHTM::addEdgeVertexColorIndices(int i0, int i1) {
+	/*
 	edgeVertexColorIndices[nEdgeVertexColorIndices++]=i0;
 	edgeVertexColorIndices[nEdgeVertexColorIndices++]=i1;
 	edgeVertexColorIndices[nEdgeVertexColorIndices++]=SO_END_LINE_INDEX;
+	*/
+	edgeVertexColorIndices[nEdgeVertexColorIndices]=i0; nEdgeVertexColorIndices++;
+	edgeVertexColorIndices[nEdgeVertexColorIndices]=i1; nEdgeVertexColorIndices++;
+	edgeVertexColorIndices[nEdgeVertexColorIndices]=SO_END_LINE_INDEX; nEdgeVertexColorIndices++;
 }
 
 void VizHTM::addFaceVertexColorIndices3(int i0, int i1, int i2) {
@@ -474,9 +480,10 @@ SoSeparator* VizHTM::makeRoot() {
 			<< "nEdgeVertexColorIndices " << nEdgeVertexColorIndices << endl
 			<< "nCoordinates            " << nCoordinates << endl
 			<< "nSpheres                " << nSpheres << endl
-//			<< "nEdges                  " << nEdges << endl
+			// << "nEdges                  " << nEdges << endl
 			<< "nEdgeIndices            " << nEdgeIndices << endl
-			<< "nFaceIndices            " << nFaceIndices << endl;
+			<< "nFaceIndices            " << nFaceIndices << endl
+			<< "nAnnotations            " << nAnnotations << endl;
 
 	SoSeparator *root = new SoSeparator;
 
@@ -486,12 +493,15 @@ SoSeparator* VizHTM::makeRoot() {
 		root->addChild(style);
 	}
 
+	if( true ) {
 	// Broken
 //	if(faceTransparency || edgeTransparency) {
 //		SoTransparencyType *transparencyType = new SoTransparencyType;
 //		transparencyType->value = SoTransparencyType::DELAYED_BLEND;
 //		root->addChild(transparencyType);
 //	}
+
+	if( nCoordinates > 0 ) {
 
 	SoCoordinate3 *coordinates = new SoCoordinate3;
 	coordinates->point.setValues(0,nCoordinates,fCoordinates);
@@ -501,19 +511,44 @@ SoSeparator* VizHTM::makeRoot() {
 
 	SoMaterial *edgeMaterials = new SoMaterial;
 	edgeMaterials->diffuseColor.setValues(0,nEdgeColors,edgeColors);
+	// edgeMaterials->diffuseColor.setValues(0,nEdgeColors,(SbColor*)&edgeColors[0]);
 	if(edgeTransparency) {
 		edgeMaterials->transparency.setValues(0,nEdgeColors,edgeTransparencies);
 	}
 	edgeNode->addChild(edgeMaterials);
 
+	/*
+	for( int i=0; i < nEdgeColors; ++i ) {
+		const SbColor *color = edgeMaterials->diffuseColor.getValues(i);
+		cout << i << " color: " << color->toString().getString() << endl << flush;
+	}
+	*/
+
 	SoMaterialBinding *edgeMaterialBinding = new SoMaterialBinding;
+	// edgeMaterialBinding->value = SoMaterialBinding::PER_PART_INDEXED;
+	// edgeMaterialBinding->value = SoMaterialBinding::PER_PART;
 	edgeMaterialBinding->value = SoMaterialBinding::PER_VERTEX_INDEXED;
+	// edgeMaterialBinding->value = SoMaterialBinding::PER_VERTEX;
+	// edgeMaterialBinding->value = SO_END_LINE_INDEX;
+
 	edgeNode->addChild(edgeMaterialBinding);
 
 	SoIndexedLineSet *edgeSet = new SoIndexedLineSet;
 	edgeSet->coordIndex.setValues(0,nEdgeIndices,edgeIndices);
 	edgeSet->materialIndex.setValues(0,nEdgeVertexColorIndices,edgeVertexColorIndices);
 	edgeNode->addChild(edgeSet);
+
+	/*
+	cout << " num mat index: " << edgeSet->materialIndex.getNum() << endl << flush;
+	for( int i=0; i < edgeSet->materialIndex.getNum(); ++i ) {
+		cout << i << ", mat index " << *(edgeSet->materialIndex.getValues(i));
+		if( *(edgeSet->materialIndex.getValues(i)) >= 0 ) {
+			int idx = *(edgeSet->materialIndex.getValues(i));
+			cout << " " << edgeMaterials->diffuseColor.getValues(idx)->toString().getString();
+		}
+		cout << endl << flush;
+	}
+	*/
 
 	edgeSwitch = new SoSwitch;
 	edgeSwitch->whichChild = SO_SWITCH_ALL;
@@ -523,7 +558,7 @@ SoSeparator* VizHTM::makeRoot() {
 	SoSeparator *faceNode = new SoSeparator;
 
 	SoMaterialBinding *faceMaterialBinding = new SoMaterialBinding;
-//	faceMaterialBinding->value = SoMaterialBinding::PER_VERTEX_INDEXED; // _INDEXED or not?
+	// faceMaterialBinding->value = SoMaterialBinding::PER_VERTEX_INDEXED; // _INDEXED or not?
 	faceMaterialBinding->value = SoMaterialBinding::PER_VERTEX; // _INDEXED or not? // Why? Why? Why? // TODO WHY?
 	faceNode->addChild(faceMaterialBinding);
 
@@ -590,6 +625,7 @@ SoSeparator* VizHTM::makeRoot() {
 		}
 		root->addChild(sphereNodes);
 	}
+	} // if nCoordinates > 0
 
 //	{
 //		cout << "Starting text test" << flush;
@@ -600,13 +636,15 @@ SoSeparator* VizHTM::makeRoot() {
 //		cout << "...done." << endl << flush;
 //	}
 
+	} // top
+
 	if(nAnnotations>0){
 		SoSeparator *texts = new SoSeparator;
 		for(int ia=0;ia<nAnnotations;ia++) {
-//			cout
-//				<< " adding annotation: " << ia
-//				<< " text: " << annotations[ia].text
-//				<< endl << flush;
+			cout
+				<< " adding annotation: " << ia
+				<< " text: " << annotations[ia].text
+				<< endl << flush;
 			texts->addChild(makeText(
 					annotations[ia].v,
 					annotations[ia].text,
@@ -616,6 +654,8 @@ SoSeparator* VizHTM::makeRoot() {
 					annotations[ia].b));
 		}
 		root->addChild(texts);
+	} else {
+		cout << " no annotations..." << endl << flush;
 	}
 
 	// root->unrefNoDelete();
@@ -735,13 +775,23 @@ void VizHTM::addSphere(SpatialVector x, float r, float g, float b, float radius)
 
 SoSeparator* VizHTM::makeText(SpatialVector* a, const char* annotation, float size, float r, float g, float b) {
 	// cf. http://oivdoc90.vsg3d.com/content/62-three-dimensional-text
+
+	cout << " makeText - adding " << annotation << endl << flush;
+	cout << "       size,r,g,b: " << size << ", " << r << ", " << g << ", " << b << endl << flush;
+	cout << "                v: " << (*a) << endl << flush;
+
 	SoSeparator *root = new SoSeparator;
+	// SoGroup *root = new SoGroup;
+	SoSeparator *textSeparator = new SoSeparator;
 
 	SoFont *font = new SoFont;
-	font->name.setValue("Times-Roman");
+	// font->name.setValue("Times-Roman");
+	// font->name.setValue("Cantarell-Regular");
+	font->name.setValue("TGS_Complex_Roman");
 	font->size.setValue(size);
 	root->addChild(font);
 
+	/**/
 	SoMaterial *material = new SoMaterial;
 	SoMaterialBinding *binding = new SoMaterialBinding;
 	material->diffuseColor.set1Value(0,SbColor(r,g,b));
@@ -749,8 +799,12 @@ SoSeparator* VizHTM::makeText(SpatialVector* a, const char* annotation, float si
 	binding->value = SoMaterialBinding::PER_PART;
 	root->addChild(material);
 	root->addChild(binding);
+	/**/
 
-	SoSeparator *textSeparator = new SoSeparator;
+	SoBaseColor *baseColor = new SoBaseColor();
+	baseColor->rgb.setValue(SbColor(r,g,b));
+	root->addChild(baseColor);
+
 	SoText3 *text = new SoText3;
 
 	SoTransform *rot0 = new SoTransform;
@@ -766,19 +820,31 @@ SoSeparator* VizHTM::makeText(SpatialVector* a, const char* annotation, float si
 
 	rot0->rotation.setValue(SbVec3f(a->x(),a->y(),a->z()),acos(i*(*a)));
 
-	text->parts = SoText3::FRONT;
-//	text->parts = SoText3::ALL;
-
-	string *s = new string(annotation);
-	string delimiter = "\n";
-	int idx=0; int last=0; int next=0; while((next=s->find(delimiter,last)) != string::npos) {
-		text->string.set1Value(idx++,(s->substr(last,next-last)).c_str());
-		last = next + 1;
+	if( true ) {
+		text->parts = SoText3::FRONT;
+		//  text->parts = SoText3::ALL;
+		string *s = new string(annotation);
+		string delimiter = "\n";
+		int idx=0; int last=0; int next=0; while((next=s->find(delimiter,last)) != string::npos) {
+			text->string.set1Value(idx++,(s->substr(last,next-last)).c_str());
+			last = next + 1;
+		}
+	} else {
+	// text->string = "Test";
+		text->string = annotation;
 	}
 
-	textSeparator->addChild(rot0);
+	/**/
 	textSeparator->addChild(tra0);
+	textSeparator->addChild(rot0);
 	textSeparator->addChild(text);
+	/**/
+
+	/*
+	root->addChild(tra0);
+	root->addChild(rot0);
+	root->addChild(text);
+	*/
 
 	root->addChild(textSeparator);
 
