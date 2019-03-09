@@ -641,10 +641,12 @@ SoSeparator* VizHTM::makeRoot() {
 	if(nAnnotations>0){
 		SoSeparator *texts = new SoSeparator;
 		for(int ia=0;ia<nAnnotations;ia++) {
+			/*
 			cout
 				<< " adding annotation: " << ia
 				<< " text: " << annotations[ia].text
 				<< endl << flush;
+			 */
 			texts->addChild(makeText(
 					annotations[ia].v,
 					annotations[ia].text,
@@ -776,9 +778,11 @@ void VizHTM::addSphere(SpatialVector x, float r, float g, float b, float radius)
 SoSeparator* VizHTM::makeText(SpatialVector* a, const char* annotation, float size, float r, float g, float b) {
 	// cf. http://oivdoc90.vsg3d.com/content/62-three-dimensional-text
 
+	/*
 	cout << " makeText - adding " << annotation << endl << flush;
 	cout << "       size,r,g,b: " << size << ", " << r << ", " << g << ", " << b << endl << flush;
 	cout << "                v: " << (*a) << endl << flush;
+	 */
 
 	SoSeparator *root = new SoSeparator;
 	// SoGroup *root = new SoGroup;

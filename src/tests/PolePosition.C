@@ -20,10 +20,11 @@ SpatialVector nudge(SpatialVector v0, SpatialVector v1, float64 a1) {
 bool PolePosition1(VizHTM *viz) {
 	bool ok = false;
 
-	float64 sphere_scale = 0.025;
+	// float64 sphere_scale = 0.025;
+	float64 sphere_scale = 0.05;
 	// float64 corner_nudge = 0.25;
-	// float64 corner_nudge = 0.05;
-	float64 corner_nudge = 0.0;
+	float64 corner_nudge = 0.05;
+	// float64 corner_nudge = 0.0;
 
 	STARE index;
 	// STARE index1;
@@ -43,17 +44,16 @@ bool PolePosition1(VizHTM *viz) {
 		index = STARE(search_level, build_level, rotate_root_octahedron);
 	}
 
-	// int level = 27; // too deep
+	int level = 27; // too deep
 	// int level = 25; // too deep
-	//+	int level = 24; // Floating point gets really bad on interactive visualization
+	//+ int level = 24; // Floating point gets really bad on interactive visualization
 	// int level = 23; // Interactive viz not great
 	// int level = 22; // Interactive viz still rough, but better
 	// int level = 21; // Interactive viz a little rough, but much better
 	// int level = 20; // Interactive viz a little rough, but much better
 	// int level = 19; // ~ 20m Interactive viz pretty good
 	// int level = 10;
-	//
-	int level = 6;
+	// int level = 6;
 
 	float64 lat0 = 90, lon0 = 0.0;
 	STARE_ArrayIndexSpatialValue north_pole_sid = index.ValueFromLatLonDegrees(lat0,lon0,level);
@@ -73,6 +73,7 @@ bool PolePosition1(VizHTM *viz) {
 			<< scientific
 			<< index.lengthMeterScaleFromEdgeFromLevel(level)
 			<< endl << flush;
+	cout << "north_pole_sid: " << hex << "0x" << north_pole_sid << dec << endl << flush;
 	STARE_ArrayIndexSpatialValues neighbors = index.NeighborsOfValue(north_pole_sid);
 
 	if(false) {
@@ -175,7 +176,7 @@ bool PolePosition1(VizHTM *viz) {
 
 
 
-	if(false){
+	if(true){
 		for(int resolution_level = level; resolution_level < level+1; ++resolution_level ) {
 
 			Triangle tr0 = index.TriangleFromValue(north_pole_sid,resolution_level);
@@ -219,7 +220,7 @@ bool PolePosition1(VizHTM *viz) {
 		}
 	}
 
-	{
+	if(false){
 		SpatialVector axis     = 0.5*xhat + 0.5*yhat; axis.normalize();
 		float64       theta    = 0.25*gPi;
 		theta = 0.0;
@@ -235,7 +236,7 @@ bool PolePosition1(VizHTM *viz) {
 	}
 
 
-	{
+	if(true){
 		SpatialIndex sIndex = index.getIndex(level);
 
 		uint64 np_htmid = index.htmIDFromValue(north_pole_sid, level);
@@ -245,6 +246,11 @@ bool PolePosition1(VizHTM *viz) {
 
 		uint64 neighbors_v[9];
 		sIndex.NeighborsAcrossVerticesFromEdges(neighbors_v, neighbors_e, np_htmid, workspace_ev);
+
+		cout << "  np_htmid: 0x" << hex << np_htmid << dec << endl << flush;
+		for(int i=0; i<3; ++i) {
+			cout << i << " n edge id 0x" << hex << neighbors_e[i] << dec << endl << flush;
+		}
 
 		uint64 neighbors_[12];
 		for(int i=0; i<9; ++i) {
@@ -286,17 +292,25 @@ bool PolePosition1(VizHTM *viz) {
 		viz->addSphere(workspace_ev[3],0.25,1.0,1.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
 		 */
 
-		viz->addSphere(workspace_ev[9+3],1.0,0.75,0.75,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
-		viz->addEdge(workspace_ev[9+3],workspace_ev[9+3]*1.025,1.0,0.75,0.75,a,1.0);
+		if(false) {
+			// The 4th vertex neighbor guess
+			viz->addSphere(workspace_ev[9+3],1.0,0.75,0.75,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
+			viz->addEdge(workspace_ev[9+3],workspace_ev[9+3]*1.025,1.0,0.75,0.75,a,1.0);
 
-
-		viz->addSphere(workspace_ev[8],1.0,0.25,0.25,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
-		viz->addEdge(workspace_ev[8],workspace_ev[8]*1.025,1.0,0.25,0.25,a,1.0);
+			// The 3rd edge neighbor guess: v is wev[0:2], m is wev[3:5], edge is wev[6:8], vert is wev[9:17]
+			viz->addSphere(workspace_ev[8],1.0,0.25,0.25,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
+			viz->addEdge(workspace_ev[8],workspace_ev[8]*1.025,1.0,0.25,0.25,a,1.0);
+		}
 
 		if(true) {
 			viz->addEdge(workspace_ev[0], workspace_ev[1], 0.0, 1.0, 1.0, a, 1.0);
 			viz->addEdge(workspace_ev[1], workspace_ev[2], 0.0, 1.0, 1.0, a, 1.0);
 			viz->addEdge(workspace_ev[2], workspace_ev[0], 0.0, 1.0, 1.0, a, 1.0);
+		}
+
+		for(int i=0; i<1; ++i) {
+			viz->addSphere(workspace_ev[6+i],1.0,0.75,0.25,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale);
+			cout << i << " edge sIdx.idByPoint 0x" << hex << sIndex.idByPoint(workspace_ev[6+i]) << dec << endl << flush;
 		}
 
 	}
