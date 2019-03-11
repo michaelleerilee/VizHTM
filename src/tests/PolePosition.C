@@ -12,10 +12,10 @@
 #include <SpatialRotation.h>
 
 
-SpatialVector nudge(SpatialVector v0, SpatialVector v1, float64 a1) {
-	SpatialVector u = (v0*(1-a1)) + (v1*a1); // u.normalize();
-	return u;
-}
+//SpatialVector nudge(SpatialVector v0, SpatialVector v1, float64 a1) {
+//	SpatialVector u = (v0*(1-a1)) + (v1*a1); // u.normalize();
+//	return u;
+//}
 
 bool PolePosition1(VizHTM *viz) {
 	bool ok = false;
@@ -26,26 +26,11 @@ bool PolePosition1(VizHTM *viz) {
 	float64 corner_nudge = 0.05;
 	// float64 corner_nudge = 0.0;
 
-	STARE index;
-	// STARE index1;
+	SpatialVector graphicsOrigin(0.0,0.0,0.0); // graphicsOrigin.setLatLonDegrees(lat0, lon0);
+	float64       graphicsScale = 1.0;
 
-	if( true ){
-		SpatialVector axis     = 0.5*xhat + 0.5*yhat; axis.normalize();
-		float64       theta    = 0.25*gPi;
-		// theta = 0.0;
-		// theta    = 0.125*gPi;
-		// theta    = 0.5*gPi + 0.00001;
-		theta    = 0.5*gPi;
-
-
-		SpatialRotation rotate_root_octahedron = SpatialRotation(axis,theta);
-		int search_level = 27, build_level = 5;
-
-		index = STARE(search_level, build_level, rotate_root_octahedron);
-	}
-
-	int level = 27; // too deep
-	// int level = 25; // too deep
+	int level = 27; // Not too bad with really small gEpsilon. Floating point gets really bad on interactive visualization
+	// int level = 25; //
 	//+ int level = 24; // Floating point gets really bad on interactive visualization
 	// int level = 23; // Interactive viz not great
 	// int level = 22; // Interactive viz still rough, but better
@@ -55,12 +40,46 @@ bool PolePosition1(VizHTM *viz) {
 	// int level = 10;
 	// int level = 6;
 
+	STARE index;
+	// STARE index1;
+
+
+	if( true ){
+		SpatialVector axis     = 0.5*xhat + 0.5*yhat; axis.normalize();
+		float64       theta    = 0.25*gPi;
+		// theta = 0.0;
+		// theta    = 0.125*gPi;
+		// theta    = 0.5*gPi + 0.00001;
+		// theta    = 0.5*gPi; // Okay!
+		SpatialRotation rotate_root_octahedron = SpatialRotation(axis,theta);
+		int search_level = 27, build_level = 5;
+		index = STARE(search_level, build_level, rotate_root_octahedron);
+
+		/**/
+		float64 dtheta = 1.0e-9;
+		for(int i=0; i<21; ++i) {
+			SpatialRotation rot = SpatialRotation(axis,i*dtheta);
+			SpatialVector z1 = rot.rotated_from(zhat);
+			if( i == 0 ) {
+				viz->addSphere(z1,1.0,i/20.0,0.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*3);
+			} else {
+				viz->addSphere(z1,1.0,i/20.0,0.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale);
+			}
+			if( i == 12 ) {
+				viz->addSphere(z1,0.0,1.0,0.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*3);
+			}
+
+		}
+		/**/
+	}
+
+
+
 	float64 lat0 = 90, lon0 = 0.0;
 	STARE_ArrayIndexSpatialValue north_pole_sid = index.ValueFromLatLonDegrees(lat0,lon0,level);
 	// STARE_ArrayIndexSpatialValue north_pole_sid = index.ValueFromLatLonDegrees(15.0,15.0,level);
 
-	SpatialVector graphicsOrigin(0.0,0.0,0.0); // graphicsOrigin.setLatLonDegrees(lat0, lon0);
-	float64       graphicsScale = 1.0;
+
 
 	// float64 scale_delta = 1.0e-6, scale = 1.0;
 	float64 scale_delta = 0.0, scale = 1.0;

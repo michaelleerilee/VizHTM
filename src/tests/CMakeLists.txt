@@ -41,8 +41,10 @@ message( "CMAKE_C_FLAGS   = ${CMAKE_C_FLAGS}"   )
 set (
   TESTS_SRC
   ${TESTS_SRC}
+  tests_support.C
   BoundingBox.C
   Edges.C
+  EquatorCheck.C
   PolePosition.C
 )
 #  

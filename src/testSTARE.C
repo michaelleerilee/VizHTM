@@ -317,6 +317,9 @@ int main(int argc, char *argv[]) {
 	string
 		lookFromArgs;
 
+	SpatialVector
+		lookFrom;
+
 	bool
 		offscreen_viz = not examiner_viz;
 
@@ -342,8 +345,21 @@ int main(int argc, char *argv[]) {
 	bool ok = false;
 
 	// ok = BoundingBox1(viz);
-	ok = PolePosition1(viz);
 	// ok = Edges1(viz);
+
+	// ok = EquatorCheck1(viz); lookFromArgs = "0.0 1.1 0.0"; lookFrom_flag = true;
+	// ok = EquatorCheck1(viz); lookFromArgs = "1.00001 0.0 0.0"; lookFrom_flag = true;
+	ok = EquatorCheck2(viz);
+
+	/*
+	ok = MeridianCheck1(viz);
+	lookFromArgs = "";
+	lookFrom.setLatLonDegrees(45.0, 0.0);
+	lookFrom_flag = false;
+	*/
+
+	// ok = PolePosition1(viz);
+
 
 	// Last chance changes...
 	if(lineWidth != -1) {
@@ -464,20 +480,27 @@ int main(int argc, char *argv[]) {
 			SoCamera *camera = viewer->getCamera();
 			if(camera) {
 
-				float scale,lon,lat;
-				cout << "lookFrom scanning " << lookFromArgs.c_str() << endl;
-				sscanf(lookFromArgs.c_str(),"%f,%f,%f",&scale,&lon,&lat);
-				cout << "Setting interactive lookFrom: (scale,lon,lat) = "
-						<< scale << ", " << lon << ", " << lat << endl;
-			    SpatialVector *p_ = VectorFromLatLonDegrees(lat,lon);
-			    SpatialVector p = (*p_);
-			    p = p * scale;
+				float scale=1.00001,lon=0.0,lat=0.0;
+				SpatialVector p;
+				if(lookFromArgs != "") {
+					cout << "lookFrom scanning " << lookFromArgs.c_str() << endl;
+					sscanf(lookFromArgs.c_str(),"%f,%f,%f",&scale,&lon,&lat);
+					cout << "Setting interactive lookFrom: (scale,lon,lat) = "
+							<< scale << ", " << lon << ", " << lat << endl;
+					SpatialVector *p_ = VectorFromLatLonDegrees(lat,lon);
+					p = (*p_);
+				} else {
+					cout << "Using lookFrom = " << lookFrom << endl << flush;
+					p = lookFrom;
+				}
+				p = p * scale;
+				cout << "Setting camera to position p = " << p << endl << flush;
 
 				SoSFVec3f position;
 				position.setValue(p.x(),p.y(),p.z());
 				//		((SoPerspectiveCamera*)camera)->position = position;
 				camera->position = position;
-				camera->orientation.setValue(SbRotation::identity());
+				// camera->orientation.setValue(SbRotation::identity());
 				camera->pointAt(SbVec3f(0.,0.,0.));
 
 				//		SoSFRotation rotation;
