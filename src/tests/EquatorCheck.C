@@ -198,8 +198,13 @@ bool EquatorCheck2( VizHTM* viz ) {
 
 	/**/
 	corner_nudge=0.0; r=1; g=1; b=0; scale = 1.000005;
-	PlotTriangles(viz,"N",4,index,corner_nudge, r, g, b, a, scale, true);
-	PlotTriangles(viz,"S",4,index,corner_nudge, r, g, b, a, scale, true);
+	int graphLevel = 4;
+	graphLevel = 5;
+	// graphLevel = 6;
+	cout << "graphLevel = " << graphLevel
+			<< ", length(m) ~ " << index.lengthMeterScaleFromEdgeFromLevel(graphLevel) << endl << flush;
+	PlotTriangles(viz,"N",graphLevel,index,corner_nudge, r, g, b, a, scale, true);
+	PlotTriangles(viz,"S",graphLevel,index,corner_nudge, r, g, b, a, scale, true);
 	/**/
 
 	ok = true;

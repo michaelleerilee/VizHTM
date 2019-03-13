@@ -24,6 +24,7 @@ bool EquatorCheck2(VizHTM *viz);
 bool MeridianCheck1(VizHTM *viz);
 
 bool PolePosition1(VizHTM *viz);
+bool PoleCheck1   (VizHTM *viz);
 
 SpatialVector nudge(SpatialVector v0, SpatialVector v1, float64 a1);
 

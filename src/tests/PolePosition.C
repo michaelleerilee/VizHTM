@@ -43,43 +43,19 @@ bool PolePosition1(VizHTM *viz) {
 	STARE index;
 	// STARE index1;
 
-
-	if( true ){
-		SpatialVector axis     = 0.5*xhat + 0.5*yhat; axis.normalize();
-		float64       theta    = 0.25*gPi;
-		// theta = 0.0;
-		// theta    = 0.125*gPi;
-		// theta    = 0.5*gPi + 0.00001;
-		// theta    = 0.5*gPi; // Okay!
-		SpatialRotation rotate_root_octahedron = SpatialRotation(axis,theta);
-		int search_level = 27, build_level = 5;
-		index = STARE(search_level, build_level, rotate_root_octahedron);
-
-		/**/
-		float64 dtheta = 1.0e-9;
-		for(int i=0; i<21; ++i) {
-			SpatialRotation rot = SpatialRotation(axis,i*dtheta);
-			SpatialVector z1 = rot.rotated_from(zhat);
-			if( i == 0 ) {
-				viz->addSphere(z1,1.0,i/20.0,0.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*3);
-			} else {
-				viz->addSphere(z1,1.0,i/20.0,0.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale);
-			}
-			if( i == 12 ) {
-				viz->addSphere(z1,0.0,1.0,0.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*3);
-			}
-
-		}
-		/**/
-	}
-
-
+	SpatialVector axis     = 0.5*xhat + 0.5*yhat; axis.normalize();
+	float64       theta    = 0.25*gPi - 12.0e-9;
+	// theta = 0.0;
+	// theta    = 0.125*gPi;
+	// theta    = 0.5*gPi + 0.00001;
+	// theta    = 0.5*gPi; // Okay!
+	SpatialRotation rotate_root_octahedron = SpatialRotation(axis,theta);
+	int search_level = 27, build_level = 5;
+	index = STARE(search_level, build_level, rotate_root_octahedron);
 
 	float64 lat0 = 90, lon0 = 0.0;
 	STARE_ArrayIndexSpatialValue north_pole_sid = index.ValueFromLatLonDegrees(lat0,lon0,level);
 	// STARE_ArrayIndexSpatialValue north_pole_sid = index.ValueFromLatLonDegrees(15.0,15.0,level);
-
-
 
 	// float64 scale_delta = 1.0e-6, scale = 1.0;
 	float64 scale_delta = 0.0, scale = 1.0;
@@ -95,12 +71,46 @@ bool PolePosition1(VizHTM *viz) {
 	cout << "north_pole_sid: " << hex << "0x" << north_pole_sid << dec << endl << flush;
 	STARE_ArrayIndexSpatialValues neighbors = index.NeighborsOfValue(north_pole_sid);
 
-	if(false) {
+	if(true) {
 		Triangle tr0 = index.TriangleFromValue(north_pole_sid,level);
 		graphicsOrigin = tr0.centroid;
 		graphicsScale  = 1.0e+8;
 	}
 	cout << "graphicsOrigin: " << graphicsOrigin << endl << flush;
+	float64 npn_scale = 0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*5*2;
+
+	SpatialVector north_pole; north_pole.setLatLonDegrees(90.0, 0.0);
+	cout << " north_pole = " << north_pole << endl << flush;
+	{
+		float64	r = 0.25, g = 0.75, b = 0.25, a = 0, scale = 1.0;
+		SpatialVector tmp0 = (north_pole-graphicsOrigin)*graphicsScale;
+		SpatialVector npn = north_pole; npn.normalize();
+		SpatialVector tmp1 = tmp0+npn*npn_scale;
+		// viz->addSphere(tmp0,1.0,1.0,1.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*5);
+		for(int k=0; k<4; ++k) {
+			tmp1 = tmp1+npn*npn_scale;
+			viz->addSphere(tmp1,1.0,1.0,1.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*5);
+		}
+		viz->addEdge(tmp0, tmp1, r, g, b, a, scale);
+		// viz->addEdge(north_pole, north_pole*(1.0+1.0e-8), r, g, b, a, scale);
+	}
+
+	/* Bread crumbs along the path of rotation */
+	float64 dtheta = 1.0e-9;
+	for(int i=0; i<21; ++i) {
+		SpatialRotation rot = SpatialRotation(axis,i*dtheta);
+		SpatialVector z1 = rot.rotated_from(zhat);
+		z1 = (z1 - graphicsOrigin)*graphicsScale;
+		if( i == 0 ) {
+			viz->addSphere(z1,1.0,i/20.0,0.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*3);
+		} else {
+			viz->addSphere(z1,1.0,i/20.0,0.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale);
+		}
+		if( i == 12 ) {
+			viz->addSphere(z1,0.0,1.0,0.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*3);
+		}
+	}
+	/**/
 
 	level = index.ResolutionLevelFromValue(north_pole_sid);
 	Triangle ta[12];
@@ -153,7 +163,7 @@ bool PolePosition1(VizHTM *viz) {
 		sprintf(str,"%s\n",to_string(i).c_str());
 		// viz->makeText(a,str,0.25*0.5*3.14*pow(2.0,-level),0.0,1.0,1.0);
 		// viz->addAnnotation(a,"test",0.25*0.5*3.14*pow(2.0,-level),0.0,1.0,1.0);
-		viz->addAnnotation(v,str,0.25*0.5*3.14*pow(2.0,-level),0.0,1.0,1.0);
+		viz->addAnnotation(v,str,0.25*0.5*3.14*pow(2.0,-level)*graphicsScale,0.0,1.0,1.0);
 
 		if(true) {
 			// SpatialVector *v = new SpatialVector(tr0.centroid*(scale+scale_delta));
@@ -199,6 +209,11 @@ bool PolePosition1(VizHTM *viz) {
 		for(int resolution_level = level; resolution_level < level+1; ++resolution_level ) {
 
 			Triangle tr0 = index.TriangleFromValue(north_pole_sid,resolution_level);
+
+			for(int k=0; k<3; ++k) {
+				tr0.vertices[k] = (tr0.vertices[k] - graphicsOrigin)*graphicsScale;
+			}
+			tr0.centroid = (tr0.centroid - graphicsOrigin)*graphicsScale;
 
 			viz->addSphere(tr0.centroid
 					,0.5,0.5,1.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale);
@@ -250,6 +265,7 @@ bool PolePosition1(VizHTM *viz) {
 
 		SpatialVector new_pole = rotate_root_octahedron.rotated_from(zhat);
 
+		new_pole = (new_pole - graphicsOrigin) * graphicsScale;
 		viz->addSphere(new_pole
 				,1.0,1.0,0.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale);
 	}
@@ -310,25 +326,29 @@ bool PolePosition1(VizHTM *viz) {
 		viz->addSphere(workspace_ev[1],0.75,1.0,1.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
 		viz->addSphere(workspace_ev[3],0.25,1.0,1.0,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
 		 */
+		SpatialVector workspace_ev_graphics[3+9];
+		for(int k=0; k<12; ++k) {
+			workspace_ev_graphics[k] = (workspace_ev[k] - graphicsOrigin)*graphicsScale;
+		}
 
 		if(false) {
 			// The 4th vertex neighbor guess
-			viz->addSphere(workspace_ev[9+3],1.0,0.75,0.75,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
-			viz->addEdge(workspace_ev[9+3],workspace_ev[9+3]*1.025,1.0,0.75,0.75,a,1.0);
+			viz->addSphere(workspace_ev_graphics[9+3],1.0,0.75,0.75,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
+			viz->addEdge(workspace_ev_graphics[9+3],workspace_ev[9+3]*1.025,1.0,0.75,0.75,a,1.0);
 
 			// The 3rd edge neighbor guess: v is wev[0:2], m is wev[3:5], edge is wev[6:8], vert is wev[9:17]
-			viz->addSphere(workspace_ev[8],1.0,0.25,0.25,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
-			viz->addEdge(workspace_ev[8],workspace_ev[8]*1.025,1.0,0.25,0.25,a,1.0);
+			viz->addSphere(workspace_ev_graphics[8],1.0,0.25,0.25,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale*2);
+			viz->addEdge(workspace_ev_graphics[8],workspace_ev_graphics[8]*1.025,1.0,0.25,0.25,a,1.0);
 		}
 
 		if(true) {
-			viz->addEdge(workspace_ev[0], workspace_ev[1], 0.0, 1.0, 1.0, a, 1.0);
-			viz->addEdge(workspace_ev[1], workspace_ev[2], 0.0, 1.0, 1.0, a, 1.0);
-			viz->addEdge(workspace_ev[2], workspace_ev[0], 0.0, 1.0, 1.0, a, 1.0);
+			viz->addEdge(workspace_ev_graphics[0], workspace_ev_graphics[1], 0.0, 1.0, 1.0, a, 1.0);
+			viz->addEdge(workspace_ev_graphics[1], workspace_ev_graphics[2], 0.0, 1.0, 1.0, a, 1.0);
+			viz->addEdge(workspace_ev_graphics[2], workspace_ev_graphics[0], 0.0, 1.0, 1.0, a, 1.0);
 		}
 
 		for(int i=0; i<1; ++i) {
-			viz->addSphere(workspace_ev[6+i],1.0,0.75,0.25,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale);
+			viz->addSphere(workspace_ev_graphics[6+i],1.0,0.75,0.25,0.125*0.5*3.14*pow(2.0,-level)*graphicsScale*sphere_scale);
 			cout << i << " edge sIdx.idByPoint 0x" << hex << sIndex.idByPoint(workspace_ev[6+i]) << dec << endl << flush;
 		}
 
@@ -336,5 +356,13 @@ bool PolePosition1(VizHTM *viz) {
 
 	cout << "PolePosition done" << endl << flush;
 	ok = true;
+	return ok;
+}
+
+
+bool PoleCheck1(VizHTM *viz) {
+	bool ok = false;
+
+	// ok = true;
 	return ok;
 }

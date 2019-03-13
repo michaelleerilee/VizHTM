@@ -332,7 +332,7 @@ int main(int argc, char *argv[]) {
 //	testTenDegreeGrid_flag = true;
 
 	// Global diagnostics
-	if(true) {
+	if(false) {
 		blockingSphere_flag    = true;
 		testTenDegreeGrid_flag = true;
 		testShapeFiles_flag    = true;
@@ -349,7 +349,7 @@ int main(int argc, char *argv[]) {
 
 	// ok = EquatorCheck1(viz); lookFromArgs = "0.0 1.1 0.0"; lookFrom_flag = true;
 	// ok = EquatorCheck1(viz); lookFromArgs = "1.00001 0.0 0.0"; lookFrom_flag = true;
-	ok = EquatorCheck2(viz);
+	// ok = EquatorCheck2(viz);
 
 	/*
 	ok = MeridianCheck1(viz);
@@ -358,7 +358,8 @@ int main(int argc, char *argv[]) {
 	lookFrom_flag = false;
 	*/
 
-	// ok = PolePosition1(viz);
+	ok = PolePosition1(viz);
+	// ok = PoleCheck1(viz);
 
 
 	// Last chance changes...
