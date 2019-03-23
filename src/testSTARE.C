@@ -332,7 +332,7 @@ int main(int argc, char *argv[]) {
 //	testTenDegreeGrid_flag = true;
 
 	// Global diagnostics
-	if(false) {
+	if(true) {
 		blockingSphere_flag    = true;
 		testTenDegreeGrid_flag = true;
 		testShapeFiles_flag    = true;
@@ -346,6 +346,7 @@ int main(int argc, char *argv[]) {
 
 	// ok = BoundingBox1(viz);
 	// ok = Edges1(viz);
+	// ok = Edges2(viz); // Looking at a case were data lies on an edge.
 
 	// ok = EquatorCheck1(viz); lookFromArgs = "0.0 1.1 0.0"; lookFrom_flag = true;
 	// ok = EquatorCheck1(viz); lookFromArgs = "1.00001 0.0 0.0"; lookFrom_flag = true;
@@ -358,9 +359,10 @@ int main(int argc, char *argv[]) {
 	lookFrom_flag = false;
 	*/
 
-	ok = PolePosition1(viz);
+	// ok = PolePosition1(viz);
 	// ok = PoleCheck1(viz);
 
+	ok = Granule1(viz);
 
 	// Last chance changes...
 	if(lineWidth != -1) {

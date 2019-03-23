@@ -24,7 +24,8 @@
 // 64M 67108864
 //  1M  1048576
 // #define NARRAY_ 1048576
-#define NARRAY_ 4000000
+// #define NARRAY_ 4000000
+#define NARRAY_ 100000000
 // #define NARRAY_ 1000000000
 //#define NARRAY_ 600000000
 //#define NARRAY_ 200000000
@@ -215,7 +216,8 @@ public:
 
 	void addHstmRange(
 			HstmRange *range,
-			float r, float g, float b, float a=-1., float scale=1.0, bool arcFlag = true
+			float r, float g, float b, float a=-1., float scale=1.0, bool arcFlag = true,
+			SpatialIndex *index = NULL
 	);
 	void addCellsFromHstmRange(
 			HstmRange *range,

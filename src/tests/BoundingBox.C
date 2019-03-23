@@ -20,8 +20,8 @@ bool BoundingBox1(VizHTM *viz) {
 	latlonbox.push_back(LatLonDegrees64(0,5));
 
 	STARE index;
-	// STARE_Intervals intervals = index.BoundingBoxFromLatLonDegrees(latlonbox,6);
-	STARE_Intervals intervals = index.CoverBoundingBoxFromLatLonDegrees(latlonbox);
+	// STARE_SpatialIntervals intervals = index.BoundingBoxFromLatLonDegrees(latlonbox,6);
+	STARE_SpatialIntervals intervals = index.CoverBoundingBoxFromLatLonDegrees(latlonbox);
 	EmbeddedLevelNameEncoding leftJustified;
 	BitShiftNameEncoding      rightJustified;
 
@@ -43,7 +43,7 @@ bool BoundingBox1(VizHTM *viz) {
 	a0 = 0, a1 = 0, a2 = 0,
 	scale = 1;
 
-	for( STARE_Intervals::iterator iSid = intervals.begin(); iSid != intervals.end(); ++iSid ) {
+	for( STARE_SpatialIntervals::iterator iSid = intervals.begin(); iSid != intervals.end(); ++iSid ) {
 		Triangle tr0 = index.TriangleFromValue(*iSid);
 
 		// leftJustified.setIdFromSciDBLeftJustifiedFormat(*iSid);

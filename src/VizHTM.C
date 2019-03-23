@@ -1205,12 +1205,24 @@ void VizHTM::addHTMRange(
 
 void VizHTM::addHstmRange(
 		HstmRange *range,
-		float r, float g, float b, float a, float scale, bool arcFlag
+		float r, float g, float b, float a, float scale, bool arcFlag,
+		SpatialIndex *index
 ) {
+
+	cout << 1000 << endl << flush;
 
 	int indexLevel = 5, level;
 	EmbeddedLevelNameEncoding leftJustified;
-	SpatialIndex *index = new SpatialIndex(indexLevel);
+	bool external_index = false;
+
+	if(!index) {
+		cout << 1500 << endl << flush;
+		index = new SpatialIndex(indexLevel);
+	} else {
+		external_index = true;
+	}
+
+	cout << 2000 << endl << flush;
 
 	KeyPair kp; int indexp;
 	range->reset();
@@ -1224,7 +1236,7 @@ void VizHTM::addHstmRange(
 //		cout << 100 << " lo,hi name: " << loName << " " << hiName << endl << flush;
 //		cout << 101 << " level:      " << level << endl << flush;
 //		cout << 102 << " kp:         " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
-		if( level != indexLevel ) {
+		if( !external_index and (level != indexLevel) ) {
 			delete index;
 			indexLevel = level;
 			index = new SpatialIndex(indexLevel);
@@ -1251,7 +1263,9 @@ void VizHTM::addHstmRange(
 			}
 		}
 	}
-	delete index;
+	if(!external_index){
+		delete index;
+	}
 }
 
 void VizHTM::addCellsFromHstmRange(

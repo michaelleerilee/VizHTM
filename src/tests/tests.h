@@ -17,7 +17,8 @@
 
 bool BoundingBox1 (VizHTM *viz);
 
-bool Edges1       (VizHTM *viz);
+bool Edges1         (VizHTM *viz);
+bool Edges2 ( VizHTM * viz );
 
 bool EquatorCheck1(VizHTM *viz);
 bool EquatorCheck2(VizHTM *viz);
