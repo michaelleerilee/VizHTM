@@ -69,7 +69,7 @@
 #include <Inventor/nodes/SoRotationXYZ.h>
 
 void testTenDegreeGrid(VizHTM *viz,float r0, float g0, float b0, float rgbScale);
-void testShapeFiles(VizHTM *viz, float r, float g, float b);
+void testShapeFiles(VizHTM *viz, float r, float g, float b, float deltaZ);
 
 // For offscreen rendering.
 #include "misc.h"
@@ -352,11 +352,11 @@ int main(int argc, char *argv[]) {
 	}
 
 	blockingSphere_flag = false;
-	// testShapeFiles_flag = false;
+	testShapeFiles_flag = false;
 
 	if(blockingSphere_flag)    plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
 	if(testTenDegreeGrid_flag) testTenDegreeGrid(viz,r0,g0,b0,rgbScale);
-	if(testShapeFiles_flag)    testShapeFiles(viz,0.5,1,1);
+	if(testShapeFiles_flag)    testShapeFiles(viz,0.5,1,1,0.0);
 
 	// ok = BoundingBox1(viz);
 	// ok = Edges1(viz);

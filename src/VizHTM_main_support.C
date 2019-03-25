@@ -2272,7 +2272,7 @@ void testAddEdgesFromIndexAndName(VizHTM* viz, const char* htmIdName, int saveLe
 string shapeFile = "data/ne_50m_coastline/ne_50m_coastline.shp";
 float shapeFilesBlockingSphereScale = 0.999;
 
-void testShapeFiles(VizHTM* viz, float r, float g, float b) {
+void testShapeFiles(VizHTM* viz, float r, float g, float b, float deltaZ) {
 	bool verbose = false;
 	if(true) {
 		if(false) {
@@ -2287,7 +2287,7 @@ void testShapeFiles(VizHTM* viz, float r, float g, float b) {
 		float g = 0.9;
 		float b = 0.9;
 		*/
-		viz->addShapeFile(shapeFile,r,g,b);
+		viz->addShapeFile(shapeFile,r,g,b,deltaZ);
 		cout << "testShape done" << endl << flush;
 	}
 }
@@ -4055,7 +4055,7 @@ void testMultiResolution0(VizHTM *viz) {
 	plotBlockingSphere(viz,0.2,0.2,0.2,0.99);
 	testTenDegreeGridRGB(viz,0.6,0.6,0.6);
 
-	testShapeFiles(viz,0.2,1.0,1.0);
+	testShapeFiles(viz,0.2,1.0,1.0,0.0);
 
 	EmbeddedLevelNameEncoding leftJustified;
 	BitShiftNameEncoding rightJustified;
@@ -4222,7 +4222,7 @@ void testMultiResolution(VizHTM *viz) {
 	plotBlockingSphere(viz,0.2,0.2,0.2,0.99);
 	testTenDegreeGridRGB(viz,0.6,0.6,0.6);
 
-	testShapeFiles(viz,0.2,1,1);
+	testShapeFiles(viz,0.2,1,1,0);
 
 	EmbeddedLevelNameEncoding leftJustified;
 	BitShiftNameEncoding rightJustified;

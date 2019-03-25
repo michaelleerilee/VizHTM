@@ -1341,14 +1341,13 @@ void VizHTM::addArcFromIndexAndLatLonDegrees(
 
 void VizHTM::addArcsFromLatLonDegrees(
 		float64 *lat, float64 *lon, int nPoints, bool close,
-		float r, float g, float b, float a, int steps
+		float r, float g, float b, float a, float deltaZ, int steps
 		) {
 	float scale_ = 1.0;
 	SpatialVector v0, v1, v2;
 	int i = 0;
 	v0.setLatLonDegrees(lat[i],lon[i]);
 	v1 = v0;
-	float deltaZ = 0;
 	for(i=1; i < nPoints; i++) {
 		v2.setLatLonDegrees(lat[i],lon[i]);
 		addArc(v1,v2,r,g,b,a,scale_,deltaZ,steps);
@@ -1861,9 +1860,10 @@ void VizHTM::addCircleEdges(
 
 void VizHTM::addShapeFile(
 		string shapeFile,
-		float r, float g, float b,
+		float r, float g, float b, float deltaZ,
 		bool verbose,
-		int nStart, int nEnd) {
+		int nStart, int nEnd
+		) {
 
 	SHPHandle hSHP = SHPOpen(shapeFile.c_str(),"rb");
 
@@ -1934,7 +1934,7 @@ void VizHTM::addShapeFile(
 							addArcsFromLatLonDegrees(
 									yA, xA, nVerts,
 									false,
-									r_,g,b,-1.,3
+									r_,g,b,-1.,deltaZ,3
 							);
 						}
 					}
@@ -1944,7 +1944,7 @@ void VizHTM::addShapeFile(
 						addArcsFromLatLonDegrees(
 								yA, xA, nVerts,
 								false,
-								0.,g,b,-1.,3
+								0.,g,b,-1.,deltaZ,3
 						);
 					}
 				}

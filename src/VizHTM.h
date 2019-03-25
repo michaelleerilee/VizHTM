@@ -187,7 +187,7 @@ public:
 
 	void addArcsFromLatLonDegrees(
 			float64 *lat, float64 *lon, int nPoints, bool close,
-			float r, float g, float b, float a=-1., int steps=-1
+			float r, float g, float b, float a=-1., float deltaZ=0, int steps=-1
 			);
 
 	void addCellFromIndexAndId(
@@ -257,7 +257,7 @@ public:
 			float r, float g, float b, float a=-1., float scale=1.0);
 
 	void addShapeFile(
-			string shapeFile, float r, float g, float b, bool verbose = false,
+			string shapeFile, float r, float g, float b, float deltaZ = 0, bool verbose = false,
 			int nStart = -1, int nEnd = -1);
 
 	void debug_dump();

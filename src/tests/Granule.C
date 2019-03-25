@@ -18,6 +18,7 @@
 #include <iostream>
 using namespace std;
 
+void testShapeFiles(VizHTM *viz, float r, float g, float b, float deltaZ);
 
 string file_directory = "/home/mrilee/data/STARE/";
 
@@ -72,6 +73,8 @@ string files[22] =
 bool Granule1( VizHTM *viz ) {
 
 	cout << "Hello world" << endl;
+
+	testShapeFiles(viz,0.5,1,1,0.03);
 
 	string swath1_key = "MODIS SWATH TYPE L2";
 

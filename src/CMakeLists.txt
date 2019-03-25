@@ -87,7 +87,7 @@ target_link_libraries(testSTARE SoQt::SoQt testSTARE_tests ${STARE_LINK_LIB} Viz
 target_include_directories( testSTARE PUBLIC ${CMAKE_SOURCE_DIR}/src /usr/include /usr/include/qt5 /usr/include/qt5/QtCore /usr/include/qt5/QtGui /usr/local/Coin3D/include ${HDF_INCLUDE_DIRECTORIES} )
 
 add_executable( VizHTM_main VizHTM_main.C ) 
-target_link_libraries(VizHTM_main SoQt::SoQt testSTARE_tests ${STARE_LINK_LIB} VizHTM_LIB ${GEOMPACK_LIBRARY_LIB} ${HDF_LIBRARIES} shp gfortran )
+target_link_libraries(VizHTM_main SoQt::SoQt ${STARE_LINK_LIB} VizHTM_LIB ${GEOMPACK_LIBRARY_LIB} ${HDF_LIBRARIES} shp gfortran )
 target_include_directories( VizHTM_main PUBLIC ${CMAKE_SOURCE_DIR}/src /usr/include /usr/include/qt5 /usr/include/qt5/QtCore /usr/include/qt5/QtGui /usr/local/Coin3D/include ${HDF_INCLUDE_DIRECTORIES} )
 
 # target_include_directories( VizHTM_LIB PUBLIC /usr/include /usr/include/qt5 /usr/include/qt5/QtCore /usr/include/qt5/QtGui /usr/local/Coin3D/include )
