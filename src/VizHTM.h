@@ -52,11 +52,14 @@ class VizHTM {
 
 public:
 	VizHTM(int nArray);
+	// TODO Finalization?
 
 	void addEdge(
 			const SpatialVector x0,
 			const SpatialVector x1,
-			float r, float g, float b, float a=-1., float scale=1.0);
+			float r, float g, float b, float a=-1., float scale=1.0,
+			float deltaZ = 0.0
+			);
 	void addEdgeAndSphere(SpatialVector x0, SpatialVector x1, float r, float g, float b,
 						  SpatialVector s0, float rs, float gs, float bs, float radius);
 
@@ -90,7 +93,8 @@ public:
 			float r0, float g0, float b0,
 			float r1, float g1, float b1,
 			float r2, float g2, float b2,
-			float a0 = -1, float a1 = -1, float a2 = -1
+			float a0 = -1, float a1 = -1, float a2 = -1,
+			float deltaZ = 0.0
 			);
 
 	void addFace3(
@@ -145,7 +149,7 @@ public:
 	void addArc(
 			const SpatialVector x0,
 			const SpatialVector x1,
-			float r, float g, float b, float a=-1., float scale=1.,
+			float r, float g, float b, float a=-1., float scale=1., float deltaZ = 0.,
 			int steps=-1);
 	void addArcAtLatitudeDegrees(float64 lat, float64 lon0, float64 lon1, float r, float g, float b);
 
@@ -166,12 +170,12 @@ public:
 			float r0, float g0, float b0,
 			float r1, float g1, float b1,
 			float r2, float g2, float b2,
-			float a=-1., float scale=1.
+			float a=-1., float scale=1., float deltaZ = 0.
 			);
 
 	void addArcFromIndexAndId(
 			const SpatialIndex *index, uint64 htmId,
-			float r, float g, float b, float a=-1., float scale=1.0);
+			float r, float g, float b, float a=-1., float scale=1.0, float deltaZ = 0.0);
 	void addArcFromIndexAndName(
 			SpatialIndex *index, const char* htmIdName,
 			float r, float g, float b, float a=-1.);
@@ -217,6 +221,7 @@ public:
 	void addHstmRange(
 			HstmRange *range,
 			float r, float g, float b, float a=-1., float scale=1.0, bool arcFlag = true,
+			float deltaZ = 0.0,
 			SpatialIndex *index = NULL
 	);
 	void addCellsFromHstmRange(
@@ -236,7 +241,9 @@ public:
 
 	void addHstmRangeFaces(
 			HstmRange *range,
-			float r, float g, float b, float a=-1., float scale=1.0
+			float r, float g, float b, float a=-1., float scale=1.0,
+			float deltaZ = 0.0,
+			SpatialIndex *index = NULL
 	);
 
 	void addCircleFacet(
@@ -292,6 +299,10 @@ public:
 
 	int 	nCoordinates;
 	float 	(*fCoordinates)[3];
+
+	string  projection = "None";
+	bool    setProjection(string projection);
+	string  getProjection();
 
 	int   	nSpheres;
 	int   	*sphereIndices;

@@ -49,6 +49,37 @@
 
 using namespace std;
 
+SpatialVector project( SpatialVector v, string projection ) {
+	if(projection == "None") {
+		return SpatialVector(v);
+	} else {
+		float64 gPio4 = gPio2 * 0.5;
+		float64 lat, lon; v.getLatLonDegrees(lat,lon);
+
+		float64 px,py,pz;
+		if(projection == "Mercator") {
+
+			if( abs(lat) == 90 ) {
+				if( lat > 0 ) {
+					lat += -1.0e-6;
+				} else {
+					lat +=  1.0e-6;
+				}
+			}
+			lat *= gPr;	lon *= gPr;
+
+			px = lon;
+			py = log(tan(gPio4+0.5*lat));
+			pz = 0.0;
+		} else {
+			px = v.x();
+			py = v.y();
+			pz = v.z();
+		}
+		return SpatialVector(px,py,pz);
+	}
+}
+
 VizHTM::VizHTM(int nArray) : nArray(nArray) {
 
 	nCoordinates 		    = 0;
@@ -185,19 +216,137 @@ void VizHTM::addFace3(
 		float r0, float g0, float b0,
 		float r1, float g1, float b1,
 		float r2, float g2, float b2,
-		float a0, float a1, float a2
+		float a0, float a1, float a2,
+		float deltaZ
 		) {
-	int indexBase = nCoordinates;
-	int colorBase = nFaceVertexColorIndices;
-	addFaceColor(r0,g0,b0,a0);
-	addFaceColor(r1,g1,b1,a1);
-	addFaceColor(r2,g2,b2,a2);
-	addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
-	addCoordinate( x00,  x01,  x02);
-	addCoordinate( x10,  x11,  x12);
-	addCoordinate( x20,  x21,  x22);
-	addFaceIndices3(indexBase,indexBase+1,indexBase+2);
-	nFaces++;
+
+	// cout << 300 << " deltaZ = " << deltaZ << endl << flush;
+
+	if( this->projection == "None" ) {
+		int indexBase = nCoordinates;
+		int colorBase = nFaceVertexColorIndices;
+		addFaceColor(r0,g0,b0,a0);
+		addFaceColor(r1,g1,b1,a1);
+		addFaceColor(r2,g2,b2,a2);
+		addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
+		addCoordinate( x00,  x01,  x02);
+		addCoordinate( x10,  x11,  x12);
+		addCoordinate( x20,  x21,  x22);
+		addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+		nFaces++;
+	} else {
+
+		// cout << "deltaZ = " << deltaZ << endl << flush;
+
+		bool printflag = false;
+
+		SpatialVector x0(x00,x01,x02), x1(x10,x11,x12), x2(x20,x21,x22);
+		float64 lat0,lon0,lat1,lon1,lat2,lon2;
+		x0.getLatLonDegrees(lat0,lon0);
+		x1.getLatLonDegrees(lat1,lon1);
+		x2.getLatLonDegrees(lat2,lon2);
+		float64 lon_min = min(lon0,min(lon1,lon2));
+		float64 lon_max = max(lon0,max(lon1,lon2));
+		int nq = 1;
+
+		if(printflag){
+			cout << "---" << endl << flush;
+			cout
+			<< " dlonmx: " << lon_max - lon_min
+			<< " lomnmx: " << lon_min << "," << lon_max << " "
+			<< " lons: " << lon0 << "," << lon1 << "," << lon2 << " -- ";
+		}
+
+		SpatialVector q0[2],q1[2],q2[2];
+		// if( lon_max - lon_min > 350.0 ) {
+		if( lon_max - lon_min > 200.0 ) {
+			nq = 2;
+
+			// printflag = false;
+//			if(printflag){
+			if(false){
+				cout << "---" << endl << flush;
+				cout
+				<< " dlonmx: " << lon_max - lon_min
+				<< " lomnmx: " << lon_min << "," << lon_max << " "
+				<< " lons: " << lon0 << "," << lon1 << "," << lon2 << " -- ";
+			}
+
+			// Left side
+			q0[0] = project(x0,this->projection);
+			q1[0] = project(x1,this->projection);
+			q2[0] = project(x2,this->projection);
+
+			if(lon0 > 180) {
+				q0[0] = q0[0] + SpatialVector( -2*gPi, 0, 0 );
+			}
+			if(lon1 > 180) {
+				q1[0] = q1[0] + SpatialVector( -2*gPi, 0, 0 );
+			}
+			if(lon2 > 180) {
+				q2[0] = q2[0] + SpatialVector( -2*gPi, 0, 0 );
+			}
+
+			// Right side
+			q0[1] = project(x0,this->projection);
+			q1[1] = project(x1,this->projection);
+			q2[1] = project(x2,this->projection);
+
+			if(lon0 < 180) {
+				q0[1] = q0[1] + SpatialVector(  2*gPi, 0, 0 );
+			}
+			if(lon1 < 180) {
+				q1[1] = q1[1] + SpatialVector(  2*gPi, 0, 0 );
+			}
+			if(lon2 < 180) {
+				q2[1] = q2[1] + SpatialVector(  2*gPi, 0, 0 );
+			}
+
+		} else {
+			nq = 1;
+			q0[0] = project(x0,this->projection);
+			q1[0] = project(x1,this->projection);
+			q2[0] = project(x2,this->projection);
+		}
+		for( int iq=0; iq<nq; ++iq) {
+			if(printflag) {
+				float64 lat,lon;
+				q0[iq].getLatLonDegrees(lat,lon); cout << lon << ",";
+				q1[iq].getLatLonDegrees(lat,lon); cout << lon << ",";
+				q2[iq].getLatLonDegrees(lat,lon); cout << lon << " -- ";
+			}
+
+			int indexBase = nCoordinates;
+			int colorBase = nFaceVertexColorIndices;
+			if(nq == 1 && iq == 0) {
+				addFaceColor(0.75,0,0,0);
+				addFaceColor(0.75,0,0,0);
+				addFaceColor(0.75,0,0,0);
+			} else if(iq == 0) {
+				addFaceColor(0,0.75,0,0);
+				addFaceColor(0,0.75,0,0);
+				addFaceColor(0,0.75,0,0);
+			} else {
+				addFaceColor(0,0,0.75,0);
+				addFaceColor(0,0,0.75,0);
+				addFaceColor(0,0,0.75,0);
+			}
+//			addFaceColor(r0,g0,b0,a0);
+//			addFaceColor(r1,g1,b1,a1);
+//			addFaceColor(r2,g2,b2,a2);
+
+			addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
+			addCoordinate( q0[iq].x(), q0[iq].y(), q0[iq].z()+deltaZ );
+			addCoordinate( q1[iq].x(), q1[iq].y(), q1[iq].z()+deltaZ );
+			addCoordinate( q2[iq].x(), q2[iq].y(), q2[iq].z()+deltaZ );
+			addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+			nFaces++;
+		}
+		if(printflag) {
+			cout << endl << flush;
+		}
+
+	}
 }
 
 void VizHTM::addFace3(
@@ -210,6 +359,9 @@ void VizHTM::addFace3(
 		float a0, float a1, float a2,
 		float scale
 		) {
+
+	cout << 400 << endl << flush;
+
 	x0 = x0*scale;
 	addFace3(
 			x0.x(), x0.y(), x0.z(),
@@ -702,24 +854,78 @@ SpatialVector randomVector() {
 void VizHTM::addEdge(
 		const SpatialVector x0,
 		const SpatialVector x1,
-		float r, float g, float b, float a, float scale) {
+		float r, float g, float b, float a, float scale,
+		float deltaZ
+		) {
 
 	// float scale_ = (scale<0) ? 1.0 : scale;
 
-	//cout << " addEdge: start, " << flush;
-	int colorBase = nEdgeColors;
-	addEdgeColor(r,g,b,a);
-	addEdgeColor(r,g,b,a);
-	addEdgeVertexColorIndices(colorBase,colorBase+1);
+	if(this->projection == "None") {
 
-	int coordBase = nCoordinates;
-//	SpatialVector a = x0*scale;
-//	SpatialVector b = x1*scale;
-//	addCoordinate(a); addCoordinate(b);
-	addCoordinate(x0*scale);
-	addCoordinate(x1*scale);
-	addEdgeIndices(coordBase,coordBase+1);
-	//cout << " addEdge: done; " << flush;
+		//cout << " addEdge: start, " << flush;
+		int colorBase = nEdgeColors;
+		addEdgeColor(r,g,b,a);
+		addEdgeColor(r,g,b,a);
+		addEdgeVertexColorIndices(colorBase,colorBase+1);
+
+		int coordBase = nCoordinates;
+		//	SpatialVector a = x0*scale;
+		//	SpatialVector b = x1*scale;
+		//	addCoordinate(a); addCoordinate(b);
+		addCoordinate(x0*scale);
+		addCoordinate(x1*scale);
+		addEdgeIndices(coordBase,coordBase+1);
+		//cout << " addEdge: done; " << flush;
+
+	} else {
+		int nq;
+		SpatialVector q0[2]; // TODO maybe one day go to a polyline
+		SpatialVector q1[2];
+
+		// Check to see if we need to break the edge in two.
+		float64 lat0, lon0, lat1, lon1;
+		SpatialVector tx0 = x0, tx1 = x1;
+		tx0.getLatLonDegrees(lat0,lon0); // range is -180..+180
+		tx1.getLatLonDegrees(lat1,lon1);
+
+		q0[0] = project(x0,this->projection);
+
+		if( abs(lon1-lon0) > 350.0 ) {
+
+			// TODO Fix the following...
+			// TODO Hope this edge is short...
+			nq = 2;
+			q0[1] = project(x1,this->projection);
+			if(lon0 > lon1) {
+				q1[0] = q0[1] + SpatialVector( 2*gPi,0,0);
+				q1[1] = q0[0] + SpatialVector(-2*gPi,0,0);
+			} else {
+				q1[0] = q0[1] + SpatialVector(-2*gPi,0,0);
+				q1[1] = q0[0] + SpatialVector( 2*gPi,0,0);
+			}
+
+		} else {
+			nq    = 1;
+			q1[0] = project(x1,this->projection);
+		}
+		SpatialVector dZ(0,0,deltaZ);
+		for( int iq = 0; iq < nq; ++iq ) {
+			//cout << " addEdge: start, " << flush;
+			int colorBase = nEdgeColors;
+			addEdgeColor(r,g,b,a);
+			addEdgeColor(r,g,b,a);
+			addEdgeVertexColorIndices(colorBase,colorBase+1);
+
+			int coordBase = nCoordinates;
+			//	SpatialVector a = x0*scale;
+			//	SpatialVector b = x1*scale;
+			//	addCoordinate(a); addCoordinate(b);
+			addCoordinate(q0[iq]+dZ);
+			addCoordinate(q1[iq]+dZ);
+			addEdgeIndices(coordBase,coordBase+1);
+			//cout << " addEdge: done; " << flush;
+		}
+	}
 }
 
 void VizHTM::addEdge2(
@@ -728,6 +934,8 @@ void VizHTM::addEdge2(
 		) {
 
 	// float scale_ = (scale<0) ? 1.0 : scale;
+
+	if(this->projection == "None") {
 
 	//cout << " addEdge: start, " << flush;
 	int colorBase = nEdgeColors;
@@ -743,6 +951,10 @@ void VizHTM::addEdge2(
 	addCoordinate(x1*scale1);
 	addEdgeIndices(coordBase,coordBase+1);
 	//cout << " addEdge: done; " << flush;
+
+	} else {
+
+	}
 }
 
 void VizHTM::addEdgeProjections(SpatialVector x1) {
@@ -904,7 +1116,7 @@ void VizHTM::addLatLonBoxEdgesDegrees(
 void VizHTM::addArc(
 		const SpatialVector x0,
 		const SpatialVector x1,
-		float r, float g, float b, float alpha, float scale,
+		float r, float g, float b, float alpha, float scale, float deltaZ,
 		int steps) {
 
 	SpatialVector dx = x1 - x0;
@@ -923,13 +1135,13 @@ void VizHTM::addArc(
 		double a = i / (steps - 1);
 //		cout << i << ", " << a << "; " << flush;
 		SpatialVector *next = new SpatialVector(x0 + a * dx); next->normalize();
-		addEdge(*last,*next, r, g, b, alpha, scale );
+		addEdge(*last,*next, r, g, b, alpha, scale, deltaZ );
 		last = next;
 	}
 
 //	cout << endl << flush;
 
-	addEdge(*last,x1,r,g,b,alpha, scale);
+	addEdge(*last,x1,r,g,b,alpha, scale, deltaZ );
 }
 
 void VizHTM::addArcAtLatitudeDegrees(float64 lat, float64 lon0, float64 lon1, float r, float g, float b) {
@@ -973,43 +1185,53 @@ void VizHTM::addFaceFromIndexAndId(
 		float r0, float g0, float b0,
 		float r1, float g1, float b1,
 		float r2, float g2, float b2,
-		float a, float scale
+		float a, float scale, float deltaZ
 		) {
+
+	// cout << 200 << " deltaZ = " << deltaZ << endl << flush;
+
 	SpatialVector x1_,x2_,x3_;
 	uint64 nodeIndex = index->nodeIndexFromId(htmId);
 //	cout << "htmId:  " << htmId << endl << flush;
 //	cout << "nodeId: " << nodeIndex << endl << flush;
 	index->nodeVertex(nodeIndex,x1_,x2_,x3_);
 	if(nodeIndex) {
-//		addFace3(
-//				v0.x(), v0.y(), v0.z(),
-//				v1.x(), v1.y(), v1.z(),
-//				v2.x(), v2.y(), v2.z(),
-//				r0,g0,b0,
-//				r1,g1,b1,
-//				r2,g2,b2
-//				);
-
-		int colorBase = this->nFaceColors;
-		this->addFaceColor(r0,g0,b0,a);
-		this->addFaceColor(r1,g1,b1,a);
-		this->addFaceColor(r2,g2,b2,a);
-		this->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
 
 		SpatialVector x1,x2,x3;
 		x1 = x1_*scale;
 		x2 = x2_*scale;
 		x3 = x3_*scale;
 
-		int indexBase = this->nCoordinates;
-		this->addCoordinate64(x1.x(),x1.y(),x1.z());
-		this->addCoordinate64(x2.x(),x2.y(),x2.z());
-		this->addCoordinate64(x3.x(),x3.y(),x3.z());
-		this->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+		if(true) {
+			// cout << 210 << " deltaZ = " << deltaZ << endl << flush;
+			addFace3(
+					x1.x(), x1.y(), x1.z(),
+					x2.x(), x2.y(), x2.z(),
+					x3.x(), x3.y(), x3.z(),
+					r0,g0,b0,
+					r1,g1,b1,
+					r2,g2,b2,
+					a,a,a,
+					deltaZ
+			);
+			// cout << 220 << " deltaZ = " << deltaZ << endl << flush;
+		} else {
+			int colorBase = this->nFaceColors;
+			this->addFaceColor(r0,g0,b0,a);
+			this->addFaceColor(r1,g1,b1,a);
+			this->addFaceColor(r2,g2,b2,a);
+			this->addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
 
-//		addEdge(v0,v1,r,g,b,a);
-//		addEdge(v1,v2,r,g,b,a);
-//		addEdge(v2,v0,r,g,b,a);
+
+			int indexBase = this->nCoordinates;
+			this->addCoordinate64(x1.x(),x1.y(),x1.z());
+			this->addCoordinate64(x2.x(),x2.y(),x2.z());
+			this->addCoordinate64(x3.x(),x3.y(),x3.z());
+			this->addFaceIndices3(indexBase,indexBase+1,indexBase+2);
+		}
+		//		addEdge(v0,v1,r,g,b,a);
+		//		addEdge(v1,v2,r,g,b,a);
+		//		addEdge(v2,v0,r,g,b,a);
 	}
 }
 
@@ -1041,14 +1263,14 @@ void VizHTM::addEdgesFromIndexAndLatLonDegrees(
 
 void VizHTM::addArcFromIndexAndId(
 		const SpatialIndex *index, uint64 htmId,
-		float r, float g, float b, float a, float scale
+		float r, float g, float b, float a, float scale, float deltaZ
 		) {
 	SpatialVector v0, v1, v2;
 	uint64 nodeIndex = index->nodeIndexFromId(htmId);
 	index->nodeVertex(nodeIndex,v0,v1,v2);
-	addArc(v0,v1,r,g,b,a,scale);
-	addArc(v1,v2,r,g,b,a,scale);
-	addArc(v2,v0,r,g,b,a,scale);
+	addArc(v0,v1,r,g,b,a,scale,deltaZ);
+	addArc(v1,v2,r,g,b,a,scale,deltaZ);
+	addArc(v2,v0,r,g,b,a,scale,deltaZ);
 }
 
 void VizHTM::addCellFromIndexAndId(
@@ -1126,13 +1348,14 @@ void VizHTM::addArcsFromLatLonDegrees(
 	int i = 0;
 	v0.setLatLonDegrees(lat[i],lon[i]);
 	v1 = v0;
+	float deltaZ = 0;
 	for(i=1; i < nPoints; i++) {
 		v2.setLatLonDegrees(lat[i],lon[i]);
-		addArc(v1,v2,r,g,b,a,scale_,steps);
+		addArc(v1,v2,r,g,b,a,scale_,deltaZ,steps);
 		v1 = v2;
 	}
 	if(close) {
-		addArc(v2,v0,r,g,b,a,scale_,steps);
+		addArc(v2,v0,r,g,b,a,scale_,deltaZ,steps);
 	}
 }
 
@@ -1206,10 +1429,11 @@ void VizHTM::addHTMRange(
 void VizHTM::addHstmRange(
 		HstmRange *range,
 		float r, float g, float b, float a, float scale, bool arcFlag,
+		float deltaZ,
 		SpatialIndex *index
 ) {
 
-	cout << 1000 << endl << flush;
+	// cout << 1000 << endl << flush;
 
 	int indexLevel = 5, level;
 	EmbeddedLevelNameEncoding leftJustified;
@@ -1222,7 +1446,7 @@ void VizHTM::addHstmRange(
 		external_index = true;
 	}
 
-	cout << 2000 << endl << flush;
+	// cout << 2000 << endl << flush;
 
 	KeyPair kp; int indexp;
 	range->reset();
@@ -1250,7 +1474,8 @@ void VizHTM::addHstmRange(
 						id,
 						r, g, b,
 						a,
-						scale
+						scale,
+						deltaZ
 				);
 			} else {
 				addEdgesFromIndexAndId(
@@ -1417,12 +1642,22 @@ void VizHTM::addHstmRangeIDs(
 
 void VizHTM::addHstmRangeFaces(
 		HstmRange *range,
-		float r, float g, float b, float a, float scale
+		float r, float g, float b, float a, float scale,
+		float deltaZ,
+		SpatialIndex *index
 ) {
+
+	// cout << 100 << " deltaZ = " << deltaZ << endl << flush;
 
 	int indexLevel = 5, level;
 	EmbeddedLevelNameEncoding leftJustified;
-	SpatialIndex *index = new SpatialIndex(indexLevel);
+
+	bool external_index = false;
+	if(!index) {
+		index = new SpatialIndex(indexLevel);
+	} else {
+		external_index = true;
+	}
 
 	KeyPair kp; int indexp;
 	range->reset();
@@ -1436,7 +1671,7 @@ void VizHTM::addHstmRangeFaces(
 //		cout << 100 << " lo,hi name: " << loName << " " << hiName << endl << flush;
 //		cout << 101 << " level:      " << level << endl << flush;
 //		cout << 102 << " kp:         " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
-		if( level != indexLevel ) {
+		if( !external_index and (level != indexLevel) ) {
 			delete index;
 			indexLevel = level;
 			index = new SpatialIndex(indexLevel);
@@ -1450,11 +1685,13 @@ void VizHTM::addHstmRangeFaces(
 					r, g, b,
 					r, g, b,
 					r, g, b,
-					a, scale
+					a, scale, deltaZ
 			);
 		}
 	}
-	delete index;
+	if(!external_index){
+		delete index;
+	}
 }
 
 void VizHTM::addHTMInterval(SpatialIndex index, htmRange interval) {
@@ -1717,3 +1954,16 @@ void VizHTM::addShapeFile(
 		SHPClose(hSHP);
 	}
 }
+bool    VizHTM::setProjection(string projection) {
+	bool ok = false;
+	if ( ok = (projection == "None") ) {
+		this->projection = projection;
+	} else if ( ok = (projection == "Mercator") ) {
+		this->projection = projection;
+	}
+	return ok;
+}
+string  VizHTM::getProjection() {
+	return projection;
+}
+

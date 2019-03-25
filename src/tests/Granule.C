@@ -42,12 +42,14 @@ string files[12] =
 string files[22] =
 {
 		"MYD09.A2019003.1820.006.2019005015616.hdf",
+
 		"MYD09.A2019003.1850.006.2019005020457.hdf",
 		"MYD09.A2019003.1855.006.2019005020704.hdf",
 		"MYD09.A2019003.1900.006.2019005020825.hdf",
 		"MYD09.A2019003.1905.006.2019005020940.hdf",
 		"MYD09.A2019003.1910.006.2019005021044.hdf",
-		"MYD09.A2019003.2000.006.2019005015631.hdf",
+
+		"MYD09.A2019003.2000.006.2019005015631.hdf", // 6
 		"MYD09.A2019003.2005.006.2019005015815.hdf",
 		"MYD09.A2019003.2010.006.2019005015932.hdf",
 		"MYD09.A2019003.2015.006.2019005020109.hdf",
@@ -57,7 +59,8 @@ string files[22] =
 		"MYD09.A2019003.2035.006.2019005020748.hdf",
 		"MYD09.A2019003.2040.006.2019005020913.hdf",
 		"MYD09.A2019003.2045.006.2019005021033.hdf",
-		"MYD09.A2019003.2050.006.2019005021135.hdf",
+		"MYD09.A2019003.2050.006.2019005021135.hdf", // 16
+
 		"MYD09.A2019003.2135.006.2019005015309.hdf",
 		"MYD09.A2019003.2140.006.2019005015427.hdf",
 		"MYD09.A2019003.2145.006.2019005015553.hdf",
@@ -75,6 +78,7 @@ bool Granule1( VizHTM *viz ) {
 	// for( int ifile = 0; ifile < 5; ++ifile ) {
 	// for( int ifile = 5; ifile < 6; ++ifile ) {
 	for( int ifile = 6; ifile < 17; ++ifile ) {
+	// for( int ifile = 7; ifile < 8; ++ifile ) {
 
 		// char filename1[128] = "/home/mrilee/data/OMI/OMI-Aura_L2-OMAERO_2004m1001t0003-o01132_v003-2011m0926t170457.he5";
 
@@ -166,13 +170,14 @@ bool Granule1( VizHTM *viz ) {
 			fprintf(stderr, "error: cannot read field '%s'\n",variable_key.c_str());
 			return -1;
 		}
-		/* Dump data from '23.8H_Approx._Res.3_TB_(not-resampled)' */
+		/* Dump data from '23.8H_Approx._Res.3_TB_(not-resampled)'
 		for (int i = 0; i < 10; ++i) {
 			for (int j = 0; j < 2; ++j) {
 				printf("%d ", datafield1data[j + 243 * i]);
 			}
 			printf("\n");
 		}
+		*/
 
 		/*
 	float Longitude(1km_Data_Lines=2030, 1km_Data_Samples=1354);
@@ -211,13 +216,14 @@ bool Granule1( VizHTM *viz ) {
 			fprintf(stderr, "error: cannot read field 'Longitude'\n");
 			return -1;
 		}
-		/* Dump data from 'Longitude' */
+		/* Dump data from 'Longitude'
 		for (int i = 0; i < 10; ++i) {
 			for (int j = 0; j < 2; ++j) {
 				printf("%f ", geofield1data[j + samples * i]);
 			}
 			printf("\n");
 		}
+		*/
 
 		/*
 		 *
@@ -244,33 +250,36 @@ bool Granule1( VizHTM *viz ) {
 			fprintf(stderr, "error: cannot read field 'Latitude'\n");
 			return -1;
 		}
-		/* Dump data from 'Latitude' */
+		/* Dump data from 'Latitude'
 		for (int i = 0; i < 10; ++i) {
 			for (int j = 0; j < 2; ++j) {
 				printf("%f ", geofield2data[j + samples * i]);
 			}
 			printf("\n");
 		}
+		*/
 
 		/*
 		 *
 		 */
 
-		cout << 100 << endl << flush;
+		// cout << 100 << endl << flush;
 		STARE index;
 		HstmRange* range = new HstmRange;
 		// int resolutionLevel = 5;
-		int resolutionLevel = 7;
+		int resolutionLevel = 6;
+		// int resolutionLevel = 7;
 		// int resolutionLevel = 8;
 		// int resolutionLevel = 14;
 		SpatialIndex sIndex = index.getIndex(resolutionLevel);
 
+		/*
 		cout << 200 << endl << flush;
-
 		cout
 		<< setprecision(17)
 		<< setw(20)
 		<< scientific;
+		*/
 
 		range->purge();
 		int k = 0;
@@ -312,10 +321,12 @@ bool Granule1( VizHTM *viz ) {
 				++k;
 			}
 		}
-		cout << 500 << endl << flush;
+		// cout << 500 << endl << flush;
 		// range->reset();
-		viz->addHstmRange(range,0.0,1.0,0.0,0.0,1.0000001,true,&sIndex);
-		cout << 600 << endl << flush;
+		viz->addHstmRange(range,0.0,1.0,0.25,0.0,1.0,true,0.02,&sIndex);
+
+		viz->addHstmRangeFaces(range,0.0,0.75,0.0,0.0,1.0,0.01,&sIndex);
+		// cout << 600 << endl << flush;
 		/*
 	void VizHTM::addHstmRange(
 			HstmRange *range,

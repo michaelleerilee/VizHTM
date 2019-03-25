@@ -68,8 +68,8 @@
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoRotationXYZ.h>
 
-void testTenDegreeGrid(VizHTM *viz);
-void testShapeFiles(VizHTM *viz);
+void testTenDegreeGrid(VizHTM *viz,float r0, float g0, float b0, float rgbScale);
+void testShapeFiles(VizHTM *viz, float r, float g, float b);
 
 // For offscreen rendering.
 #include "misc.h"
@@ -297,6 +297,8 @@ void loadTestScene
 
 int main(int argc, char *argv[]) {
 
+	bool ok = false;
+
 	QWidget *window = SoQt::init(argv[0]);
 
 	const char* mainName = "testSTARE";
@@ -304,6 +306,11 @@ int main(int argc, char *argv[]) {
 	cout << "viz..." << flush;
 	VizHTM *viz = new VizHTM(NARRAY_);
 	cout << "allocated." << endl << flush;
+
+	// Project... Needs to come first.
+	// cout << 100 << endl << flush;
+	ok = viz->setProjection("Mercator");
+	// cout << 200 << endl << flush;
 
 	bool
 		examiner_viz           = false,
@@ -330,6 +337,12 @@ int main(int argc, char *argv[]) {
 	string baseName = "testSTARE";
 
 //	testTenDegreeGrid_flag = true;
+	float
+	r0       = 0.5,
+	g0       = 0.5,
+	b0       = 0.5,
+	rgbScale = 0
+	;
 
 	// Global diagnostics
 	if(true) {
@@ -338,11 +351,12 @@ int main(int argc, char *argv[]) {
 		testShapeFiles_flag    = true;
 	}
 
-	if(blockingSphere_flag)    plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
-	if(testTenDegreeGrid_flag) testTenDegreeGrid(viz);
-	if(testShapeFiles_flag)    testShapeFiles(viz);
+	blockingSphere_flag = false;
+	// testShapeFiles_flag = false;
 
-	bool ok = false;
+	if(blockingSphere_flag)    plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
+	if(testTenDegreeGrid_flag) testTenDegreeGrid(viz,r0,g0,b0,rgbScale);
+	if(testShapeFiles_flag)    testShapeFiles(viz,0.5,1,1);
 
 	// ok = BoundingBox1(viz);
 	// ok = Edges1(viz);

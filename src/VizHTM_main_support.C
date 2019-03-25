@@ -2025,7 +2025,10 @@ void testTwoRectangle(VizHTM *viz, int htmIdLevel) {
 }
 
 
-void testTenDegreeGrid(VizHTM *viz) {
+void testTenDegreeGrid(
+		VizHTM *viz,
+		float r0, float g0, float b0, float rgbScale
+		) {
 	int saveLevel = 5;
 	float64 PI = atan2(0,-1);
 	float64 k  = 2*PI/360.;
@@ -2034,9 +2037,12 @@ void testTenDegreeGrid(VizHTM *viz) {
 	float dLon = 10;
 	for(float lat=-90; lat<=90; lat+= dLat) {
 		for(float lon=0; lon<=360; lon+= dLon) {
-			float r = 0.125+0.125*(1+cos(k*lon)); // r=0;
-			float g = 0.125+0.125*(1+sin(k*lon)); // g=0;
-			float b = 0.125+0.125*(1+sin(k*lat)); // b=0;
+//			float r = 0.125+0.125*(1+cos(k*lon)); // r=0;
+//			float g = 0.125+0.125*(1+sin(k*lon)); // g=0;
+//			float b = 0.125+0.125*(1+sin(k*lat)); // b=0;
+			float r = r0+rgbScale*(1+cos(k*lon)); // r=0;
+			float g = g0+rgbScale*(1+sin(k*lon)); // g=0;
+			float b = b0+rgbScale*(1+sin(k*lat)); // b=0;
 			viz->addLatLonBoxEdgesDegrees(
 					lat + 0.25, lon + 0.25,
 					lat + dLat - 0.25, lon + dLon - 0.25,
@@ -2266,17 +2272,21 @@ void testAddEdgesFromIndexAndName(VizHTM* viz, const char* htmIdName, int saveLe
 string shapeFile = "data/ne_50m_coastline/ne_50m_coastline.shp";
 float shapeFilesBlockingSphereScale = 0.999;
 
-void testShapeFiles(VizHTM* viz) {
+void testShapeFiles(VizHTM* viz, float r, float g, float b) {
 	bool verbose = false;
 	if(true) {
-		plotBlockingSphere(viz,0.2,0.2,0.2,shapeFilesBlockingSphereScale);
-		testTenDegreeGridRGB(viz,0.6,0.6,0.6);
+		if(false) {
+			plotBlockingSphere(viz,0.2,0.2,0.2,shapeFilesBlockingSphereScale);
+			testTenDegreeGridRGB(viz,0.6,0.6,0.6);
+		}
 		//	string shapeFile = "data/ne_110m_coastline/ne_110m_coastline.shp"; // okay
 		// string shapeFile = "data/ne_50m_coastline/ne_50m_coastline.shp"; // okay
 		// string shapeFile = "data/ne_10m_coastline/ne_10m_coastline.shp"; // Doesn't work yet.
+		/*
 		float r = 0.5;
 		float g = 0.9;
 		float b = 0.9;
+		*/
 		viz->addShapeFile(shapeFile,r,g,b);
 		cout << "testShape done" << endl << flush;
 	}
@@ -4045,7 +4055,7 @@ void testMultiResolution0(VizHTM *viz) {
 	plotBlockingSphere(viz,0.2,0.2,0.2,0.99);
 	testTenDegreeGridRGB(viz,0.6,0.6,0.6);
 
-	testShapeFiles(viz);
+	testShapeFiles(viz,0.2,1.0,1.0);
 
 	EmbeddedLevelNameEncoding leftJustified;
 	BitShiftNameEncoding rightJustified;
@@ -4212,7 +4222,7 @@ void testMultiResolution(VizHTM *viz) {
 	plotBlockingSphere(viz,0.2,0.2,0.2,0.99);
 	testTenDegreeGridRGB(viz,0.6,0.6,0.6);
 
-	testShapeFiles(viz);
+	testShapeFiles(viz,0.2,1,1);
 
 	EmbeddedLevelNameEncoding leftJustified;
 	BitShiftNameEncoding rightJustified;
