@@ -68,6 +68,10 @@
 #include <Inventor/nodes/SoCube.h>
 #include <Inventor/nodes/SoRotationXYZ.h>
 
+#include <Inventor/SbVec2f.h>
+
+#include <Inventor/Qt/SoQtGLWidget.h>
+
 void testTenDegreeGrid(VizHTM *viz,float r0, float g0, float b0, float rgbScale);
 void testShapeFiles(VizHTM *viz, float r, float g, float b, float deltaZ);
 
@@ -309,7 +313,8 @@ int main(int argc, char *argv[]) {
 
 	// Project... Needs to come first.
 	// cout << 100 << endl << flush;
-	ok = viz->setProjection("Mercator");
+	ok = viz->setProjection("Equirectangular");
+	// ok = viz->setProjection("Mercator");
 	// cout << 200 << endl << flush;
 
 	bool
@@ -345,14 +350,14 @@ int main(int argc, char *argv[]) {
 	;
 
 	// Global diagnostics
-	if(true) {
+	if(false) {
 		blockingSphere_flag    = true;
 		testTenDegreeGrid_flag = true;
 		testShapeFiles_flag    = true;
 	}
 
-	blockingSphere_flag = false;
-	testShapeFiles_flag = false;
+	// blockingSphere_flag = false;
+	// testShapeFiles_flag = false;
 
 	if(blockingSphere_flag)    plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
 	if(testTenDegreeGrid_flag) testTenDegreeGrid(viz,r0,g0,b0,rgbScale);
@@ -376,7 +381,8 @@ int main(int argc, char *argv[]) {
 	// ok = PolePosition1(viz);
 	// ok = PoleCheck1(viz);
 
-	ok = Granule1(viz);
+	// ok = Granule1(viz);
+	ok = Chunk1(viz);
 
 	// Last chance changes...
 	if(lineWidth != -1) {
@@ -401,7 +407,9 @@ int main(int argc, char *argv[]) {
 	/**************** Start Graphics ****************/
 
 	// const int width = 2000, height = 1400;
-	const int width = 800, height = 600;
+	// const int width = 1600, height = 800;
+	// const int width = 800, height = 600;
+	const int width = 1000, height = 500;
 
 	window->setMinimumSize(width,height);
 	if (window == NULL) exit(1);
@@ -476,6 +484,14 @@ int main(int argc, char *argv[]) {
 	// Examiner viewer
 	if(examiner_viz){
 		SoQtExaminerViewer *viewer = new SoQtExaminerViewer(window);
+
+		{
+			SbVec2f r_; float granularity;
+			viewer->getPointSizeLimits(r_,granularity);
+			cout << "pointsize range: " << r_[0] << "-" << r_[1] << ", granularity = " << granularity << endl << flush;
+			viewer->getLineWidthLimits(r_,granularity);
+			cout << "pointsize range: " << r_[0] << "-" << r_[1] << ", granularity = " << granularity << endl << flush;
+		}
 
 		//	SoQtFlyViewer *viewer = new SoQtFlyViewer(window); // Still fails with transparency sorted_*
 		// Transparency on examiner viewer is broken on my Mac Pro.

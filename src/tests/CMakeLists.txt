@@ -62,6 +62,7 @@ set (
   ${TESTS_SRC}
   tests_support.C
   BoundingBox.C
+  Chunking.C
   Edges.C
   EquatorCheck.C
   Granule.C

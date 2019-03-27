@@ -66,10 +66,17 @@ SpatialVector project( SpatialVector v, string projection ) {
 					lat +=  1.0e-6;
 				}
 			}
-			lat *= gPr;	lon *= gPr;
 
+			// lon = fmod( lon + 270, 360 );
+
+			lat *= gPr;	lon *= gPr;
 			px = lon;
 			py = log(tan(gPio4+0.5*lat));
+			pz = 0.0;
+		} else if (projection == "Equirectangular") {
+			lat *= gPr;	lon *= gPr;
+			px = lon;
+			py = lat*cos(0.0);
 			pz = 0.0;
 		} else {
 			px = v.x();
@@ -241,6 +248,11 @@ void VizHTM::addFace3(
 		bool printflag = false;
 
 		SpatialVector x0(x00,x01,x02), x1(x10,x11,x12), x2(x20,x21,x22);
+
+		x0 = this->projectionRotateLon.rotated_from(x0);
+		x1 = this->projectionRotateLon.rotated_from(x1);
+		x2 = this->projectionRotateLon.rotated_from(x2);
+
 		float64 lat0,lon0,lat1,lon1,lat2,lon2;
 		x0.getLatLonDegrees(lat0,lon0);
 		x1.getLatLonDegrees(lat1,lon1);
@@ -318,22 +330,26 @@ void VizHTM::addFace3(
 
 			int indexBase = nCoordinates;
 			int colorBase = nFaceVertexColorIndices;
-			if(nq == 1 && iq == 0) {
-				addFaceColor(0.75,0,0,0);
-				addFaceColor(0.75,0,0,0);
-				addFaceColor(0.75,0,0,0);
-			} else if(iq == 0) {
-				addFaceColor(0,0.75,0,0);
-				addFaceColor(0,0.75,0,0);
-				addFaceColor(0,0.75,0,0);
+
+			if(false) {
+				if(nq == 1 && iq == 0) {
+					addFaceColor(0.75,0,0,0);
+					addFaceColor(0.75,0,0,0);
+					addFaceColor(0.75,0,0,0);
+				} else if(iq == 0) {
+					addFaceColor(0,0.75,0,0);
+					addFaceColor(0,0.75,0,0);
+					addFaceColor(0,0.75,0,0);
+				} else {
+					addFaceColor(0,0,0.75,0);
+					addFaceColor(0,0,0.75,0);
+					addFaceColor(0,0,0.75,0);
+				}
 			} else {
-				addFaceColor(0,0,0.75,0);
-				addFaceColor(0,0,0.75,0);
-				addFaceColor(0,0,0.75,0);
+				addFaceColor(r0,g0,b0,a0);
+				addFaceColor(r1,g1,b1,a1);
+				addFaceColor(r2,g2,b2,a2);
 			}
-//			addFaceColor(r0,g0,b0,a0);
-//			addFaceColor(r1,g1,b1,a1);
-//			addFaceColor(r2,g2,b2,a2);
 
 			addFaceVertexColorIndices3(colorBase,colorBase+1,colorBase+2);
 			addCoordinate( q0[iq].x(), q0[iq].y(), q0[iq].z()+deltaZ );
@@ -635,7 +651,8 @@ SoSeparator* VizHTM::makeRoot() {
 			// << "nEdges                  " << nEdges << endl
 			<< "nEdgeIndices            " << nEdgeIndices << endl
 			<< "nFaceIndices            " << nFaceIndices << endl
-			<< "nAnnotations            " << nAnnotations << endl;
+			<< "nAnnotations            " << nAnnotations << endl
+			<< "lineWidth               " << lineWidth << endl;
 
 	SoSeparator *root = new SoSeparator;
 
@@ -660,6 +677,12 @@ SoSeparator* VizHTM::makeRoot() {
 	root->addChild(coordinates);
 
 	SoSeparator *edgeNode = new SoSeparator;
+
+//	if(lineWidth != -1) {
+//		SoDrawStyle *style = new SoDrawStyle;
+//		style->lineWidth.setValue(lineWidth);
+//		edgeNode->addChild(style);
+//	}
 
 	SoMaterial *edgeMaterials = new SoMaterial;
 	edgeMaterials->diffuseColor.setValues(0,nEdgeColors,edgeColors);
@@ -884,18 +907,26 @@ void VizHTM::addEdge(
 
 		// Check to see if we need to break the edge in two.
 		float64 lat0, lon0, lat1, lon1;
-		SpatialVector tx0 = x0, tx1 = x1;
+
+//		SpatialVector
+//		tx0 = x0,
+//		tx1 = x1;
+
+		SpatialVector
+		tx0 = this->projectionRotateLon.rotated_from(x0),
+		tx1 = this->projectionRotateLon.rotated_from(x1);
+
 		tx0.getLatLonDegrees(lat0,lon0); // range is -180..+180
 		tx1.getLatLonDegrees(lat1,lon1);
 
-		q0[0] = project(x0,this->projection);
+		q0[0] = project(tx0,this->projection);
 
 		if( abs(lon1-lon0) > 350.0 ) {
 
 			// TODO Fix the following...
 			// TODO Hope this edge is short...
 			nq = 2;
-			q0[1] = project(x1,this->projection);
+			q0[1] = project(tx1,this->projection);
 			if(lon0 > lon1) {
 				q1[0] = q0[1] + SpatialVector( 2*gPi,0,0);
 				q1[1] = q0[0] + SpatialVector(-2*gPi,0,0);
@@ -906,7 +937,7 @@ void VizHTM::addEdge(
 
 		} else {
 			nq    = 1;
-			q1[0] = project(x1,this->projection);
+			q1[0] = project(tx1,this->projection);
 		}
 		SpatialVector dZ(0,0,deltaZ);
 		for( int iq = 0; iq < nq; ++iq ) {
@@ -917,8 +948,8 @@ void VizHTM::addEdge(
 			addEdgeVertexColorIndices(colorBase,colorBase+1);
 
 			int coordBase = nCoordinates;
-			//	SpatialVector a = x0*scale;
-			//	SpatialVector b = x1*scale;
+			//	SpatialVector a = tx0*scale;
+			//	SpatialVector b = tx1*scale;
 			//	addCoordinate(a); addCoordinate(b);
 			addCoordinate(q0[iq]+dZ);
 			addCoordinate(q1[iq]+dZ);
@@ -1439,7 +1470,7 @@ void VizHTM::addHstmRange(
 	bool external_index = false;
 
 	if(!index) {
-		cout << 1500 << endl << flush;
+		// cout << 1500 << endl << flush;
 		index = new SpatialIndex(indexLevel);
 	} else {
 		external_index = true;
@@ -1449,16 +1480,33 @@ void VizHTM::addHstmRange(
 
 	KeyPair kp; int indexp;
 	range->reset();
+	cout << dec << endl << flush;
+
 	while((indexp = range->getNext(kp)) > 0) {
+		// cout << 3000 << " kp.lo: " << hex << kp.lo << dec << endl << flush;
+		// cout << 3000 << " kp.hi: " << hex << kp.hi << dec << endl << flush;
 		leftJustified.setId(kp.lo);
+		// cout << 3001 << endl << flush;
 		level = leftJustified.getLevel();
+		// cout << 3002 << " level: " << level << endl << flush;
 		string loName = leftJustified.getName();
+		// cout << 3003 << " loName: " << loName << endl << flush;
 		uint64 termId = leftJustified.idFromTerminatorAndLevel_NoDepthBit(kp.hi,level);
-		leftJustified.setId(termId);
-		string hiName = leftJustified.getName();
-//		cout << 100 << " lo,hi name: " << loName << " " << hiName << endl << flush;
-//		cout << 101 << " level:      " << level << endl << flush;
-//		cout << 102 << " kp:         " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
+		// cout << 3004 << " termId: " << hex << termId << dec << endl << flush << flush;
+
+		// TODO fix the following kluge -- what should termId be for S0?
+		string hiName;
+		if( termId != 0 ) {
+			leftJustified.setId(termId);
+			// cout << 1005 << endl << flush;
+			hiName = leftJustified.getName();
+		} else {
+			hiName = loName;
+		}
+		// cout << 3100 << " lo,hi name: " << loName << " " << hiName << endl << flush;
+		// cout << 3101 << " level:      " << level << endl << flush;
+		// cout << 3102 << " kp:         " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
+
 		if( !external_index and (level != indexLevel) ) {
 			delete index;
 			indexLevel = level;
@@ -1959,6 +2007,8 @@ bool    VizHTM::setProjection(string projection) {
 	if ( ok = (projection == "None") ) {
 		this->projection = projection;
 	} else if ( ok = (projection == "Mercator") ) {
+		this->projection = projection;
+	} else if ( ok = (projection == "Equirectangular") ) {
 		this->projection = projection;
 	}
 	return ok;

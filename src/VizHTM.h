@@ -11,6 +11,7 @@
 #include "HtmRange.h"
 #include "HstmRange.h"
 #include "SpatialIndex.h"
+#include "SpatialRotation.h"
 #include "SpatialVector.h"
 #include "SpatialConstraint.h"
 #include "SpatialInterface.h"
@@ -303,6 +304,7 @@ public:
 	string  projection = "None";
 	bool    setProjection(string projection);
 	string  getProjection();
+	SpatialRotation projectionRotateLon = SpatialRotation(zhat,-90*gPr);
 
 	int   	nSpheres;
 	int   	*sphereIndices;
