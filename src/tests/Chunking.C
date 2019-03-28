@@ -53,8 +53,8 @@ void AllTrixelsAtLevelAcrossBins(int level, int nbins, HstmRange ranges[]) {
 			int bLevel = leftJustifiedEncoding.levelById(b_);
 			leftJustifiedEncoding.setId(b_);
 			b = leftJustifiedEncoding.getIdTerminator_NoDepthBit();
-			cout << "a_,b_ " << hex << a_ << "," << b_ << dec << endl << flush;
-			cout << "a,b " << hex << a << "," << b << dec << endl << flush;
+			// cout << "a_,b_ " << hex << a_ << "," << b_ << dec << endl << flush;
+			// cout << "a,b " << hex << a << "," << b << dec << endl << flush;
 		}
 		ranges[(iChunk % nbins)].addRange(ljId,ljId);
 		if(false){
@@ -100,16 +100,20 @@ bool Chunk1( VizHTM *viz ) {
 		r[ic] = color_scale*ic/(ncolor-1.0);
 		g[ic] = color_scale*ic/(ncolor-1.0);
 		b[ic] = color_scale*ic/(ncolor-1.0);
+		// b[ic] = color_scale*(ncolor-ic-1)/(ncolor-1.0);
 	}
 	HstmRange range_edges;
 	HstmRange range_faces[ncolor];
 
-	int chunkLevel = 4;
-	EmbeddedLevelNameEncoding lj;
-	lj.setName("S00000");
-	uint64 lj0 = lj.getId();
-	lj.setName("N33333");
-	uint64 lj1 = lj.getId();
+	cout << "ncolor: " << ncolor << endl << flush;
+
+	int chunkLevel = 6;
+	cout << "chunkLevel, nChunks: " << chunkLevel << ", " << 8*int(pow(4,chunkLevel)) << endl << flush;
+//	EmbeddedLevelNameEncoding lj;
+//	lj.setName("S00000");
+//	uint64 lj0 = lj.getId();
+//	lj.setName("N33333");
+//	uint64 lj1 = lj.getId();
 	// cout << hex;
 	// cout << "lj0,lj1: " << lj0 << "," << lj1 << endl << flush;
 	// uint64 ljx = lj.decrement(lj1,4);
@@ -125,31 +129,53 @@ bool Chunk1( VizHTM *viz ) {
 	// 8*4**level
 	// int nodeFromChunkNumber[8*int(pow(4,chunkLevel)))];
 
-
-	if(false){
+	if(true){
 		HstmRange ranges[ncolor];
 		AllTrixelsAtLevelAcrossBins(chunkLevel,ncolor,ranges);
 		SpatialIndex sIndex = index.getIndex(chunkLevel);
 		float re=0, ge=0.75, be=0;
-		for( int ic = 0; ic < ncolor; ++ic ) {
-			// cout << ic << " ranges size " << ranges[ic].range->nranges() << endl << flush;
-			viz->addHstmRangeFaces(&(ranges[ic]),r[ic],g[ic],b[ic],0.0,1.0,0.01,&sIndex);
-			viz->addHstmRange(&(ranges[ic]),re,ge,be,0.0,1.0,true,0.02,&sIndex);
+		if(true) {
+			for( int ic = 0; ic < ncolor; ++ic ) {
+				// cout << ic << " ranges size " << ranges[ic].range->nranges() << endl << flush;
+				viz->addHstmRangeFaces(&(ranges[ic]),r[ic],g[ic],b[ic],0.0,1.0,0.01,&sIndex);
+				//viz->addHstmRange(&(ranges[ic]),re,ge,be,0.0,1.0,true,0.02,&sIndex);
+			}
 		}
+		// int ic = 15;
+		// re = 1; ge = 0; be = 0;
+		// viz->addHstmRange(&(ranges[ic]),re,ge,be,0.0,1.0,true,0.02,&sIndex);
+		// re = 0; ge = 1; be = 0;
+		// viz->addHstmRange(&(ranges[++ic]),re,ge,be,0.0,1.0,true,0.02,&sIndex);
+		// re = 0; ge = 0; be = 1;
+		// viz->addHstmRange(&(ranges[++ic]),re,ge,be,0.0,1.0,true,0.02,&sIndex);
+
+//		int ic;
+//		ic = 5;	re = 1; ge = 1; be = 0;
+//		viz->addHstmRange(&(ranges[ic]),re,ge,be,0.0,1.0,true,0.02,&sIndex);
+//		viz->addHstmRangeFaces(&(ranges[ic]),r[ic],g[ic],b[ic],0.0,1.0,0.01,&sIndex);
+//		ic = 6; re = 1; ge = 0; be = 1;
+//
+//		ic = 7; re = 0; ge = 1; be = 1;
+//
+//
+//		ic = 12; re = 0.5; ge = 0.5; be = 1;
+//
+//		ic = 13; re = 0.5; ge = 1; be = 0.5;
+//
+//		ic = 14; re = 1; ge = 0.5; be = 0.5;
+
 	}
 
 	if(true){
-		int nbins = 1;
-		int level = 0;
+		int nbins = 1, nlevels = 6;
 		float re=1.0, ge=1.0, be=0.5, zlayer = 0.02, rgb_scale = 0.7;
 		HstmRange ranges0[nbins];
-		for(level=0; level<5; ++level) {
+		for(int level=0; level<nlevels; ++level) {
 			for(int ib=0; ib < nbins; ++ib) {
 				ranges0[ib].purge();
 			}
 			AllTrixelsAtLevelAcrossBins(level,nbins,ranges0);
 			SpatialIndex sIndex0 = index.getIndex(level);
-
 			for( int ic = 0; ic < nbins; ++ic ) {
 				// cout << "ranges0 size " << ranges0[ic].range->nranges() << endl << flush;
 				// be = (1.0*ic)/nbins;
@@ -160,35 +186,6 @@ bool Chunk1( VizHTM *viz ) {
 		}
 	}
 
-	if(false){
-		int nbins = 1;
-		int level = 2;
-		HstmRange ranges0[nbins];
-		AllTrixelsAtLevelAcrossBins(level,nbins,ranges0);
-		SpatialIndex sIndex0 = index.getIndex(level);
-		float re=1.0, ge=1.0, be=0;
-		for( int ic = 0; ic < nbins; ++ic ) {
-			// cout << "ranges0 size " << ranges0[ic].range->nranges() << endl << flush;
-			// be = (1.0*ic)/nbins;
-			re = 0.5; ge = 0.5; be = 0.25;
-			viz->addHstmRange(&(ranges0[ic]),re,ge,be,0.0,1.0,true,0.019,&sIndex0);
-		}
-	}
-
-	if(false){
-		int nbins = 1;
-		int level = 3;
-		HstmRange ranges0[nbins];
-		AllTrixelsAtLevelAcrossBins(level,nbins,ranges0);
-		SpatialIndex sIndex0 = index.getIndex(level);
-		float re=1.0, ge=1.0, be=0;
-		for( int ic = 0; ic < nbins; ++ic ) {
-			// cout << "ranges0 size " << ranges0[ic].range->nranges() << endl << flush;
-			// be = (1.0*ic)/nbins;
-			re = 0.25; ge = 0.25; be = 0.125;
-			viz->addHstmRange(&(ranges0[ic]),re,ge,be,0.0,1.0,true,0.018,&sIndex0);
-		}
-	}
 
 //	int nChunks = 8*int(pow(4,chunkLevel));
 //	uint64 ljIdFromChunkNumber[nChunks];

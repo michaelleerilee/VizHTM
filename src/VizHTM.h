@@ -305,6 +305,7 @@ public:
 	bool    setProjection(string projection);
 	string  getProjection();
 	SpatialRotation projectionRotateLon = SpatialRotation(zhat,-90*gPr);
+	// SpatialRotation projectionRotateLon = SpatialRotation(zhat,0.0);
 
 	int   	nSpheres;
 	int   	*sphereIndices;

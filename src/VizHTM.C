@@ -245,6 +245,11 @@ void VizHTM::addFace3(
 
 		// cout << "deltaZ = " << deltaZ << endl << flush;
 
+		cout
+		<< setprecision(17)
+		<< setw(20)
+		<< scientific;
+
 		bool printflag = false;
 
 		SpatialVector x0(x00,x01,x02), x1(x10,x11,x12), x2(x20,x21,x22);
@@ -254,9 +259,13 @@ void VizHTM::addFace3(
 		x2 = this->projectionRotateLon.rotated_from(x2);
 
 		float64 lat0,lon0,lat1,lon1,lat2,lon2;
-		x0.getLatLonDegrees(lat0,lon0);
-		x1.getLatLonDegrees(lat1,lon1);
-		x2.getLatLonDegrees(lat2,lon2);
+		bool ok;
+		ok = x0.getLatLonDegrees(lat0,lon0);
+		ok = x1.getLatLonDegrees(lat1,lon1);
+		ok = x2.getLatLonDegrees(lat2,lon2);
+
+		// Why a nan in lon1?
+
 		float64 lon_min = min(lon0,min(lon1,lon2));
 		float64 lon_max = max(lon0,max(lon1,lon2));
 		int nq = 1;
@@ -266,7 +275,8 @@ void VizHTM::addFace3(
 			cout
 			<< " dlonmx: " << lon_max - lon_min
 			<< " lomnmx: " << lon_min << "," << lon_max << " "
-			<< " lons: " << lon0 << "," << lon1 << "," << lon2 << " -- ";
+			<< " lons: " << lon0 << "," << lon1 << "," << lon2 << " -- "
+			<< " lats: " << lat0 << "," << lat1 << "," << lat2 << " -- ";
 		}
 
 		SpatialVector q0[2],q1[2],q2[2];
@@ -1223,9 +1233,12 @@ void VizHTM::addFaceFromIndexAndId(
 
 	SpatialVector x1_,x2_,x3_;
 	uint64 nodeIndex = index->nodeIndexFromId(htmId);
-//	cout << "htmId:  " << htmId << endl << flush;
-//	cout << "nodeId: " << nodeIndex << endl << flush;
+	// cout << "htmId:  " << hex << htmId << dec << endl << flush;
+	// cout << "nodeId: " << hex << nodeIndex << dec << endl << flush;
 	index->nodeVertex(nodeIndex,x1_,x2_,x3_);
+	// cout << " x1: " << x1_ << endl << flush;
+	// cout << " x2: " << x2_ << endl << flush;
+	// cout << " x3: " << x3_ << endl << flush;
 	if(nodeIndex) {
 
 		SpatialVector x1,x2,x3;
@@ -1263,6 +1276,8 @@ void VizHTM::addFaceFromIndexAndId(
 		//		addEdge(v0,v1,r,g,b,a);
 		//		addEdge(v1,v2,r,g,b,a);
 		//		addEdge(v2,v0,r,g,b,a);
+	} else {
+		cout << "VizHTM::addFaceFromIndexAndId-ERROR index->nodeVertex(nodeIndex...) NOT FOUND!" << endl << flush;
 	}
 }
 
@@ -1708,6 +1723,7 @@ void VizHTM::addHstmRangeFaces(
 
 	KeyPair kp; int indexp;
 	range->reset();
+	// int count = 0;
 	while((indexp = range->getNext(kp)) > 0) {
 		leftJustified.setId(kp.lo);
 		level = leftJustified.getLevel();
@@ -1715,9 +1731,10 @@ void VizHTM::addHstmRangeFaces(
 		uint64 termId = leftJustified.idFromTerminatorAndLevel_NoDepthBit(kp.hi,level);
 		leftJustified.setId(termId);
 		string hiName = leftJustified.getName();
-//		cout << 100 << " lo,hi name: " << loName << " " << hiName << endl << flush;
-//		cout << 101 << " level:      " << level << endl << flush;
-//		cout << 102 << " kp:         " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
+		// cout << "099" << " count = " << ++count << endl << flush;
+		// cout << 100 << " lo,hi name: " << loName << " " << hiName << endl << flush;
+		// cout << 101 << " level:      " << level << endl << flush;
+		// cout << 102 << " kp:         " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
 		if( !external_index and (level != indexLevel) ) {
 			delete index;
 			indexLevel = level;
@@ -1725,6 +1742,7 @@ void VizHTM::addHstmRangeFaces(
 		}
 		uint64 id0 = index->idByName(loName.c_str());
 		uint64 id1 = index->idByName(hiName.c_str());
+		// cout << 103 << " id0,id1 = " << hex << id0 << " " << id1 << dec << endl << flush;
 		for(uint64 id=id0; id<=id1; id++) {
 			addFaceFromIndexAndId(
 					index,
