@@ -72,8 +72,14 @@ string files[22] =
 
 
 bool Granule1( VizHTM *viz ) {
+	bool ok   = false;
+	bool once = false;
 
-	cout << "Hello world" << endl;
+	cout << "Granule1" << endl;
+	if( !viz->notestream() ) {
+		viz->addNotes(new stringstream);
+	}
+	*(viz->notestream()) << endl << "Granule1 Start" << endl;
 
 	{
 		float
@@ -88,6 +94,16 @@ bool Granule1( VizHTM *viz ) {
 	testShapeFiles(viz,0.5,1,1,0.03);
 
 	string swath1_key = "MODIS SWATH TYPE L2";
+
+	*(viz->notestream()) << "swath key = " << swath1_key << endl;
+
+	int resolutionLevel = 4;
+	// int resolutionLevel = 5;
+	// int resolutionLevel = 6;
+	// int resolutionLevel = 7;
+	// int resolutionLevel = 8;
+	// int resolutionLevel = 14;
+	*(viz->notestream()) << "resolutionLevel of triangles = " << resolutionLevel << endl;
 
 	// for( int ifile = 0; ifile < 5; ++ifile ) {
 	// for( int ifile = 5; ifile < 6; ++ifile ) {
@@ -104,6 +120,11 @@ bool Granule1( VizHTM *viz ) {
 		// string swath1_key = "Low_Res_Swath";
 
 		/* Open using swath API */
+
+		*(viz->notestream())
+				<< " ifile = " << ifile     << endl
+				<< "Loading  " << filename1 << endl
+				;
 
 		cout << "Opening swathfile " << filename1 << endl;
 		int32 swathfile1;
@@ -146,6 +167,7 @@ bool Granule1( VizHTM *viz ) {
 		int16 *datafield1data;
 
 		string variable_key = "1km Surface Reflectance Band 2";
+		// *(viz->notestream()) << "variable_key = " << variable_key << endl;
 
 		/* Retrieve information about '23.8H_Approx._Res.3_TB_(not-resampled)' datafield */
 		if ((SWfieldinfo(swath1, variable_key.c_str(), &datafield1rank, datafield1dimsize, &datafield1type, datafield1dimname)) == -1) {
@@ -163,6 +185,19 @@ bool Granule1( VizHTM *viz ) {
 			<< "  datafield1type:    " << datafield1type << endl
 			<< "  datafield1dimname: " << datafield1dimname << endl;
 
+			if(!once) {
+				once = true;
+				*(viz->notestream())
+							<< " variable_key: " << variable_key << endl
+							<< "  datafield1rank:    " << datafield1rank << endl;
+				for(int i=0; i < datafield1rank; ++i) {
+					*(viz->notestream())
+							<< "  datafield1dimsize: " << i << ": " << datafield1dimsize[i] << endl;
+				}
+				*(viz->notestream())
+							<< "  datafield1type:    " << datafield1type << endl
+							<< "  datafield1dimname: " << datafield1dimname << endl;
+			}
 			/*
 			 * Check hntdefs.h to identify what the type codes mean. datafield1type...
 			 *  DFNT_FLOAT64  6
@@ -280,12 +315,7 @@ bool Granule1( VizHTM *viz ) {
 		// cout << 100 << endl << flush;
 		STARE index;
 		HstmRange* range = new HstmRange;
-		int resolutionLevel = 4;
-		// int resolutionLevel = 5;
-		// int resolutionLevel = 6;
-		// int resolutionLevel = 7;
-		// int resolutionLevel = 8;
-		// int resolutionLevel = 14;
+
 		SpatialIndex sIndex = index.getIndex(resolutionLevel);
 
 		/*
@@ -377,7 +407,8 @@ bool Granule1( VizHTM *viz ) {
 		}
 	}
 	cout << "Done...";
-	return 0;
+	ok = true;
+	return ok;
 }
 
 

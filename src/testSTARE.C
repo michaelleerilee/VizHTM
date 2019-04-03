@@ -381,8 +381,8 @@ int main(int argc, char *argv[]) {
 	// ok = PolePosition1(viz);
 	// ok = PoleCheck1(viz);
 
-	// ok = Granule1(viz);
-	ok = Chunk1(viz);
+	ok = Granule1(viz);
+	// ok = Chunk1(viz);
 
 	// Last chance changes...
 	if(lineWidth != -1) {
