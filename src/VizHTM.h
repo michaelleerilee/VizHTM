@@ -8,6 +8,8 @@
 #ifndef VIZHTM_H_
 #define VIZHTM_H_
 
+#include <sstream>
+
 #include "HtmRange.h"
 #include "HstmRange.h"
 #include "SpatialIndex.h"
@@ -323,6 +325,10 @@ public:
 
 	int        nAnnotations;
 	annotation *annotations;
+
+	stringstream *notes = NULL;
+	stringstream *notestream() { return notes; };
+	void addNotes(stringstream *notes) { this->notes = notes; };
 
 };
 

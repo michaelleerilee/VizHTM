@@ -72,7 +72,12 @@ void AllTrixelsAtLevelAcrossBins(int level, int nbins, HstmRange ranges[]) {
 bool Chunk1( VizHTM *viz ) {
 	bool ok = false;
 
-	cout << "Hello world" << endl;
+	cout << "Chunk1" << endl;
+
+	if( !viz->notestream() ) {
+		viz->addNotes(new stringstream);
+	}
+	*(viz->notestream()) << "Chunk1 Start" << endl;
 
 	// MLR Doesn't work Fedora+GLX viz->lineWidth = 1;
 
@@ -91,7 +96,18 @@ bool Chunk1( VizHTM *viz ) {
 	SpatialIndex sIndex0 = index.getIndex(0);
 	HstmRange* range0 = new HstmRange;
 
-	int ncolor = 16;
+	int  ncolor      = 16;
+	int  chunkLevel  = 3; // faces: chunks at level
+	bool randomized  = true;
+	int  nbins       = 1;
+	int  nlevels     = 5; // grid: nlevels=3 => levels 0,1,2
+
+	*(viz->notestream()) << "ncolor = " << ncolor << endl;
+	cout << "ncolor: " << ncolor << endl << flush;
+
+	*(viz->notestream()) << "chunkLevel = " << chunkLevel << endl << flush;
+	cout << "chunkLevel, nChunks: " << chunkLevel << ", " << 8*int(pow(4,chunkLevel)) << endl << flush;
+
 	// float color_scale = 0.5;
 	// float color_scale = 0.75;
 	float color_scale = 1.0;
@@ -105,10 +121,6 @@ bool Chunk1( VizHTM *viz ) {
 	HstmRange range_edges;
 	HstmRange range_faces[ncolor];
 
-	cout << "ncolor: " << ncolor << endl << flush;
-
-	int chunkLevel = 6;
-	cout << "chunkLevel, nChunks: " << chunkLevel << ", " << 8*int(pow(4,chunkLevel)) << endl << flush;
 //	EmbeddedLevelNameEncoding lj;
 //	lj.setName("S00000");
 //	uint64 lj0 = lj.getId();
@@ -130,14 +142,23 @@ bool Chunk1( VizHTM *viz ) {
 	// int nodeFromChunkNumber[8*int(pow(4,chunkLevel)))];
 
 	if(true){
+		*(viz->notestream()) << endl << "Drawing faces with ncolors bin colors" << endl;
 		HstmRange ranges[ncolor];
 		AllTrixelsAtLevelAcrossBins(chunkLevel,ncolor,ranges);
 		SpatialIndex sIndex = index.getIndex(chunkLevel);
-		float re=0, ge=0.75, be=0;
+		if(randomized) {
+			*(viz->notestream()) << "chunks randomized: uniformDouble" << endl;
+		}
+		// float re=0, ge=0.75, be=0;
 		if(true) {
 			for( int ic = 0; ic < ncolor; ++ic ) {
 				// cout << ic << " ranges size " << ranges[ic].range->nranges() << endl << flush;
-				viz->addHstmRangeFaces(&(ranges[ic]),r[ic],g[ic],b[ic],0.0,1.0,0.01,&sIndex);
+				int ic0 = ic;
+				if(randomized) {
+					ic0 = uniformDouble()*ncolor;
+				}
+				viz->addHstmRangeFaces(&(ranges[ic]),r[ic0],g[ic0],b[ic0],0.0,1.0,0.01,&sIndex);
+				// viz->addHstmRangeFaces(&(ranges[ic]),r[ic],g[ic],b[ic],0.0,1.0,0.01,&sIndex);
 				//viz->addHstmRange(&(ranges[ic]),re,ge,be,0.0,1.0,true,0.02,&sIndex);
 			}
 		}
@@ -167,7 +188,12 @@ bool Chunk1( VizHTM *viz ) {
 	}
 
 	if(true){
-		int nbins = 1, nlevels = 6;
+		*(viz->notestream()) << endl;
+		*(viz->notestream()) << "Drawing trixels at various levels" << endl;
+		*(viz->notestream()) << "nbins is the number of bins into which to put trixels" << endl;
+		*(viz->notestream()) << "nlevels is the number of levels to draw. levels=[0,1,2,...,nlevels-1]" << endl << endl;
+		*(viz->notestream()) << "nbins = " << nbins << endl;
+		*(viz->notestream()) << "nlevels = " << nlevels << endl;
 		float re=1.0, ge=1.0, be=0.5, zlayer = 0.02, rgb_scale = 0.7;
 		HstmRange ranges0[nbins];
 		for(int level=0; level<nlevels; ++level) {
@@ -282,6 +308,8 @@ bool Chunk1( VizHTM *viz ) {
 		// cout << 210 << endl << flush;
 	}
 	}
+
+	*(viz->notestream()) << "Chunk1 End" << endl;
 
 	ok = true;
 	return ok;

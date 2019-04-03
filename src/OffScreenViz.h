@@ -19,6 +19,10 @@
 
 #include "misc.h"
 #include <string>
+#include <sstream>
+
+#include <iostream>
+#include <fstream>
 
 class OffScreenViz {
 public:
@@ -31,6 +35,7 @@ public:
 
 	void init();
 	int initImageDirectory(const std::string basePath="tmp/", const uint fieldWidth=3);
+
 	QImage getImage();
 	void writeFile(const uint item);
 	void writeFileRGB(const uint item);
@@ -38,6 +43,10 @@ public:
 
 	std::string base;
 	uint        fieldWidth;
+
+	std::stringstream *notes = NULL;
+	void addNoteStream(std::stringstream *ss) { this->notes = ss; } ;
+	void writeNotes();
 
 	SoSeparator         *root;
 	SbViewportRegion    *vpRegion;

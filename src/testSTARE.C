@@ -408,9 +408,10 @@ int main(int argc, char *argv[]) {
 
 	// const int width = 2000, height = 1400;
 	// const int width = 1600, height = 800;
+	const int width = 1200, height = 600;
 	// const int width = 1000, height = 500;
 	// const int width = 800, height = 600;
-	const int width = 800, height = 400;
+	// const int width = 800, height = 400;
 
 	window->setMinimumSize(width,height);
 	if (window == NULL) exit(1);
@@ -604,6 +605,10 @@ int main(int argc, char *argv[]) {
 			offscreen->writeFile(1);
 			// offscreen->saveImage(1);
 
+			// stringstream ss; ss << "test" << endl;
+			// offscreen->addNoteStream(&ss);
+			offscreen->addNoteStream( viz->notestream() );
+			offscreen->writeNotes();
 		}
 
 		delete viewer;

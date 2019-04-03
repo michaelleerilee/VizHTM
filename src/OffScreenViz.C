@@ -113,6 +113,17 @@ void OffScreenViz::writeFile(const uint item) {
 	}
 }
 
+void OffScreenViz::writeNotes() {
+	if( notes ) {
+		if( notes->tellp() > 0 ) {
+			std::ofstream noteFile;
+			noteFile.open( base+"/notes.org" );
+			noteFile << notes->str();
+			noteFile.close();
+		}
+	}
+}
+
 void OffScreenViz::saveImage(const uint item) {
 	bool ok = false;
 

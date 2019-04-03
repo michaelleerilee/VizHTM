@@ -19,6 +19,7 @@
 using namespace std;
 
 void testShapeFiles(VizHTM *viz, float r, float g, float b, float deltaZ);
+void testTenDegreeGrid(VizHTM *viz,float r0, float g0, float b0, float rgbScale);
 
 string file_directory = "/home/mrilee/data/STARE/";
 
@@ -73,6 +74,16 @@ string files[22] =
 bool Granule1( VizHTM *viz ) {
 
 	cout << "Hello world" << endl;
+
+	{
+		float
+		r0       = 0.5,
+		g0       = 0.5,
+		b0       = 0.5,
+		rgbScale = 0
+		;
+		testTenDegreeGrid(viz,r0,g0,b0,rgbScale);
+	}
 
 	testShapeFiles(viz,0.5,1,1,0.03);
 
@@ -269,8 +280,9 @@ bool Granule1( VizHTM *viz ) {
 		// cout << 100 << endl << flush;
 		STARE index;
 		HstmRange* range = new HstmRange;
+		int resolutionLevel = 4;
 		// int resolutionLevel = 5;
-		int resolutionLevel = 6;
+		// int resolutionLevel = 6;
 		// int resolutionLevel = 7;
 		// int resolutionLevel = 8;
 		// int resolutionLevel = 14;
@@ -328,7 +340,7 @@ bool Granule1( VizHTM *viz ) {
 		// range->reset();
 		viz->addHstmRange(range,0.0,1.0,0.25,0.0,1.0,true,0.02,&sIndex);
 
-		viz->addHstmRangeFaces(range,0.0,0.75,0.0,0.0,1.0,0.01,&sIndex);
+		viz->addHstmRangeFaces(range,0.8,0.25,0.0,0.0,1.0,0.01,&sIndex);
 		// cout << 600 << endl << flush;
 		/*
 	void VizHTM::addHstmRange(
