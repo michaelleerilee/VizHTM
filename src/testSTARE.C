@@ -313,7 +313,7 @@ int main(int argc, char *argv[]) {
 
 	// Project... Needs to come first.
 	// cout << 100 << endl << flush;
-	ok = viz->setProjection("Equirectangular");
+	// ok = viz->setProjection("Equirectangular");
 	// ok = viz->setProjection("Mercator");
 	// cout << 200 << endl << flush;
 
@@ -363,6 +363,13 @@ int main(int argc, char *argv[]) {
 	if(testTenDegreeGrid_flag) testTenDegreeGrid(viz,r0,g0,b0,rgbScale);
 	if(testShapeFiles_flag)    testShapeFiles(viz,0.5,1,1,0.0);
 
+	// offscreen_viz = true;
+	offscreen_viz = false;
+
+	// bool reuse_ExaminerCameraForOffscreen = true;
+	bool reuse_ExaminerCameraForOffscreen = false;
+	if( viz->getProjection() == "None" ) { reuse_ExaminerCameraForOffscreen = true; }
+
 	// ok = BoundingBox1(viz);
 	// ok = Edges1(viz);
 	// ok = Edges2(viz); // Looking at a case were data lies on an edge.
@@ -382,7 +389,11 @@ int main(int argc, char *argv[]) {
 	// ok = PoleCheck1(viz);
 
 	ok = Granule1(viz);
-	// ok = Chunk1(viz);
+
+	// for( int i=0; i<6; ++i ) { ok = Area1(viz,i); }; offscreen_viz = true;
+	// for( int i=0; i<6; ++i ) { ok = Area1(viz,i); }; offscreen_viz = false;
+	// for( int i=7; i<11; ++i ) { ok = Area1(viz,i); }; offscreen_viz = false;
+	ok = Chunk1(viz); offscreen_viz = true;
 
 	// Last chance changes...
 	if(lineWidth != -1) {
@@ -423,6 +434,9 @@ int main(int argc, char *argv[]) {
 	SoSeparator *root = new SoSeparator;
 	//	root->ref(); // TODO Figure out ->ref();
 
+    // SoDirectionalLight * light = new SoDirectionalLight;
+    // root->addChild(light);
+
 	root->addChild(viz->makeRoot());
 	// root->addChild(testText());
 
@@ -448,6 +462,7 @@ int main(int argc, char *argv[]) {
 
 	SpatialVector *cam_vizCenter = VectorFromLatLonDegrees(90.0, 0.0);
 	float offscreenPerscamPositionScale = 3;
+	// float offscreenPerscamPositionScale = 1;
 
 //	offscreen_viz = false;
 //	if(offscreen_viz){
@@ -487,13 +502,13 @@ int main(int argc, char *argv[]) {
 	if(examiner_viz){
 		SoQtExaminerViewer *viewer = new SoQtExaminerViewer(window);
 
-		{
-			SbVec2f r_; float granularity;
-			viewer->getPointSizeLimits(r_,granularity);
-			cout << "pointsize range: " << r_[0] << "-" << r_[1] << ", granularity = " << granularity << endl << flush;
-			viewer->getLineWidthLimits(r_,granularity);
-			cout << "pointsize range: " << r_[0] << "-" << r_[1] << ", granularity = " << granularity << endl << flush;
-		}
+//		{
+//			SbVec2f r_; float granularity;
+//			viewer->getPointSizeLimits(r_,granularity);
+//			cout << "pointsize range: " << r_[0] << "-" << r_[1] << ", granularity = " << granularity << endl << flush;
+//			viewer->getLineWidthLimits(r_,granularity);
+//			cout << "pointsize range: " << r_[0] << "-" << r_[1] << ", granularity = " << granularity << endl << flush;
+//		}
 
 		//	SoQtFlyViewer *viewer = new SoQtFlyViewer(window); // Still fails with transparency sorted_*
 		// Transparency on examiner viewer is broken on my Mac Pro.
@@ -503,8 +518,9 @@ int main(int argc, char *argv[]) {
 		//	viewer->setTransparencyType(SoGLRenderAction::ADD); // Weird
 		//	viewer->setTransparencyType(SoGLRenderAction::BLEND); // Weird. No transparency!
 		// viewer->setTransparencyType(SoGLRenderAction::SORTED_OBJECT_BLEND);
+		viewer->setTransparencyType(SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND);
 		// viewer->setTransparencyType(SoGLRenderAction::BLEND);
-		viewer->setTransparencyType(SoGLRenderAction::NONE);
+		// viewer->setTransparencyType(SoGLRenderAction::NONE);
 
 		viewer->setSceneGraph(selectionRoot);
 		viewer->setTitle(mainName);
@@ -569,7 +585,7 @@ int main(int argc, char *argv[]) {
 		SoQt::show(window);
 		SoQt::mainLoop();
 
-		offscreen_viz = true;
+		// offscreen_viz = true;
 		if(offscreen_viz){
 			cout << "Offscreen rendering and saving to a file." << endl << flush;
 			cout << "width,height: " << width << ", " << height << endl << flush;
@@ -584,6 +600,24 @@ int main(int argc, char *argv[]) {
 			SoSFVec3f position = camera->position;
 			float x,y,z;
 			position.getValue().getValue(x,y,z);
+
+			// For hand-set Equirectangular camera
+			// if(true) {
+			if(!reuse_ExaminerCameraForOffscreen) {
+				// Equirectangular
+				x = 3.15988683700561523e+00;
+				y = 2.27740779519081116e-02;
+				z = 3.93305110931396484e+00;
+				// camera = new SoPerspectiveCamera();
+				camera = new SoOrthographicCamera();
+				// camera->focalDistance = 2;
+				camera->position.setValue(x,y,z);
+			}
+			cout
+			<< "100 offscreen_viz setting camera position to "
+			<< "x,y,z = " << x << "," << y << "," << z
+			<< endl << flush;
+
 			cam_vizCenter->set(x, y, z);
 
 			if( true ) {
@@ -601,8 +635,34 @@ int main(int argc, char *argv[]) {
 				cout << "Adding test scene to selectionRoot" << endl << flush;
 				selectionRoot->addChild(offscreen->root);
 			}
+
+			// For hand-set Equirectangular camera
+			// if(true) {
+			if(!reuse_ExaminerCameraForOffscreen) {
+				// kluge the field
+				camera->viewAll(offscreen->root,*offscreen->vpRegion,0.1);
+
+				camera->scaleHeight(0.275);
+
+				SoSFVec3f position = camera->position;
+				float x,y,z;
+				position.getValue().getValue(x,y,z);
+				x = x - 0.25;
+//				z *= .1;
+//				cout
+//				<< "200 offscreen_viz setting camera position to "
+//				<< "x,y,z = " << x << "," << y << "," << z
+//				<< endl << flush;
+				camera->position.setValue(x,y,z);
+//				camera->farDistance = 50;
+			}
+
+			// viewer->setTransparencyType(SoGLRenderAction::BLEND);
+
 			// offscreen->writeFileRGB(1);
-			offscreen->writeFile(1);
+			// bool enableTransparency = false;
+			bool enableTransparency = true;
+			offscreen->writeFile(1,enableTransparency);
 			// offscreen->saveImage(1);
 
 			// stringstream ss; ss << "test" << endl;

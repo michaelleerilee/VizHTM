@@ -18,6 +18,7 @@
 #include <iostream>
 using namespace std;
 
+void plotBlockingSphere(VizHTM* viz, float r, float g, float b, float radius);
 void testShapeFiles(VizHTM *viz, float r, float g, float b, float deltaZ);
 void testTenDegreeGrid(VizHTM *viz,float r0, float g0, float b0, float rgbScale);
 
@@ -75,13 +76,37 @@ bool Granule1( VizHTM *viz ) {
 	bool ok   = false;
 	bool once = false;
 
+	// bool faces_color = false;
+	bool faces_color = true;
+
+	// float faces_transparency = 0.05;
+	// float faces_transparency = 0.05;
+	// float faces_transparency = 0.25;
+	// float faces_transparency = 0.35;
+	float faces_transparency = 0.5;
+	// float faces_transparency = 0.6;
+
+	float64 z_offset = 0.034;
+	// float64 face_z_offset = 0.005;
+	float64 face_z_offset = 0.031;
+
 	cout << "Granule1" << endl;
 	if( !viz->notestream() ) {
 		viz->addNotes(new stringstream);
 	}
 	*(viz->notestream()) << endl << "Granule1 Start" << endl;
 
-	{
+	if(true) {
+		if(viz->getProjection() == "None") {
+			plotBlockingSphere(viz,0.2,0.2,0.2,0.98);
+			*(viz->notestream()) << endl << "Granule1 plotBlockingSphere enabled" << endl;
+		}
+	}
+
+	*(viz->notestream()) << endl << "Granule1 faces_color " << faces_color << endl;
+	*(viz->notestream()) << endl << "Granule1 faces_transparency " << faces_transparency << endl;
+
+	if( false ){
 		float
 		r0       = 0.5,
 		g0       = 0.5,
@@ -89,15 +114,20 @@ bool Granule1( VizHTM *viz ) {
 		rgbScale = 0
 		;
 		testTenDegreeGrid(viz,r0,g0,b0,rgbScale);
+		*(viz->notestream()) << endl << "Granule1 testTenDegreeGrid enabled" << endl;
 	}
 
-	testShapeFiles(viz,0.5,1,1,0.03);
+	if( false ) {
+		testShapeFiles(viz,0.5,1,1,0.03);
+		*(viz->notestream()) << endl << "Granule1 testShapeFiles enabled" << endl;
+	}
 
 	string swath1_key = "MODIS SWATH TYPE L2";
 
 	*(viz->notestream()) << "swath key = " << swath1_key << endl;
 
-	int resolutionLevel = 4;
+	// int resolutionLevel = 4;
+	int resolutionLevel = 5;
 	// int resolutionLevel = 5;
 	// int resolutionLevel = 6;
 	// int resolutionLevel = 7;
@@ -368,9 +398,12 @@ bool Granule1( VizHTM *viz ) {
 		}
 		// cout << 500 << endl << flush;
 		// range->reset();
-		viz->addHstmRange(range,0.0,1.0,0.25,0.0,1.0,true,0.02,&sIndex);
+		viz->addHstmRange(range,0.0,1.0,0.25,0.0,1.0,true,z_offset,&sIndex);
 
-		viz->addHstmRangeFaces(range,0.8,0.25,0.0,0.0,1.0,0.01,&sIndex);
+		if( faces_color ) {
+			*(viz->notestream()) << "color_faces = true" << endl;
+			viz->addHstmRangeFaces(range,0.9,0.125,0.0,faces_transparency,1.0,face_z_offset,&sIndex);
+		}
 		// cout << 600 << endl << flush;
 		/*
 	void VizHTM::addHstmRange(

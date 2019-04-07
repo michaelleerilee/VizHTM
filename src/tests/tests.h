@@ -29,6 +29,7 @@ bool PoleCheck1   (VizHTM *viz);
 
 bool Granule1( VizHTM *viz );
 
+bool Area1 ( VizHTM *viz, int level );
 bool Chunk1( VizHTM *viz );
 
 SpatialVector nudge(SpatialVector v0, SpatialVector v1, float64 a1);

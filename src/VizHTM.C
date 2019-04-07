@@ -742,6 +742,13 @@ SoSeparator* VizHTM::makeRoot() {
 
 	SoSeparator *faceNode = new SoSeparator;
 
+	if(faceTransparency || edgeTransparency) {
+		SoTransparencyType *transparencyType = new SoTransparencyType;
+		// transparencyType->value = SoTransparencyType::DELAYED_BLEND;
+		transparencyType->value = SoTransparencyType::SORTED_OBJECT_SORTED_TRIANGLE_BLEND;
+		faceNode->addChild(transparencyType);
+	}
+
 	SoMaterialBinding *faceMaterialBinding = new SoMaterialBinding;
 	// faceMaterialBinding->value = SoMaterialBinding::PER_VERTEX_INDEXED; // _INDEXED or not?
 	faceMaterialBinding->value = SoMaterialBinding::PER_VERTEX; // _INDEXED or not? // Why? Why? Why? // TODO WHY?
@@ -750,13 +757,17 @@ SoSeparator* VizHTM::makeRoot() {
 	SoMaterial *faceMaterials = new SoMaterial;
 	// faceMaterials->diffuseColor.setValues(0,nFaceColors,faceColors);
 	faceMaterials->diffuseColor.setValues(0,nFaceColors,(SbColor*)&faceColors[0]);
+	// faceMaterials->ambientColor.setValues(0,nFaceColors,(SbColor*)&faceColors[0]);
 	if(faceTransparency) {
+		cout << "1000 setting transparencies" << endl << flush;
 		faceMaterials->transparency.setValues(0,nFaceColors,faceTransparencies);
+		// faceMaterials->transparency.setValues(0,nFaceColors,(SbTransparency*)&faceTransparencies[0]);
 	}
 	faceNode->addChild(faceMaterials);
 
-//	cout << "1000 " << faceMaterials->transparency.getNum() << endl << flush;
+	cout << "1000 nTransparencies = " << faceMaterials->transparency.getNum() << endl << flush;
 
+/*
 	SoShapeHints* pHints   = new SoShapeHints;
 // Working
 	pHints->faceType       = SoShapeHints::UNKNOWN_FACE_TYPE;
@@ -766,6 +777,7 @@ SoSeparator* VizHTM::makeRoot() {
 //	pHints->vertexOrdering = SoShapeHints::UNKNOWN_ORDERING;
 //	pHints->vertexOrdering = SoShapeHints::COUNTERCLOCKWISE;
 	faceNode->addChild(pHints);
+*/
 
 	SoIndexedFaceSet *faceSet = new SoIndexedFaceSet;
 	faceSet->coordIndex.setValues(0,nFaceIndices,faceIndices);

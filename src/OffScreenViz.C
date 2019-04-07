@@ -71,19 +71,24 @@ void OffScreenViz::writeFileRGB(const uint item) {
 	}
 }
 
-void OffScreenViz::writeFile(const uint item) {
+void OffScreenViz::writeFile(const uint item, bool enableTransparency) {
 	// bool ok = false;
 	std::cout << "Trying SoOffscreenRenderer writeToFile output" << std::endl << std::flush;
 	SoOffscreenRenderer offscreenRenderer(*vpRegion);
-	offscreenRenderer.setComponents(
-			SoOffscreenRenderer::Components::RGB);
-			// SoOffscreenRenderer::Components::RGB_TRANSPARENCY);
+	if( enableTransparency ) {
+		offscreenRenderer.setComponents(
+				SoOffscreenRenderer::Components::RGB_TRANSPARENCY);
+	} else {
+		offscreenRenderer.setComponents(
+				SoOffscreenRenderer::Components::RGB);
+	}
 
 	// The following is okay, but won't reorder graphic elements.
-	//	offscreenRenderer.getGLRenderAction()->setTransparencyType(SoGLRenderAction::DELAYED_BLEND);
+	// offscreenRenderer.getGLRenderAction()->setTransparencyType(SoGLRenderAction::DELAYED_BLEND);
 	// Yay!!!  The following seems to work.
-	// offscreenRenderer.getGLRenderAction()->setTransparencyType(SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND);
-	offscreenRenderer.getGLRenderAction()->setTransparencyType(SoGLRenderAction::NONE);
+	offscreenRenderer.getGLRenderAction()->setTransparencyType(SoGLRenderAction::SORTED_OBJECT_SORTED_TRIANGLE_BLEND);
+	// offscreenRenderer.getGLRenderAction()->setTransparencyType(SoGLRenderAction::NONE);
+
 	offscreenRenderer.setBackgroundColor(SbColor(0.,0.,0.));
 
 	// Um, first render fails in a tile.
