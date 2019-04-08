@@ -313,7 +313,7 @@ int main(int argc, char *argv[]) {
 
 	// Project... Needs to come first.
 	// cout << 100 << endl << flush;
-	// ok = viz->setProjection("Equirectangular");
+	ok = viz->setProjection("Equirectangular");
 	// ok = viz->setProjection("Mercator");
 	// cout << 200 << endl << flush;
 
@@ -648,6 +648,9 @@ int main(int argc, char *argv[]) {
 				float x,y,z;
 				position.getValue().getValue(x,y,z);
 				x = x - 0.25;
+				// x = x - 0.2;
+				// x = x - 0.225;
+				// x = x - 0.125;
 //				z *= .1;
 //				cout
 //				<< "200 offscreen_viz setting camera position to "
@@ -660,8 +663,8 @@ int main(int argc, char *argv[]) {
 			// viewer->setTransparencyType(SoGLRenderAction::BLEND);
 
 			// offscreen->writeFileRGB(1);
-			// bool enableTransparency = false;
-			bool enableTransparency = true;
+			bool enableTransparency = false;
+			// bool enableTransparency = true;
 			offscreen->writeFile(1,enableTransparency);
 			// offscreen->saveImage(1);
 

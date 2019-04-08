@@ -106,7 +106,7 @@ bool Granule1( VizHTM *viz ) {
 	*(viz->notestream()) << endl << "Granule1 faces_color " << faces_color << endl;
 	*(viz->notestream()) << endl << "Granule1 faces_transparency " << faces_transparency << endl;
 
-	if( false ){
+	if( true ){
 		float
 		r0       = 0.5,
 		g0       = 0.5,
