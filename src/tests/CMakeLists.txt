@@ -66,6 +66,7 @@ set (
   Edges.C
   EquatorCheck.C
   Granule.C
+  Points.C
   PolePosition.C
 )
 #  

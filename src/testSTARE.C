@@ -313,7 +313,7 @@ int main(int argc, char *argv[]) {
 
 	// Project... Needs to come first.
 	// cout << 100 << endl << flush;
-	ok = viz->setProjection("Equirectangular");
+	// ok = viz->setProjection("Equirectangular");
 	// ok = viz->setProjection("Mercator");
 	// cout << 200 << endl << flush;
 
@@ -349,26 +349,33 @@ int main(int argc, char *argv[]) {
 	rgbScale = 0
 	;
 
+	// bool reuse_ExaminerCameraForOffscreen = true;
+	bool reuse_ExaminerCameraForOffscreen = false;
+	if( viz->getProjection() == "None" ) { reuse_ExaminerCameraForOffscreen = true; }
+
+
+	// Kuo's Equirectangular and Globe Summary slides
+	if(false) {
+		// You can set projection here as long as no graphics viz calls occur above.
+		// ok = viz->setProjection("None");
+		ok = viz->setProjection("Equirectangular");
+		ok = Granule1(viz);
+		ok = Chunk1(viz); offscreen_viz = true;
+		if( viz->getProjection() == "None" ) { reuse_ExaminerCameraForOffscreen = true; }
+	}
+
 	// Global diagnostics
 	if(false) {
 		blockingSphere_flag    = true;
 		testTenDegreeGrid_flag = true;
 		testShapeFiles_flag    = true;
 	}
-
-	// blockingSphere_flag = false;
-	// testShapeFiles_flag = false;
-
 	if(blockingSphere_flag)    plotBlockingSphere(viz,0.2,0.2,0.2,0.999);
 	if(testTenDegreeGrid_flag) testTenDegreeGrid(viz,r0,g0,b0,rgbScale);
 	if(testShapeFiles_flag)    testShapeFiles(viz,0.5,1,1,0.0);
 
 	// offscreen_viz = true;
 	offscreen_viz = false;
-
-	// bool reuse_ExaminerCameraForOffscreen = true;
-	bool reuse_ExaminerCameraForOffscreen = false;
-	if( viz->getProjection() == "None" ) { reuse_ExaminerCameraForOffscreen = true; }
 
 	// ok = BoundingBox1(viz);
 	// ok = Edges1(viz);
@@ -388,12 +395,18 @@ int main(int argc, char *argv[]) {
 	// ok = PolePosition1(viz);
 	// ok = PoleCheck1(viz);
 
-	ok = Granule1(viz);
+	// ok = Granule1(viz);
+
+	// ok = Points1(viz); offscreen_viz = true;
+	// ok = Points2(viz); offscreen_viz = false;
+	ok = Points3(viz); offscreen_viz = false;
 
 	// for( int i=0; i<6; ++i ) { ok = Area1(viz,i); }; offscreen_viz = true;
 	// for( int i=0; i<6; ++i ) { ok = Area1(viz,i); }; offscreen_viz = false;
 	// for( int i=7; i<11; ++i ) { ok = Area1(viz,i); }; offscreen_viz = false;
-	ok = Chunk1(viz); offscreen_viz = true;
+	// ok = Chunk1(viz); offscreen_viz = true;
+
+
 
 	// Last chance changes...
 	if(lineWidth != -1) {

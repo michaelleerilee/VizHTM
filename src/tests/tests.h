@@ -29,6 +29,10 @@ bool PoleCheck1   (VizHTM *viz);
 
 bool Granule1( VizHTM *viz );
 
+bool Points1( VizHTM *viz );
+bool Points2( VizHTM *viz );
+bool Points3( VizHTM *viz );
+
 bool Area1 ( VizHTM *viz, int level );
 bool Chunk1( VizHTM *viz );
 
