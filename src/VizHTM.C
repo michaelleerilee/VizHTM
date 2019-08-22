@@ -1567,6 +1567,89 @@ void VizHTM::addHstmRange(
 	}
 }
 
+
+void VizHTM::addSpatialRange(
+		HstmRange *range,
+		float r, float g, float b, float a, float scale, bool arcFlag,
+		float deltaZ,
+		STARE *stare_index
+) {
+
+	// cout << 1000 << endl << flush;
+
+	SpatialIndex index;
+
+	int level;
+	EmbeddedLevelNameEncoding leftJustified;
+	bool external_index = false;
+
+	if(!stare_index) {
+		// cout << 1500 << endl << flush;
+		stare_index = new STARE;
+		external_index = true;
+	}
+
+	// cout << 2000 << endl << flush;
+
+	KeyPair kp; int indexp;
+	range->reset();
+	cout << dec << endl << flush;
+
+	while((indexp = range->getNext(kp)) > 0) {
+		// cout << 3000 << " kp.lo: " << hex << kp.lo << dec << endl << flush;
+		// cout << 3000 << " kp.hi: " << hex << kp.hi << dec << endl << flush;
+		leftJustified.setId(kp.lo);
+		// cout << 3001 << endl << flush;
+		level = leftJustified.getLevel();
+		// cout << 3002 << " level: " << level << endl << flush;
+		string loName = leftJustified.getName();
+		// cout << 3003 << " loName: " << loName << endl << flush;
+		uint64 termId = leftJustified.idFromTerminatorAndLevel_NoDepthBit(kp.hi,level);
+		// cout << 3004 << " termId: " << hex << termId << dec << endl << flush << flush;
+
+		// TODO fix the following kluge -- what should termId be for S0?
+		string hiName;
+		if( termId != 0 ) {
+			leftJustified.setId(termId);
+			// cout << 1005 << endl << flush;
+			hiName = leftJustified.getName();
+		} else {
+			hiName = loName;
+		}
+		// cout << 3100 << " lo,hi name: " << loName << " " << hiName << endl << flush;
+		// cout << 3101 << " level:      " << level << endl << flush;
+		// cout << 3102 << " kp:         " << hex << kp.lo << " " << kp.hi << dec << endl << flush;
+
+		index = stare_index->getIndex(level);
+
+		uint64 id0 = index.idByName(loName.c_str());
+		uint64 id1 = index.idByName(hiName.c_str());
+		for(uint64 id=id0; id<=id1; id++) {
+			if(arcFlag) {
+				addArcFromIndexAndId(
+						&index,
+						id,
+						r, g, b,
+						a,
+						scale,
+						deltaZ
+				);
+			} else {
+				addEdgesFromIndexAndId(
+						&index,
+						id,
+						r, g, b,
+						a,
+						scale
+				);
+			}
+		}
+	}
+	if(!external_index){
+		delete stare_index;
+	}
+}
+
 void VizHTM::addCellsFromHstmRange(
 		HstmRange *range,
 		float r0, float g0, float b0, float a0, float scale0,

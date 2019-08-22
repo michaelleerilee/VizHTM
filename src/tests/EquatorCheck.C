@@ -30,6 +30,7 @@ bool EquatorCheck1( VizHTM* viz ) {
 	// STARE index1;
 
 	if( true ){
+		SpatialVector xhat(1,0,0), yhat(0,1,0);
 		SpatialVector axis     = 0.5*xhat + 0.5*yhat; axis.normalize();
 		float64       theta    = 0.25*gPi;
 		// theta = 0.0;
@@ -56,6 +57,8 @@ bool EquatorCheck1( VizHTM* viz ) {
 		}
 		*/
 	}
+
+	SpatialVector xhat(1,0,0), yhat(0,1,0), zhat(0,0,1);
 
 	SpatialVector x0 = xhat;
 	SpatialVector x1;
@@ -176,6 +179,7 @@ bool EquatorCheck2( VizHTM* viz ) {
 	STARE index;
 	// STARE index1;
 
+	SpatialVector xhat(1,0,0), yhat(0,1,0), zhat(0,0,1);
 	if( true ){
 		SpatialVector axis     = 0.5*xhat + 0.5*yhat; axis.normalize();
 		float64       theta    = 0.25*gPi;
@@ -232,6 +236,7 @@ bool MeridianCheck1( VizHTM* viz ) {
 	STARE index;
 	// STARE index1;
 
+	SpatialVector xhat(1,0,0), yhat(0,1,0), zhat(0,0,1);
 	if( true ){
 		SpatialVector axis     = 0.5*xhat + 0.5*yhat; axis.normalize();
 		float64       theta    = 0.25*gPi;

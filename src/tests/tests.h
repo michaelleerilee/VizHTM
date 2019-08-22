@@ -28,6 +28,7 @@ bool PolePosition1(VizHTM *viz);
 bool PoleCheck1   (VizHTM *viz);
 
 bool Granule1( VizHTM *viz );
+bool Granule2( VizHTM *viz );
 
 bool Points1( VizHTM *viz );
 bool Points2( VizHTM *viz );

@@ -42,7 +42,7 @@ bool PolePosition1(VizHTM *viz) {
 
 	STARE index;
 	// STARE index1;
-
+	SpatialVector xhat(1,0,0), yhat(0,1,0), zhat(0,0,1);
 	SpatialVector axis     = 0.5*xhat + 0.5*yhat; axis.normalize();
 	float64       theta    = 0.25*gPi - 12.0e-9;
 	// theta = 0.0;
@@ -255,6 +255,7 @@ bool PolePosition1(VizHTM *viz) {
 	}
 
 	if(false){
+		SpatialVector xhat(1,0,0), yhat(0,1,0), zhat(0,0,1);
 		SpatialVector axis     = 0.5*xhat + 0.5*yhat; axis.normalize();
 		float64       theta    = 0.25*gPi;
 		theta = 0.0;

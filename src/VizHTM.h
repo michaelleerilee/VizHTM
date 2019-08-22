@@ -17,6 +17,7 @@
 #include "SpatialVector.h"
 #include "SpatialConstraint.h"
 #include "SpatialInterface.h"
+#include "STARE.h"
 
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/nodes/SoSwitch.h>
@@ -227,6 +228,14 @@ public:
 			float deltaZ = 0.0,
 			SpatialIndex *index = NULL
 	);
+
+	void addSpatialRange(
+			HstmRange *range,
+			float r, float g, float b, float a=-1., float scale=1.0, bool arcFlag = true,
+			float deltaZ = 0.0,
+			STARE *index = NULL
+	);
+
 	void addCellsFromHstmRange(
 			HstmRange *range,
 			float r0, float g0, float b0, float a0, float scale0,
@@ -306,7 +315,7 @@ public:
 	string  projection = "None";
 	bool    setProjection(string projection);
 	string  getProjection();
-	SpatialRotation projectionRotateLon = SpatialRotation(zhat,-90*gPr);
+	SpatialRotation projectionRotateLon = SpatialRotation(SpatialVector(0,0,1),-90*gPr);
 	// SpatialRotation projectionRotateLon = SpatialRotation(zhat,0.0);
 
 	int   	nSpheres;

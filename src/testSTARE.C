@@ -396,10 +396,11 @@ int main(int argc, char *argv[]) {
 	// ok = PoleCheck1(viz);
 
 	// ok = Granule1(viz);
+	ok = Granule2(viz);
 
 	// ok = Points1(viz); offscreen_viz = true;
 	// ok = Points2(viz); offscreen_viz = false;
-	ok = Points3(viz); offscreen_viz = false;
+	// ok = Points3(viz); offscreen_viz = false;
 
 	// for( int i=0; i<6; ++i ) { ok = Area1(viz,i); }; offscreen_viz = true;
 	// for( int i=0; i<6; ++i ) { ok = Area1(viz,i); }; offscreen_viz = false;
