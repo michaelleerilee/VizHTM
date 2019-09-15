@@ -313,7 +313,7 @@ int main(int argc, char *argv[]) {
 
 	// Project... Needs to come first.
 	// cout << 100 << endl << flush;
-	// ok = viz->setProjection("Equirectangular");
+	ok = viz->setProjection("Equirectangular");
 	// ok = viz->setProjection("Mercator");
 	// cout << 200 << endl << flush;
 
@@ -396,7 +396,9 @@ int main(int argc, char *argv[]) {
 	// ok = PoleCheck1(viz);
 
 	// ok = Granule1(viz);
-	ok = Granule2(viz);
+	// ok = Granule2(viz);
+
+	ok = Constraints1(viz);
 
 	// ok = Points1(viz); offscreen_viz = true;
 	// ok = Points2(viz); offscreen_viz = false;

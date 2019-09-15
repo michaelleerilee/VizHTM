@@ -17,6 +17,8 @@
 
 bool BoundingBox1 (VizHTM *viz);
 
+bool Constraints1 (VizHTM *viz);
+
 bool Edges1         (VizHTM *viz);
 bool Edges2 ( VizHTM * viz );
 
@@ -28,6 +30,7 @@ bool PolePosition1(VizHTM *viz);
 bool PoleCheck1   (VizHTM *viz);
 
 bool Granule1( VizHTM *viz );
+bool Granule2_ConvexHullTesting1( VizHTM *viz );
 bool Granule2( VizHTM *viz );
 
 bool Points1( VizHTM *viz );

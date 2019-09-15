@@ -63,6 +63,7 @@ set (
   tests_support.C
   BoundingBox.C
   Chunking.C
+  Constraints.C
   Edges.C
   EquatorCheck.C
   Granule.C

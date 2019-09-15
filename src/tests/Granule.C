@@ -8,6 +8,7 @@
  */
 #include "STARE.h"
 #include "HstmRange.h"
+#include "SpatialRange.h"
 #include "tests.h"
 
 #include <mfhdf.h>
@@ -445,7 +446,7 @@ bool Granule1( VizHTM *viz ) {
 }
 
 
-bool Granule2( VizHTM *viz ) {
+bool Granule2_ConvexHullTesting1( VizHTM *viz ) {
 	bool ok   = false;
 	bool once = false;
 
@@ -719,18 +720,29 @@ bool Granule2( VizHTM *viz ) {
 		lat1 = 45,
 		lon1 = -110;
 
+		lat0 = 83.75;
+		lon0 = 0;
+		lat1 = 85;
+		lon1 = 10;
+
+		float64
+		lat05 = 0.5*(lat0+lat1);
+
 		SpatialVector *v0 = VectorFromLatLonDegrees(lat0,lon0);
 		SpatialVector *v1 = VectorFromLatLonDegrees(lat0,lon1);
 		SpatialVector *v2 = VectorFromLatLonDegrees(lat1,lon1);
 		SpatialVector *v3 = VectorFromLatLonDegrees(lat1,lon0);
 
-		viz->addLatLonBoxEdgesDegrees(lat0, lon0, lat1, lon1, 1, 1, 1);
+		if(true) {
+			viz->addLatLonBoxEdgesDegrees(lat0, lon0, lat1, lon1, 1, 1, 1);
+		}
 
 		LatLonDegrees64ValueVector corners;
 		corners.push_back(LatLonDegrees64(lat0,lon0));
 		corners.push_back(LatLonDegrees64(lat0,lon1));
 		corners.push_back(LatLonDegrees64(lat1,lon1));
 		corners.push_back(LatLonDegrees64(lat1,lon0));
+		// corners.push_back(LatLonDegrees64(lat05,lon0));
 
 		cout << "corners" << endl << flush;
 		for(int i=0; i<corners.size(); ++i) {
@@ -738,23 +750,52 @@ bool Granule2( VizHTM *viz ) {
 		}
 
 		STARE index0;
+		STARE_SpatialIntervals cover;
+		STARE_SpatialIntervals coverCH; // Returns an approximate cover of the convex hull.
 
 		// TODO Question: Is force resolution level necessary here?
 		// int force_resolution_level = 9;
 		int force_resolution_level = 5;
 		SpatialIndex sIndex0 = index0.getIndex(force_resolution_level);
 
-		STARE_SpatialIntervals cover = index0.CoverBoundingBoxFromLatLonDegrees(corners, force_resolution_level);
-		// STARE_SpatialIntervals cover = index0.CoverBoundingBoxFromLatLonDegrees(corners);
+		// STARE_SpatialIntervals cover = index0.CoverBoundingBoxFromLatLonDegrees(corners, force_resolution_level);
+		// STARE_SpatialIntervals cover = index0.ConvexHull(corners, force_resolution_level);
+
+		// Use bounding box.
+		cover = index0.CoverBoundingBoxFromLatLonDegrees(corners);
 
 		cout << dec;
 		cout << "cover size: " << cover.size() << endl << flush;
-		HstmRange cover_range = SpatialRangeFromSpatialIntervals(cover);
-		cout << "cover_range size: " << cover_range.range->nranges() << endl << flush;
+		SpatialRange cover_sr(cover);
+		HstmRange *cover_range = cover_sr.range;
+		cout << "cover_range size: " << cover_range->range->nranges() << endl << flush;
 		// viz->addHstmRange(&cover_range,1,1,1,0,1,true,0.05,&sIndex0);
 		if(false) {
-			viz->addSpatialRange(&cover_range,1,1,1,0,1,true,0.001);
+			viz->addSpatialRange(cover_range,1,1,1,0,1,true,0.001);
 		}
+
+		// Try convex hull.
+		if(true) {
+			// STARE_SpatialIntervals coverCH = index0.ConvexHull(corners, force_resolution_level);
+			// coverCH = index0.ConvexHull(corners,9);
+			coverCH = index0.ConvexHull(corners,11);
+			SpatialRange coverCH_sr(coverCH);
+			HstmRange *coverCH_range = coverCH_sr.range;
+			cout << "coverCH_range size: " << coverCH_range->range->nranges() << endl << flush;
+			// viz->addHstmRange(coverCH_range,0.1,0,1,0,1,true,0.05,&sIndex0);
+			if(true) {
+				viz->addSpatialRange(coverCH_range,1,0.1,0.1,0,1,true,0.002);
+			}
+		}
+
+		// Print cover, coverCH
+		for(int i=0; i< min(cover.size(),coverCH.size()); ++i) {
+			cout << i << " i,c,cCH: " << hex
+					<< cover[i] << " " << coverCH[i]
+												  << endl << flush
+												  << dec;
+		}
+
 		/*
 		 *
 		 */
@@ -773,60 +814,62 @@ bool Granule2( VizHTM *viz ) {
 		<< scientific;
 		*/
 
-		range->purge();
-		int k = 0;
-		// for( int iline = 0; iline < lines; ++iline ) {
-		//	for( int isample = 0; isample < samples; ++isample ) {
-		for( int iline = 0; iline < lines; iline += 10 ) {
-			for( int isample = 0; isample < samples; isample += 10 ) {
+		if(false) {
+			range->purge();
+			int k = 0;
+			// for( int iline = 0; iline < lines; ++iline ) {
+			//	for( int isample = 0; isample < samples; ++isample ) {
+			for( int iline = 0; iline < lines; iline += 10 ) {
+				for( int isample = 0; isample < samples; isample += 10 ) {
 
-				// cout << 300 << " " << k << " iline,isample = " << iline << "," << isample << endl << flush;
-				/*
+					// cout << 300 << " " << k << " iline,isample = " << iline << "," << isample << endl << flush;
+					/*
 			cout << k << " " << isample << " " << iline << " kij lat,lon = "
 			<< geofield2data[isample + samples * iline] << "," << geofield1data[isample + samples * iline]
 			<< endl << flush;
-				 */
+					 */
 
-				STARE_ArrayIndexSpatialValue a =
-						index.ValueFromLatLonDegrees(
-								geofield2data[isample + samples * iline],
-								geofield1data[isample + samples * iline],
-								resolutionLevel);
-				// cout << k << ": " << hex << a << dec << endl << flush;
-				LatLonDegrees64 latlon = index.LatLonDegreesFromValue(a);
+					STARE_ArrayIndexSpatialValue a =
+							index.ValueFromLatLonDegrees(
+									geofield2data[isample + samples * iline],
+									geofield1data[isample + samples * iline],
+									resolutionLevel);
+					// cout << k << ": " << hex << a << dec << endl << flush;
+					LatLonDegrees64 latlon = index.LatLonDegreesFromValue(a);
 
-				// << setprecision(17)
-				// << setw(20)
-				// << scientific
-				/*
+					// << setprecision(17)
+					// << setw(20)
+					// << scientific
+					/*
 			cout
 			<< " stare = " << hex << a << dec
 			<< ", latlon = " << latlon.lat << "," << latlon.lon
 			<< endl << flush;
-				 */
+					 */
 
-				EmbeddedLevelNameEncoding leftJustified;
-				leftJustified.setIdFromSciDBLeftJustifiedFormat(a);
-				uint64 b = leftJustified.getId();
-				// range->reset();
-				range->addRange(b,b);
-				++k;
+					EmbeddedLevelNameEncoding leftJustified;
+					leftJustified.setIdFromSciDBLeftJustifiedFormat(a);
+					uint64 b = leftJustified.getId();
+					// range->reset();
+					range->addRange(b,b);
+					++k;
+				}
 			}
-		}
-		// cout << 500 << endl << flush;
-		// range->reset();
-		viz->addHstmRange(range,0.0,1.0,0.25,0.0,1.0,true,z_offset,&sIndex);
+			// cout << 500 << endl << flush;
+			// range->reset();
+			viz->addHstmRange(range,0.0,1.0,0.25,0.0,1.0,true,z_offset,&sIndex);
 
-		if( faces_color ) {
-			*(viz->notestream()) << "color_faces = true" << endl;
-			viz->addHstmRangeFaces(range,0.9,0.125,0.0,faces_transparency,1.0,face_z_offset,&sIndex);
-		}
-		// cout << 600 << endl << flush;
-		/*
+			if( faces_color ) {
+				*(viz->notestream()) << "color_faces = true" << endl;
+				viz->addHstmRangeFaces(range,0.9,0.125,0.0,faces_transparency,1.0,face_z_offset,&sIndex);
+			}
+			// cout << 600 << endl << flush;
+			/*
 	void VizHTM::addHstmRange(
 			HstmRange *range,
 			float r, float g, float b, float a, float scale, bool arcFlag
-		 */
+			 */
+		}
 
 		if(false) {
 			LatLonDegrees64ValueVector points;
@@ -854,8 +897,9 @@ bool Granule2( VizHTM *viz ) {
 				STARE_SpatialIntervals cover_hull = index.ConvexHull(points,resolution_level);
 				cout << 110 << endl << flush;
 
-				HstmRange hull_range = SpatialRangeFromSpatialIntervals(cover_hull);
-				viz->addSpatialRange(&hull_range,0.1,0.25,1.0,0,1,true,0.002);
+				SpatialRange cover_hull_sr(cover_hull);
+				HstmRange *hull_range = cover_hull_sr.range;
+				viz->addSpatialRange(hull_range,0.1,0.25,1.0,0,1,true,0.002);
 
 			} catch (const SpatialException & e) {
 				cout << 200 << endl << flush;
@@ -865,12 +909,551 @@ bool Granule2( VizHTM *viz ) {
 		}
 
 
-		if(true) {
+		if(false) {
 			LatLonDegrees64ValueVector points;
 			float64 deltaDegree=4;
 			{
 				float64 lat = lat0;
 				for( float64 lon = lon0; lon < lon1; lon += deltaDegree ) {
+					points.push_back(LatLonDegrees64(lat,lon));
+				}
+			}
+			{
+				float64 lon = lon1;
+				for( float64 lat = lat0; lat < lat1; lat += deltaDegree ) {
+					points.push_back(LatLonDegrees64(lat,lon));
+				}
+			}
+			{
+				float64 lat = lat1;
+				for( float64 lon = lon1; lon > lon0; lon -= deltaDegree ) {
+					points.push_back(LatLonDegrees64(lat,lon));
+				}
+			}
+
+			{
+				float64 lon = lon0;
+				for( float64 lat = lat1; lat > lat0; lat -= deltaDegree ) {
+					points.push_back(LatLonDegrees64(lat,lon));
+				}
+			}
+
+			cout << "finished adding " << points.size() << " pairs to points." << endl << flush;
+
+			int resolution_level = 4;
+			try {
+				cout << 400 << endl << flush;
+				STARE_SpatialIntervals cover_hull = index.ConvexHull(points,resolution_level);
+				cout << 405 << endl << flush;
+				cout << "cover_hull.size(): " << cover_hull.size() << endl << flush;
+				cout << 410 << endl << flush;
+
+				SpatialRange cover_hull_sr(cover_hull);
+				HstmRange *hull_range = cover_hull_sr.range;
+				cout << 415 << endl << flush;
+				viz->addSpatialRange(hull_range,0.125,1.0,1.0,0,1,true,0.002);
+				cout << 420 << endl << flush;
+
+			} catch (const SpatialException & e) {
+				cout << 500 << endl << flush;
+				cout << "Exception " << e.what() << endl << flush;
+			}
+			cout << 600 << endl << flush;
+		}
+
+
+		/*
+		 *
+		 */
+
+		/* Release the buffer for '23.8H_Approx._Res.3_TB_(not-resampled)' */
+		free(datafield1data);
+		/* Release the buffer for 'Longitude' */
+		free(geofield1data);
+		/* Release the buffer for 'Latitude' */
+		free(geofield2data);
+
+		/*
+		 *
+		 */
+
+		/* Close the swath named 'Low_Res_Swath' */
+		cout << "Detaching..." << endl;
+		if ((SWdetach(swath1)) == -1) {
+			fprintf(stderr, "error: cannot detach from '%s'\n",swath1_key.c_str());
+			return -1;
+		}
+		cout << "Closing swathfile " << filename1 << endl;
+		/* Close */
+		if ((SWclose(swathfile1)) == -1) {
+			fprintf(stderr, "error: cannot close swath\n");
+			return -1;
+		}
+	}
+	cout << "Done...";
+	ok = true;
+	return ok;
+}
+
+
+bool Granule2( VizHTM *viz ) {
+	bool ok   = false;
+	bool once = false;
+
+	// bool faces_color = false;
+	bool faces_color = true;
+
+	// float faces_transparency = 0.05;
+	// float faces_transparency = 0.05;
+	// float faces_transparency = 0.25;
+	// float faces_transparency = 0.35;
+	float faces_transparency = 0.5;
+	// float faces_transparency = 0.6;
+
+	float64 z_offset = 0.034;
+	// float64 face_z_offset = 0.005;
+	float64 face_z_offset = 0.031;
+
+	cout << "Granule2" << endl;
+	if( !viz->notestream() ) {
+		viz->addNotes(new stringstream);
+	}
+	*(viz->notestream()) << endl << "Granule1 Start" << endl;
+
+	if(true) {
+		if(viz->getProjection() == "None") {
+			// plotBlockingSphere(viz,0.2,0.2,0.2,0.98);
+			plotBlockingSphere(viz,0.2,0.2,0.2,0.995);
+			*(viz->notestream()) << endl << "Granule1 plotBlockingSphere enabled" << endl;
+		}
+	}
+
+	*(viz->notestream()) << endl << "Granule1 faces_color " << faces_color << endl;
+	*(viz->notestream()) << endl << "Granule1 faces_transparency " << faces_transparency << endl;
+
+	if( true ){
+		float
+		r0       = 0.5,
+		g0       = 0.5,
+		b0       = 0.5,
+		rgbScale = 0
+		;
+		testTenDegreeGrid(viz,r0,g0,b0,rgbScale);
+		*(viz->notestream()) << endl << "Granule1 testTenDegreeGrid enabled" << endl;
+	}
+
+	if( false ) {
+		testShapeFiles(viz,0.5,1,1,0.03);
+		*(viz->notestream()) << endl << "Granule1 testShapeFiles enabled" << endl;
+	}
+
+	string swath1_key = "MODIS SWATH TYPE L2";
+
+	*(viz->notestream()) << "swath key = " << swath1_key << endl;
+
+	// int resolutionLevel = 4;
+	int resolutionLevel = 5;
+	// int resolutionLevel = 5;
+	// int resolutionLevel = 6;
+	// int resolutionLevel = 7;
+	// int resolutionLevel = 8;
+	// int resolutionLevel = 14;
+	*(viz->notestream()) << "resolutionLevel of triangles = " << resolutionLevel << endl;
+
+	// for( int ifile = 0; ifile < 5; ++ifile ) {
+	// for( int ifile = 5; ifile < 6; ++ifile ) {
+	// ++ for( int ifile = 6; ifile < 17; ++ifile ) {
+	for( int ifile = 7; ifile < 8; ++ifile ) {
+	// for( int ifile = 13; ifile < 15; ++ifile ) {
+
+		// char filename1[128] = "/home/mrilee/data/OMI/OMI-Aura_L2-OMAERO_2004m1001t0003-o01132_v003-2011m0926t170457.he5";
+
+		// An hdf4 file...
+		// char filename1[128] = "/home/mrilee/data/STARE/MYD09.A2019003.2040.006.2019005020913.hdf";
+		string filename1 = file_directory + files[ifile];
+
+		// char filename1[128] = "/home/mrilee/data/TestData/AMSR_E_L2A_BrightnessTemperatures_V09_200206190029_D.hdf";
+		// string swath1_key = "Low_Res_Swath";
+
+		/* Open using swath API */
+
+		*(viz->notestream())
+				<< " ifile = " << ifile     << endl
+				<< "Loading  " << filename1 << endl
+				;
+
+		cout << "Opening swathfile " << filename1 << endl;
+		int32 swathfile1;
+		if ((swathfile1 = SWopen(filename1.c_str(), DFACC_RDONLY)) == -1) {
+			fprintf(stderr, "error: cannot open swath '%s'\n",filename1.c_str());
+			return -1;
+		}
+
+		/* Open a swath */
+		int32 swath1;
+		cout << "Attaching to " << swath1_key.c_str();
+		if ((swath1 = SWattach(swathfile1, swath1_key.c_str())) == -1) {
+			fprintf(stderr, "error: cannot attach to '%s'\n",swath1_key.c_str());
+			return -1;
+		} else {
+			cout << " - ATTACHED" << endl << flush;
+		}
+
+		/*
+	short 1km_Surface_Reflectance_Band_2(1km_Data_Lines=2030, 1km_Data_Samples=1354);
+	  :long_name = "1km Surface Reflectance Band 2";
+	  :units = "reflectance";
+	  :Nadir_Data_Resolution = "1km";
+	  :valid_range = -100S, 16000S; // short
+	  :_FillValue = -28672S; // short
+	  :scale_factor = 10000.0; // double
+	  :scale_factor_err = 0.0; // double
+	  :add_offset = 0.0; // double
+	  :add_offset_err = 0.0; // double
+	  :calibrated_nt = 5; // int
+		 */
+		// track vs. x-track?
+		// was lines=1997, samples=243.
+		int lines = 2030, samples = 1354;
+
+		int32 datafield1rank;
+		int32 datafield1dimsize[32];
+		int32 datafield1type;
+		char datafield1dimname[512];
+		int16 *datafield1data;
+
+		string variable_key = "1km Surface Reflectance Band 2";
+		// *(viz->notestream()) << "variable_key = " << variable_key << endl;
+
+		/* Retrieve information about '23.8H_Approx._Res.3_TB_(not-resampled)' datafield */
+		if ((SWfieldinfo(swath1, variable_key.c_str(), &datafield1rank, datafield1dimsize, &datafield1type, datafield1dimname)) == -1) {
+			fprintf(stderr, "error: cannot get the field info for '%s'\n",variable_key.c_str());
+			return -1;
+		} else {
+			cout
+			<< " variable_key: " << variable_key << endl
+			<< "  datafield1rank:    " << datafield1rank << endl;
+			for(int i=0; i < datafield1rank; ++i) {
+				cout
+				<< "  datafield1dimsize: " << i << ": " << datafield1dimsize[i] << endl;
+			}
+			cout
+			<< "  datafield1type:    " << datafield1type << endl
+			<< "  datafield1dimname: " << datafield1dimname << endl;
+
+			if(!once) {
+				once = true;
+				*(viz->notestream())
+							<< " variable_key: " << variable_key << endl
+							<< "  datafield1rank:    " << datafield1rank << endl;
+				for(int i=0; i < datafield1rank; ++i) {
+					*(viz->notestream())
+							<< "  datafield1dimsize: " << i << ": " << datafield1dimsize[i] << endl;
+				}
+				*(viz->notestream())
+							<< "  datafield1type:    " << datafield1type << endl
+							<< "  datafield1dimname: " << datafield1dimname << endl;
+			}
+			/*
+			 * Check hntdefs.h to identify what the type codes mean. datafield1type...
+			 *  DFNT_FLOAT64  6
+			 *  DFNT_INT16   22
+			 *
+			 */
+		}
+
+		lines   = datafield1dimsize[0];
+		samples = datafield1dimsize[1];
+
+		/* Allocate buffer for '23.8H_Approx._Res.3_TB_(not-resampled)' */
+		if ((datafield1data = (int16 *)malloc(sizeof(int16) * lines * samples)) == NULL) {
+			fprintf(stderr, "error: cannot allocate memory for '%s'\n",variable_key.c_str());
+			return -1;
+		}
+		/* Read data from '23.8H_Approx._Res.3_TB_(not-resampled)' */
+		if ((SWreadfield(swath1, variable_key.c_str(), NULL, NULL, NULL, datafield1data)) == -1) {
+			fprintf(stderr, "error: cannot read field '%s'\n",variable_key.c_str());
+			return -1;
+		}
+		/* Dump data from '23.8H_Approx._Res.3_TB_(not-resampled)'
+		for (int i = 0; i < 10; ++i) {
+			for (int j = 0; j < 2; ++j) {
+				printf("%d ", datafield1data[j + 243 * i]);
+			}
+			printf("\n");
+		}
+		*/
+
+		/*
+	float Longitude(1km_Data_Lines=2030, 1km_Data_Samples=1354);
+  :long_name = "Longitude";
+  :units = "degrees_east";
+  :Nadir_Data_Resolution = "1km";
+  :valid_range = -180.0f, 180.0f; // float
+  :_FillValue = 0.0f; // float
+  :scale_factor = 1.0; // double
+  :scale_factor_err = 0.0; // double
+  :add_offset = 0.0; // double
+  :add_offset_err = 0.0; // double
+  :calibrated_nt = 5; // int
+  :_CoordinateAxisType = "Lon";
+		 */
+
+		int32 geofield1rank;
+		int32 geofield1dimsize[32];
+		int32 geofield1type;
+		char geofield1dimname[512];
+		float32 *geofield1data;
+
+		/* Retrieve information about 'Longitude' geolocation field */
+		if ((SWfieldinfo(swath1, "Longitude", &geofield1rank, geofield1dimsize, &geofield1type, geofield1dimname)) == -1) {
+			fprintf(stderr, "error: cannot get the field info for 'Longitude'\n");
+			return -1;
+		}
+		/* Allocate buffer for 'Longitude' */
+		// if ((geofield1data = malloc(sizeof(float32) * 1997 * 243)) == NULL) {
+		if ((geofield1data = (float32 *)malloc(sizeof(float32) * lines * samples )) == NULL) {
+			fprintf(stderr, "error: cannot allocate memory for 'Longitude'\n");
+			return -1;
+		}
+		/* Read data from 'Longitude' */
+		if ((SWreadfield(swath1, "Longitude", NULL, NULL, NULL, geofield1data)) == -1) {
+			fprintf(stderr, "error: cannot read field 'Longitude'\n");
+			return -1;
+		}
+		/* Dump data from 'Longitude'
+		for (int i = 0; i < 10; ++i) {
+			for (int j = 0; j < 2; ++j) {
+				printf("%f ", geofield1data[j + samples * i]);
+			}
+			printf("\n");
+		}
+		*/
+
+		/*
+		 *
+		 */
+
+		int32 geofield2rank;
+		int32 geofield2dimsize[32];
+		int32 geofield2type;
+		char geofield2dimname[512];
+		float32 *geofield2data;
+
+		/* Retrieve information about 'Latitude' geolocation field */
+		if ((SWfieldinfo(swath1, "Latitude", &geofield2rank, geofield2dimsize, &geofield2type, geofield2dimname)) == -1) {
+			fprintf(stderr, "error: cannot get the field info for 'Latitude'\n");
+			return -1;
+		}
+		/* Allocate buffer for 'Latitude' */
+		if ((geofield2data = (float32 *)malloc(sizeof(float32) * lines * samples)) == NULL) {
+			fprintf(stderr, "error: cannot allocate memory for 'Latitude'\n");
+			return -1;
+		}
+		/* Read data from 'Latitude' */
+		if ((SWreadfield(swath1, "Latitude", NULL, NULL, NULL, geofield2data)) == -1) {
+			fprintf(stderr, "error: cannot read field 'Latitude'\n");
+			return -1;
+		}
+		/* Dump data from 'Latitude'
+		for (int i = 0; i < 10; ++i) {
+			for (int j = 0; j < 2; ++j) {
+				printf("%f ", geofield2data[j + samples * i]);
+			}
+			printf("\n");
+		}
+		*/
+
+		float64	lats[4] = { 0,  5, 20,  10 };
+		float64 lons[4] = { 0, 10, 10, -10 };
+
+		SpatialVector v[4];
+
+		for(int i=0; i<4; ++i) {
+			v[i].setLatLonDegrees(lats[i], lons[i]);
+		}
+
+		for(int i=0; i<4; ++i) {
+			viz->addArc(v[i], v[i < 3 ? i+1 : 0], 1, 0, 0, -1, 1.0025, 0, 16);
+		}
+
+		LatLonDegrees64ValueVector corners;
+		for(int i=0; i<4; ++i) {
+			corners.push_back(LatLonDegrees64(lats[i],lons[i]));
+		}
+
+		cout << "corners" << endl << flush;
+		for(int i=0; i<corners.size(); ++i) {
+			cout << i << " corner: lat-lon: " << corners[i].lat << " " << corners[i].lon << endl << flush;
+		}
+
+		STARE index0;
+		STARE_SpatialIntervals cover;
+		STARE_SpatialIntervals coverCH; // Returns an approximate cover of the convex hull.
+
+		// TODO Question: Is force resolution level necessary here?
+		// int force_resolution_level = 9;
+		int force_resolution_level = 5;
+		SpatialIndex sIndex0 = index0.getIndex(force_resolution_level);
+
+		// STARE_SpatialIntervals cover = index0.CoverBoundingBoxFromLatLonDegrees(corners, force_resolution_level);
+		// STARE_SpatialIntervals cover = index0.ConvexHull(corners, force_resolution_level);
+
+		// Use bounding box.
+		cover = index0.CoverBoundingBoxFromLatLonDegrees(corners);
+
+		cout << dec;
+		cout << "cover size: " << cover.size() << endl << flush;
+		SpatialRange cover_sr(cover);
+		HstmRange *cover_range = cover_sr.range;
+		cout << "cover_range size: " << cover_range->range->nranges() << endl << flush;
+		// viz->addHstmRange(cover_range,1,1,1,0,1,true,0.05,&sIndex0);
+		if(true) {
+			viz->addSpatialRange(cover_range,1,1,1,0,1,true,0.001);
+		}
+
+		// Try convex hull.
+		if(false) {
+			// STARE_SpatialIntervals coverCH = index0.ConvexHull(corners, force_resolution_level);
+			// coverCH = index0.ConvexHull(corners,9);
+			coverCH = index0.ConvexHull(corners,11);
+			SpatialRange coverCH_range_sr(coverCH);
+			HstmRange *coverCH_range = coverCH_range_sr.range;
+			cout << "coverCH_range size: " << coverCH_range->range->nranges() << endl << flush;
+			// viz->addHstmRange(coverCH_range,0.1,0,1,0,1,true,0.05,&sIndex0);
+			if(true) {
+				viz->addSpatialRange(coverCH_range,1,0.1,0.1,0,1,true,0.002);
+			}
+		} // Convex Hull
+
+		// Print cover, coverCH
+		for(int i=0; i< min(cover.size(),coverCH.size()); ++i) {
+			cout << i << " i,c,cCH: " << hex
+					<< cover[i] << " " << coverCH[i]
+												  << endl << flush
+												  << dec;
+		}
+
+		/*
+		 *
+		 */
+
+		// cout << 100 << endl << flush;
+		STARE index;
+		HstmRange* range = new HstmRange;
+
+		SpatialIndex sIndex = index.getIndex(resolutionLevel);
+
+		/*
+		cout << 200 << endl << flush;
+		cout
+		<< setprecision(17)
+		<< setw(20)
+		<< scientific;
+		*/
+
+		if(false) {
+			range->purge();
+			int k = 0;
+			// for( int iline = 0; iline < lines; ++iline ) {
+			//	for( int isample = 0; isample < samples; ++isample ) {
+			for( int iline = 0; iline < lines; iline += 10 ) {
+				for( int isample = 0; isample < samples; isample += 10 ) {
+
+					// cout << 300 << " " << k << " iline,isample = " << iline << "," << isample << endl << flush;
+					/*
+			cout << k << " " << isample << " " << iline << " kij lat,lon = "
+			<< geofield2data[isample + samples * iline] << "," << geofield1data[isample + samples * iline]
+			<< endl << flush;
+					 */
+
+					STARE_ArrayIndexSpatialValue a =
+							index.ValueFromLatLonDegrees(
+									geofield2data[isample + samples * iline],
+									geofield1data[isample + samples * iline],
+									resolutionLevel);
+					// cout << k << ": " << hex << a << dec << endl << flush;
+					LatLonDegrees64 latlon = index.LatLonDegreesFromValue(a);
+
+					// << setprecision(17)
+					// << setw(20)
+					// << scientific
+					/*
+			cout
+			<< " stare = " << hex << a << dec
+			<< ", latlon = " << latlon.lat << "," << latlon.lon
+			<< endl << flush;
+					 */
+
+					EmbeddedLevelNameEncoding leftJustified;
+					leftJustified.setIdFromSciDBLeftJustifiedFormat(a);
+					uint64 b = leftJustified.getId();
+					// range->reset();
+					range->addRange(b,b);
+					++k;
+				}
+			}
+			// cout << 500 << endl << flush;
+			// range->reset();
+			viz->addHstmRange(range,0.0,1.0,0.25,0.0,1.0,true,z_offset,&sIndex);
+
+			if( faces_color ) {
+				*(viz->notestream()) << "color_faces = true" << endl;
+				viz->addHstmRangeFaces(range,0.9,0.125,0.0,faces_transparency,1.0,face_z_offset,&sIndex);
+			}
+			// cout << 600 << endl << flush;
+			/*
+	void VizHTM::addHstmRange(
+			HstmRange *range,
+			float r, float g, float b, float a, float scale, bool arcFlag
+			 */
+		}
+
+		if(false) {
+			LatLonDegrees64ValueVector points;
+			int k0 = 0;
+			// for( int iline = 0; iline < lines; iline += 1000 ) {
+			for( int iline = 0; iline < lines; iline += 10 ) {
+				cout << "adding line " << iline << " to points" << endl << flush;
+				for( int isample = 0; isample < samples; isample += 10 ) {
+					//	for( int isample = 0; isample < samples; isample += 1000 ) {
+					++k0;
+					double
+					lat = geofield2data[isample + samples * iline],
+					lon = geofield1data[isample + samples * iline];
+					if( k0 % 1000 ) {
+						cout << "k0 = " << k0 << "; lat,lon: " << lat << ", " << lon << endl << flush;
+					}
+					points.push_back(LatLonDegrees64(lat,lon));
+				}
+			}
+			cout << "finished adding " << k0 << " pairs to points." << endl << flush;
+
+			int resolution_level = 5;
+			try {
+				cout << 100 << endl << flush;
+				STARE_SpatialIntervals cover_hull = index.ConvexHull(points,resolution_level);
+				cout << 110 << endl << flush;
+
+				SpatialRange hull_range_sr(cover_hull);
+				HstmRange *hull_range = hull_range_sr.range;
+				viz->addSpatialRange(hull_range,0.1,0.25,1.0,0,1,true,0.002);
+
+			} catch (const SpatialException & e) {
+				cout << 200 << endl << flush;
+				cout << "Exception " << e.what() << endl << flush;
+			}
+			cout << 300 << endl << flush;
+		}
+
+/*
+		if(false) {
+			LatLonDegrees64ValueVector points;
+
+			float64 deltaDegree=4;
+			{
+				float64 lat = lats[0];
+				for( float64 lon = lons[0]; lon < lons[1]; lon += deltaDegree ) {
 					points.push_back(LatLonDegrees64(lat,lon));
 				}
 			}
@@ -915,7 +1498,7 @@ bool Granule2( VizHTM *viz ) {
 			}
 			cout << 600 << endl << flush;
 		}
-
+*/
 
 		/*
 		 *
