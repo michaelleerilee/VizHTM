@@ -17,6 +17,8 @@
 #include "SpatialIndex.h"
 #include "SpatialVector.h"
 
+#include "SpatialRange.h"
+
 #include <Inventor/Qt/SoQt.h>
 #include <Inventor/Qt/viewers/SoQtExaminerViewer.h>
 
@@ -1569,11 +1571,13 @@ void VizHTM::addHstmRange(
 
 
 void VizHTM::addSpatialRange(
-		HstmRange *range,
+		SpatialRange *sRange,
 		float r, float g, float b, float a, float scale, bool arcFlag,
 		float deltaZ,
 		STARE *stare_index
 ) {
+
+	HstmRange *range = sRange->range;
 
 	// cout << 1000 << endl << flush;
 

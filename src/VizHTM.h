@@ -13,6 +13,7 @@
 #include "HtmRange.h"
 #include "HstmRange.h"
 #include "SpatialIndex.h"
+#include "SpatialRange.h"
 #include "SpatialRotation.h"
 #include "SpatialVector.h"
 #include "SpatialConstraint.h"
@@ -230,7 +231,8 @@ public:
 	);
 
 	void addSpatialRange(
-			HstmRange *range,
+			// HstmRange *range,
+			SpatialRange *range,
 			float r, float g, float b, float a=-1., float scale=1.0, bool arcFlag = true,
 			float deltaZ = 0.0,
 			STARE *index = NULL

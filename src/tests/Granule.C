@@ -771,7 +771,7 @@ bool Granule2_ConvexHullTesting1( VizHTM *viz ) {
 		cout << "cover_range size: " << cover_range->range->nranges() << endl << flush;
 		// viz->addHstmRange(&cover_range,1,1,1,0,1,true,0.05,&sIndex0);
 		if(false) {
-			viz->addSpatialRange(cover_range,1,1,1,0,1,true,0.001);
+			viz->addSpatialRange(&cover_sr,1,1,1,0,1,true,0.001);
 		}
 
 		// Try convex hull.
@@ -784,7 +784,7 @@ bool Granule2_ConvexHullTesting1( VizHTM *viz ) {
 			cout << "coverCH_range size: " << coverCH_range->range->nranges() << endl << flush;
 			// viz->addHstmRange(coverCH_range,0.1,0,1,0,1,true,0.05,&sIndex0);
 			if(true) {
-				viz->addSpatialRange(coverCH_range,1,0.1,0.1,0,1,true,0.002);
+				viz->addSpatialRange(&coverCH_sr,1,0.1,0.1,0,1,true,0.002);
 			}
 		}
 
@@ -899,7 +899,7 @@ bool Granule2_ConvexHullTesting1( VizHTM *viz ) {
 
 				SpatialRange cover_hull_sr(cover_hull);
 				HstmRange *hull_range = cover_hull_sr.range;
-				viz->addSpatialRange(hull_range,0.1,0.25,1.0,0,1,true,0.002);
+				viz->addSpatialRange(&cover_hull_sr,0.1,0.25,1.0,0,1,true,0.002);
 
 			} catch (const SpatialException & e) {
 				cout << 200 << endl << flush;
@@ -951,7 +951,7 @@ bool Granule2_ConvexHullTesting1( VizHTM *viz ) {
 				SpatialRange cover_hull_sr(cover_hull);
 				HstmRange *hull_range = cover_hull_sr.range;
 				cout << 415 << endl << flush;
-				viz->addSpatialRange(hull_range,0.125,1.0,1.0,0,1,true,0.002);
+				viz->addSpatialRange(&cover_hull_sr,0.125,1.0,1.0,0,1,true,0.002);
 				cout << 420 << endl << flush;
 
 			} catch (const SpatialException & e) {
@@ -1309,7 +1309,8 @@ bool Granule2( VizHTM *viz ) {
 		cout << "cover_range size: " << cover_range->range->nranges() << endl << flush;
 		// viz->addHstmRange(cover_range,1,1,1,0,1,true,0.05,&sIndex0);
 		if(true) {
-			viz->addSpatialRange(cover_range,1,1,1,0,1,true,0.001);
+			// viz->addSpatialRange(cover_range,1,1,1,0,1,true,0.001);
+			viz->addSpatialRange(&cover_sr,1,1,1,0,1,true,0.001);
 		}
 
 		// Try convex hull.
@@ -1322,7 +1323,7 @@ bool Granule2( VizHTM *viz ) {
 			cout << "coverCH_range size: " << coverCH_range->range->nranges() << endl << flush;
 			// viz->addHstmRange(coverCH_range,0.1,0,1,0,1,true,0.05,&sIndex0);
 			if(true) {
-				viz->addSpatialRange(coverCH_range,1,0.1,0.1,0,1,true,0.002);
+				viz->addSpatialRange(&coverCH_range_sr,1,0.1,0.1,0,1,true,0.002);
 			}
 		} // Convex Hull
 
@@ -1437,7 +1438,7 @@ bool Granule2( VizHTM *viz ) {
 
 				SpatialRange hull_range_sr(cover_hull);
 				HstmRange *hull_range = hull_range_sr.range;
-				viz->addSpatialRange(hull_range,0.1,0.25,1.0,0,1,true,0.002);
+				viz->addSpatialRange(&hull_range_sr,0.1,0.25,1.0,0,1,true,0.002);
 
 			} catch (const SpatialException & e) {
 				cout << 200 << endl << flush;
