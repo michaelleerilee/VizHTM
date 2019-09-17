@@ -313,7 +313,7 @@ int main(int argc, char *argv[]) {
 
 	// Project... Needs to come first.
 	// cout << 100 << endl << flush;
-	ok = viz->setProjection("Equirectangular");
+	// ok = viz->setProjection("Equirectangular");
 	// ok = viz->setProjection("Mercator");
 	// cout << 200 << endl << flush;
 

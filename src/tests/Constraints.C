@@ -255,7 +255,7 @@ bool Constraints1( VizHTM *viz ) {
 
 	}
 
-	if( true ) {
+	if( false ) {
 
 		STARE index;
 		RangeConvex rc;
@@ -269,8 +269,9 @@ bool Constraints1( VizHTM *viz ) {
 
 		for( int i = 0; i < 6; ++i ) {
 			// vs[i].setLatLonDegrees(lat[i], lon[i]);
+			// latlon.push_back(LatLonDegrees64(lat[i], lon[i]));
 			vs[5-i].setLatLonDegrees(lat[i], lon[i]);
-			latlon.push_back(LatLonDegrees64(lat[i], lon[i]));
+			latlon.push_back(LatLonDegrees64(lat[5-i], lon[5-i]));
 		}
 
 		STARE_SpatialIntervals intervals = index.ConvexHull(latlon, resolution);
@@ -285,6 +286,53 @@ bool Constraints1( VizHTM *viz ) {
 
 		SpatialRange *intersect_sr = cover_hull_sr & circle_sr;
 		viz->addSpatialRange(intersect_sr,1.0,1.0,0.0,0,1,true,0.0032);
+
+	}
+
+	if( true ) {
+
+		STARE index;
+		RangeConvex rc;
+
+		int resolution = 8;
+
+		// Try a grid...
+		int nLat = 101,nLon = 101, nLatLon=nLat*nLon;
+		float64 lat[nLat], lon[nLon];
+		SpatialVector vs[nLatLon], cs[nLatLon], vs1[nLatLon];
+		LatLonDegrees64ValueVector latlon;
+		for( int i = 0; i < nLon; ++i ) {
+			lon[i] = i*0.5;
+		}
+		for( int j = 0; j < nLat; ++j ) {
+			lat[j] = -40.0 + j*1.0;
+		}
+		int k = 0;
+		for( int i = 0; i < nLon; ++i ) {
+			for( int j = 0; j < nLat; ++j ) {
+				vs[k++].setLatLonDegrees(lat[j], lon[i]);
+				latlon.push_back(LatLonDegrees64(lat[j], lon[i]));
+				viz->addSphere(vs[k-1], 0, 1, 0, 0.001);
+			}
+		}
+
+		STARE_SpatialIntervals intervals = index.ConvexHull(latlon, resolution);
+
+		SpatialRange cover_hull_sr(intervals);
+		viz->addSpatialRange(&cover_hull_sr,0.125,1.0,1.0,0,1,true,0.002);
+
+		// STARE_SpatialIntervals CoverCircleFromLatLonRadiusDegrees(float64 latDegrees, float64 lonDegrees, float64 radius_degrees, int force_resolution_level = -1);
+		STARE_SpatialIntervals circle = index.CoverCircleFromLatLonRadiusDegrees(40,35,20,8);
+		SpatialRange circle_sr(circle);
+		viz->addSpatialRange(&circle_sr,1.0,0.0,0.0,0,1,true,0.003);
+
+		// SpatialRange *intersect_sr = cover_hull_sr & circle_sr;
+		SpatialRange *intersect_sr = circle_sr & cover_hull_sr;
+		// SpatialRange *intersect_sr = sr_intersect(circle_sr,cover_hull_sr,true);
+		// viz->addSpatialRange(intersect_sr,0.5,0.5,0.0,0,1,true,0.0035);
+
+		intersect_sr->range->range->CompressionPass();
+		viz->addSpatialRange(intersect_sr,1.0,1.0,0.0,0,1,true,0.005);
 
 	}
 
