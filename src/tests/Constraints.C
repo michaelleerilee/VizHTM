@@ -431,11 +431,27 @@ bool Constraints1( VizHTM *viz ) {
 				SpatialRange *sir2 = sr_intersect(*sir0,*sir1,true);
 				cout << "sir2 nranges " << sir2->range->range->nranges() << endl << flush;
 				viz->addSpatialRange(sir2,1,1,1,0,1,true,0.003);
+
+				STARE_SpatialIntervals sir2si = sir2->toSpatialIntervals();
+				STARE_ArrayIndexSpatialValues result = expandIntervals(sir2si);
+
+				if(false) {
+					for(int i=0; i<(sir2si.size() > result.size() ? sir2si.size() : result.size()); ++i) {
+						cout << i << " i,sis,siv " << setw(20) << hex
+								<< ( i < sir2si.size() ? sir2si[i] : 0 ) << " "
+								<< ( i < result.size() ? result[i] : 0 ) << " "
+								<< endl << flush;
+					}
+					cout << dec;
+				}
+
+				SpatialRange result_r(result);
+				viz->addSpatialRange(&result_r,1,0,1,0,1,true,0.0035);
+
 			} catch (SpatialException e) {
 				cout << "sir2 " << e.what() << endl << flush;
 			}
 		}
-
 	}
 
 	cout << "Constraints1 Done..." << endl << flush;
