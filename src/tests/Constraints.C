@@ -289,7 +289,7 @@ bool Constraints1( VizHTM *viz ) {
 
 	}
 
-	if( true ) {
+	if( false ) {
 
 		STARE index;
 		RangeConvex rc;
@@ -336,7 +336,109 @@ bool Constraints1( VizHTM *viz ) {
 
 	}
 
-	cout << "Done...";
+	if( false ) {
+/*
+	lat = np.array([0, 0,60], dtype=np.double)
+	lon = np.array([0,60,30], dtype=np.double)
+	*/
+		double lats[3] = { 0, 0, 60 };
+		double lons[3] = { 0, 60, 30 };
+		LatLonDegrees64ValueVector latlon;
+		for(int i=0; i<3; ++i) {
+			latlon.push_back(LatLonDegrees64(lats[i],lons[i]));
+		}
+		viz->addArcsFromLatLonDegrees(lats, lons, latlon.size(), true, 1, 0, 0, 0, 0.004, 16);
+		// latlon.push_back(LatLonDegrees64(0,0));
+		// latlon.push_back(LatLonDegrees64(0,60));
+		// latlon.push_back(LatLonDegrees64(60,30));
+
+		STARE index;
+		int resolution = 4;
+
+		STARE_SpatialIntervals intervals = index.ConvexHull(latlon, resolution);
+		SpatialRange cover_hull_sr(intervals);
+		viz->addSpatialRange(&cover_hull_sr,0.125,1.0,1.0,0,1,true,0.002);
+	}
+
+	/*
+	resolution0 = 4; ntri0 = 1000
+	lat0 = np.array([ 10, 5, 60,70], dtype=np.double)
+	lon0 = np.array([-30,-20,60,10], dtype=np.double)
+	lats0,lons0,triang0,hull0 = make_hull(lat0,lon0,resolution0,ntri0)
+	print('hull0: ',len(hull0))
+
+	resolution1 = 4; ntri1 = 1000
+	lat1 = np.array([10,  20, 30, 20 ], dtype=np.double)
+	lon1 = np.array([-60, 60, 60, -60], dtype=np.double)
+	lats1,lons1,triang1,hull1 = make_hull(lat1,lon1,resolution1,ntri1)
+	print('hull1: ',len(hull1))
+
+	if True:
+	    intersected = np.full([1000],-1,dtype=np.int64)
+	    # intersected = ps.intersect(hull0,hull1,multiresolution=True)
+	    ps._intersect_multiresolution(hull0,hull1,intersected)
+	    print('intersected: ',len(intersected))
+	    print('np.min:      ',np.amin(intersected))
+	    print('intersected: ',[hex(i) for i in intersected])
+	    endarg = np.argmax(intersected < 0)
+	    intersected = intersected[:endarg]
+	    # intersected = ps.intersect(hull0,hull1)
+	    print('intersected: ',len(intersected))
+	    lati,loni,latci,lonci = ps.to_vertices_latlon(intersected)
+	    lonsi,latsi,intmati = triangulate1(lati,loni)
+	    triangi = tri.Triangulation(lonsi,latsi,intmati)
+
+	    */
+
+	if( true ) {
+		STARE index;
+
+		cout << "sir0" << endl << flush;
+		SpatialRange *sir0;
+		int resolution_base = 5;
+		{
+			int n = 4;
+			double lats[n] = { 10, 5, 60, 70 };
+			double lons[n] = { -30, -20, 60, 10 };
+			LatLonDegrees64ValueVector latlon;
+			for(int i=0; i<n; ++i) {
+				latlon.push_back(LatLonDegrees64(lats[i],lons[i]));
+			}
+			int resolution = resolution_base;
+			STARE_SpatialIntervals intervals = index.ConvexHull(latlon,resolution);
+			sir0 = new SpatialRange(intervals);
+			viz->addSpatialRange(sir0,1,0,0,0,1,true,0.002);
+		}
+
+		cout << "sir1" << endl << flush;
+		SpatialRange *sir1;
+		{
+			int n = 4;
+			double lats[n] = { 10, 20, 30, 20 };
+			double lons[n] = { -60, 60, 60, -60 };
+			LatLonDegrees64ValueVector latlon;
+			for(int i=0; i<n; ++i) {
+				latlon.push_back(LatLonDegrees64(lats[i],lons[i]));
+			}
+			int resolution = resolution_base;
+			STARE_SpatialIntervals intervals = index.ConvexHull(latlon,resolution);
+			sir1 = new SpatialRange(intervals);
+			viz->addSpatialRange(sir1,0,1,0,0,1,true,0.0025);
+		}
+		if(true) {
+			cout << "sir2" << endl << flush;
+			try {
+				SpatialRange *sir2 = sr_intersect(*sir0,*sir1,true);
+				cout << "sir2 nranges " << sir2->range->range->nranges() << endl << flush;
+				viz->addSpatialRange(sir2,1,1,1,0,1,true,0.003);
+			} catch (SpatialException e) {
+				cout << "sir2 " << e.what() << endl << flush;
+			}
+		}
+
+	}
+
+	cout << "Constraints1 Done..." << endl << flush;
 	ok = true;
 	return ok;
 }
